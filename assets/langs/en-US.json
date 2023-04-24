@@ -1,0 +1,7 @@
+{
+    "test": {
+        "only_english": "This value only exists in english",
+        "variable": "This key are created in $HYDROGEN_VERSION",
+        "translate": "Value to be translated"
+    }
+}

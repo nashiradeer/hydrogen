@@ -1,0 +1,6 @@
+{
+    "test": {
+        "translate": "Valor a ser traduzido",
+        "variable": "Essa chave foi criada em $HYDROGEN_VERSION"
+    }
+}
