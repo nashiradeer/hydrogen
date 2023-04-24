@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::env;
 
 use crate::lang::{HydrogenLang, HydrogenLangError, HYDROGEN_DEFAULT_LANG};
 
@@ -17,13 +17,9 @@ fn lang_translate() {
         }
     }
 
-    let pt_br = String::from("pt-BR");
-    let category = String::from("test");
-    let translate_key = String::from("translate");
-
     assert_eq!(
-        i18n.get(&pt_br, &category, &translate_key, None),
-        String::from("Valor a ser traduzido")
+        i18n.get("pt-BR", "test", "translate", &[]),
+        "Valor a ser traduzido"
     );
 }
 
@@ -42,13 +38,9 @@ fn lang_only_english() {
         }
     }
 
-    let pt_br = String::from("pt-BR");
-    let category = String::from("test");
-    let only_english_key = String::from("only_english");
-
     assert_eq!(
-        i18n.get(&pt_br, &category, &only_english_key, None),
-        String::from("This value only exists in english")
+        i18n.get("pt-BR", "test", "only_english", &[]),
+        "This value only exists in english"
     );
 }
 
@@ -67,21 +59,14 @@ fn lang_variable() {
         }
     }
 
-    let pt_br = String::from("pt-BR");
-    let category = String::from("test");
-    let variable_key = String::from("variable");
-
     assert_eq!(
         i18n.get(
-            &pt_br,
-            &category,
-            &variable_key,
-            Some(HashMap::from([(
-                String::from("HYDROGEN_VERSION"),
-                String::from("0.0.1")
-            )]))
+            "pt-BR",
+            "test",
+            "variable",
+            &[("HYDROGEN_VERSION", "0.0.1")]
         ),
-        String::from("Essa chave foi criada em 0.0.1")
+        "Essa chave foi criada em 0.0.1"
     );
 }
 
@@ -100,12 +85,5 @@ fn lang_nexists() {
         }
     }
 
-    let pt_br = String::from("pt-BR");
-    let category = String::from("test");
-    let nexists_key = String::from("nexists");
-
-    assert_eq!(
-        i18n.get(&pt_br, &category, &nexists_key, None),
-        String::from("test.nexists")
-    );
+    assert_eq!(i18n.get("pt-BR", "test", "nexists", &[]), "test.nexists");
 }
