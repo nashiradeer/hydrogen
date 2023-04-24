@@ -1,0 +1,48 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=hydrogen",
+                    "--package=hydrogen"
+                ],
+                "filter": {
+                    "name": "hydrogen",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "HYDROGEN_LANG_PATH": "${workspaceFolder}/assets/langs"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=hydrogen",
+                    "--package=hydrogen"
+                ],
+                "filter": {
+                    "name": "hydrogen",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "HYDROGEN_LANG_PATH": "${workspaceFolder}/assets/langs"
+            }
+        }
+    ]
+}

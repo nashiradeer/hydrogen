@@ -355,6 +355,8 @@ name = "hydrogen"
 version = "0.0.1"
 dependencies = [
  "rustls 0.21.0",
+ "serde",
+ "serde_json",
  "serenity",
  "tokio",
 ]
