@@ -1,15 +1,23 @@
-use std::{env, process::exit, collections::HashMap};
+use std::{env, process::exit, collections::HashMap, sync::Arc};
 
-use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, InteractionResponseType, application_command::ApplicationCommandInteraction}, command::{Command, CommandOptionType}}, async_trait, builder::CreateApplicationCommand};
+use lavalink::{HydrogenLavalinkHandler, LavalinkSocketReady};
+use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
+
+mod commands;
+use crate::commands::{PingCommand, PlayCommand};
+
+mod lavalink;
+use crate::lavalink::HydrogenLavalink;
 
 #[derive(Clone)]
 struct HydrogenContext;
 
+#[derive(Clone)]
 struct HydrogenHandler {
     context: HydrogenContext,
-    commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>
+    commands: Arc<HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>>
 }
 
 #[async_trait]
@@ -18,73 +26,10 @@ trait HydrogenCommandListener {
     async fn execute(&self, hydrogen_context: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction);
 }
 
-struct PingCommand;
-
 #[async_trait]
-impl HydrogenCommandListener for PingCommand {
-    fn register<'a, 'b>(&'a self,command: &'b mut CreateApplicationCommand) ->  &'b mut CreateApplicationCommand {
-        command
-            .description("Ping!")
-    }
-
-    async fn execute(&self, _: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction) {
-        if let Err(e) = interaction.create_interaction_response(&context.http, |response| {
-            response
-                .kind(InteractionResponseType::ChannelMessageWithSource)
-                .interaction_response_data(|message| {
-                    message.content("pong!")
-                })
-        }).await {
-            warn!("can't response to interaction: {:?}", e);
-        }
-    }
-}
-
-struct PlayCommand;
-
-#[async_trait]
-impl HydrogenCommandListener for PlayCommand {
-    fn register<'a, 'b>(&'a self,command: &'b mut CreateApplicationCommand) ->  &'b mut CreateApplicationCommand {
-        command
-            .description("Searches and plays the requested song, initializing the player if necessary.")
-            .create_option(|option| option
-                .kind(CommandOptionType::String)
-                .name("query")
-                .description("The query to search for.")
-                .required(true)
-            )
-            .dm_permission(false)
-    }
-
-    async fn execute(&self, _: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction) {
-        let query = {
-            let Some(option) = interaction.data.options.get(0) else {
-                warn!("no 'play:query' provided");
-                return;
-            };
-
-            let Some(value) = &option.value else {
-                warn!("no 'play:query provided");
-                return;
-            };
-
-            let Some(data) = value.as_str() else {
-                warn!("invalid 'play:query' provided");
-                return;
-            };
-
-            data.to_owned()
-        };
-
-        if let Err(e) = interaction.create_interaction_response(&context.http, |response| {
-            response
-                .kind(InteractionResponseType::ChannelMessageWithSource)
-                .interaction_response_data(|message| {
-                    message.content(format!("Requested query: {}", query))
-                })
-        }).await {
-            warn!("can't response to interaction: {:?}", e);
-        }
+impl HydrogenLavalinkHandler for HydrogenHandler {
+    async fn lavalink_ready(&self, _: LavalinkSocketReady) {
+        info!("lavalink initialized and connected");
     }
 }
 
@@ -104,6 +49,33 @@ impl EventHandler for HydrogenHandler {
         }
 
         info!("commands registered");
+
+        debug!("initializing lavalink...");
+        {
+            let uri = match env::var("LAVALINK_URL") {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("you need to set LAVALINK_URL environment variable: {:?}", e);
+                    exit(1);
+                }
+            };
+
+            let password = match env::var("LAVALINK_PASSWORD") {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("you need to set LAVALINK_PASSWORD environment variable: {:?}", e);
+                    exit(1);
+                }
+            };
+
+            match HydrogenLavalink::new(&uri, &password, &ready.user.id.0.to_string(), self.clone()).await {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("can't initialize lavalink: {}", e);
+                    exit(4);
+                }
+            }
+        };
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -134,6 +106,17 @@ async fn main() {
         .init();
 
     info!("starting up...");
+    let app = HydrogenHandler {
+        context: HydrogenContext,
+        commands: {
+            let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
+            
+            commands.insert("ping".to_owned(), Box::new(PingCommand));
+            commands.insert("play".to_owned(), Box::new(PlayCommand));
+
+            Arc::new(commands)
+        }
+    };
 
     debug!("initializing client...");
     let mut client = match Client::builder(match env::var("DISCORD_TOKEN") {
@@ -143,17 +126,7 @@ async fn main() {
             exit(1);
         }
     }, GatewayIntents::default())
-        .event_handler(HydrogenHandler {
-            context: HydrogenContext,
-            commands: {
-                let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
-                
-                commands.insert("ping".to_owned(), Box::new(PingCommand));
-                commands.insert("play".to_owned(), Box::new(PlayCommand));
-
-                commands
-            }
-        })
+        .event_handler(app)
         .await {
             Ok(v) => v,
             Err(e) => {
