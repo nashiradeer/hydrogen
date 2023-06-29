@@ -1,9 +1,44 @@
-use std::{env, process::exit};
+use std::{env, process::exit, collections::HashMap};
 
-use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, InteractionResponseType}, command::Command}, async_trait};
+use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, InteractionResponseType, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
-struct HydrogenHandler;
+
+#[derive(Clone)]
+struct HydrogenContext;
+
+struct HydrogenHandler {
+    context: HydrogenContext,
+    commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>
+}
+
+#[async_trait]
+trait HydrogenCommandListener {
+    fn register<'a, 'b>(&'a self, command: &'b mut CreateApplicationCommand) -> &'b mut CreateApplicationCommand;
+    async fn execute(&self, hydrogen_context: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction);
+}
+
+struct PingCommand;
+
+#[async_trait]
+impl HydrogenCommandListener for PingCommand {
+    fn register<'a, 'b>(&'a self,command: &'b mut CreateApplicationCommand) ->  &'b mut CreateApplicationCommand {
+        command
+            .description("Ping!")
+    }
+
+    async fn execute(&self, _: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction) {
+        if let Err(e) = interaction.create_interaction_response(&context.http, |response| {
+            response
+                .kind(InteractionResponseType::ChannelMessageWithSource)
+                .interaction_response_data(|message| {
+                    message.content("pong!")
+                })
+        }).await {
+            error!("can't response to interaction: {:?}", e);
+        }
+    }
+}
 
 #[async_trait]
 impl EventHandler for HydrogenHandler {
@@ -11,12 +46,13 @@ impl EventHandler for HydrogenHandler {
         info!("client initialized and connected to: {}", ready.user.name);
 
         debug!("registering commands...");
-        if let Err(e) = Command::create_global_application_command(ctx.http, |command| {
-            command
-                .name("ping")
-                .description("Ping!")
-        }).await {
-            error!("can't register command: {}", e);
+        for (name, command) in self.commands.iter() {
+            debug!("registering '{}' command...", name);
+            if let Err(e) = Command::create_global_application_command(ctx.http.clone(), |create_command| {
+                command.register(create_command).name(name)
+            }).await {
+                error!("can't register '{}' command: {}", name, e);
+            }
         }
 
         info!("commands registered");
@@ -27,23 +63,15 @@ impl EventHandler for HydrogenHandler {
             Interaction::ApplicationCommand(command) => {
                 let command_name = command.data.name.as_str();
                 debug!("executing application command: {}", command_name);
-                match command_name {
-                    "ping" => {
-                        if let Err(e) = command.create_interaction_response(&ctx.http, |response| {
-                            response
-                                .kind(InteractionResponseType::ChannelMessageWithSource)
-                                .interaction_response_data(|message| {
-                                    message.content("pong!")
-                                })
-                        }).await {
-                            error!("can't response to interaction: {:?}", e);
-                        }
-                    }
-                    _ => {
-                        warn!("unknown command: {}", command_name);
-                        ()
-                    },
+
+                if let Some(listener) = self.commands.get(command_name) {
+                    listener.execute(self.context.clone(), ctx, command).await;
                 }
+                else {
+                    warn!("unknown command: {}", command_name);
+                }
+
+                ()
             }
             _ => (),
         }
@@ -59,6 +87,9 @@ async fn main() {
 
     info!("starting up...");
 
+    let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> = HashMap::new();
+    commands.insert("ping".to_owned(), Box::new(PingCommand));
+
     debug!("initializing client...");
     let mut client = match Client::builder(match env::var("DISCORD_TOKEN") {
         Ok(v) => v,
@@ -67,7 +98,10 @@ async fn main() {
             exit(1);
         }
     }, GatewayIntents::default())
-        .event_handler(HydrogenHandler)
+        .event_handler(HydrogenHandler {
+            context: HydrogenContext,
+            commands
+        })
         .await {
             Ok(v) => v,
             Err(e) => {
