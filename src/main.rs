@@ -135,11 +135,6 @@ async fn main() {
 
     info!("starting up...");
 
-    debug!("initializing commands...");
-    let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> = HashMap::new();
-    commands.insert("ping".to_owned(), Box::new(PingCommand));
-    commands.insert("play".to_owned(), Box::new(PlayCommand));
-
     debug!("initializing client...");
     let mut client = match Client::builder(match env::var("DISCORD_TOKEN") {
         Ok(v) => v,
@@ -150,7 +145,14 @@ async fn main() {
     }, GatewayIntents::default())
         .event_handler(HydrogenHandler {
             context: HydrogenContext,
-            commands
+            commands: {
+                let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
+                
+                commands.insert("ping".to_owned(), Box::new(PingCommand));
+                commands.insert("play".to_owned(), Box::new(PlayCommand));
+
+                commands
+            }
         })
         .await {
             Ok(v) => v,
