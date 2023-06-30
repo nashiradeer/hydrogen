@@ -1,7 +1,9 @@
 {
     "cSpell.words": [
         "lavalink",
+        "reqwest",
         "rustls",
+        "seekable",
         "tungstenite"
     ]
 }
