@@ -1,7 +1,8 @@
-use std::{env, process::exit, collections::HashMap, sync::Arc};
+use std::{env, collections::HashMap, sync::Arc};
 
 use lavalink::{HydrogenLavalinkHandler, LavalinkSocketReady};
 use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
+use songbird::SerenityInit;
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
@@ -12,7 +13,9 @@ mod lavalink;
 use crate::lavalink::HydrogenLavalink;
 
 #[derive(Clone)]
-struct HydrogenContext;
+struct HydrogenContext {
+    pub lavalink: Arc<HydrogenLavalink>
+}
 
 #[derive(Clone)]
 struct HydrogenHandler {
@@ -50,32 +53,8 @@ impl EventHandler for HydrogenHandler {
 
         info!("commands registered");
 
-        debug!("initializing lavalink...");
-        {
-            let uri = match env::var("LAVALINK_URL") {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("you need to set LAVALINK_URL environment variable: {:?}", e);
-                    exit(1);
-                }
-            };
-
-            let password = match env::var("LAVALINK_PASSWORD") {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("you need to set LAVALINK_PASSWORD environment variable: {:?}", e);
-                    exit(1);
-                }
-            };
-
-            match HydrogenLavalink::new(&uri, &password, &ready.user.id.0.to_string(), self.clone()).await {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("can't initialize lavalink: {}", e);
-                    exit(4);
-                }
-            }
-        };
+        debug!("connecting to lavalink server...");
+        self.context.lavalink.init(&ready.user.id.0.to_string(), self.clone()).await.expect("can't connect to the lavalink server");
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -90,8 +69,6 @@ impl EventHandler for HydrogenHandler {
                 else {
                     warn!("unknown command: {}", command_name);
                 }
-
-                ()
             }
             _ => (),
         }
@@ -106,8 +83,21 @@ async fn main() {
         .init();
 
     info!("starting up...");
+
+    debug!("initializing lavalink...");
+    let lavalink = {
+        let uri = env::var("LAVALINK_URL").expect("you need to set LAVALINK_URL environment variable");
+        let password = env::var("LAVALINK_PASSWORD").expect("you need to set LAVALINK_PASSWORD environment variable");
+        let tls = env::var("LAVALINK_TLS").unwrap_or_default().to_lowercase();
+
+        Arc::new(HydrogenLavalink::new(&uri, &password, tls == "true" || tls == "enabled" || tls == "on").expect("can't initialize lavalink"))
+    };
+
+    debug!("initializing handler...");
     let app = HydrogenHandler {
-        context: HydrogenContext,
+        context: HydrogenContext {
+            lavalink
+        },
         commands: {
             let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
             
@@ -118,25 +108,12 @@ async fn main() {
         }
     };
 
-    debug!("initializing client...");
-    let mut client = match Client::builder(match env::var("DISCORD_TOKEN") {
-        Ok(v) => v,
-        Err(e) => {
-            error!("you need to set DISCORD_TOKEN environment variable: {:?}", e);
-            exit(1);
-        }
-    }, GatewayIntents::default())
-        .event_handler(app)
-        .await {
-            Ok(v) => v,
-            Err(e) => {
-                error!("can't initialize the client: {:?}", e);
-                exit(2);
-            }
-        };
+    
 
-    if let Err(e) = client.start().await {
-        error!("can't start the client: {:?}", e);
-        exit(3);
-    }
+    debug!("initializing client...");
+    Client::builder(env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"), GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES)
+        .event_handler(app)
+        .register_songbird()
+        .await.expect("can't initialize the client")
+        .start().await.expect("can't start the client");
 }
