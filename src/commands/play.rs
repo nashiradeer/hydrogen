@@ -21,23 +21,26 @@ impl PlayCommand {
 
         let voice_manager = songbird::get(&context).await.ok_or("songbird not registered".to_owned())?;
         let guild_id = interaction.guild_id.ok_or("interaction doesn't have a guild_id".to_owned())?;
-        let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
 
-        let channel_id = match {
-            Ok(
-                guild.voice_states.get(&interaction.user.id).ok_or("can't find the user voice state in the origin guild".to_owned())?
-                    .channel_id.ok_or("can't get the channel id from the voice state".to_owned())?
-            )
-        } {
-            Ok(v) => v,
-            Err(e) => {
-                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                    response
-                        .content("You aren't in a voice chat!")
-                }).await {
-                    warn!("can't response to interaction: {:?}", e);
+        let channel_id = {
+            let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
+            
+            match {
+                Ok(
+                    guild.voice_states.get(&interaction.user.id).ok_or("can't find the user voice state in the origin guild".to_owned())?
+                        .channel_id.ok_or("can't get the channel id from the voice state".to_owned())?
+                )
+            } {
+                Ok(v) => v,
+                Err(e) => {
+                    if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                        response
+                            .content("You aren't in a voice chat!")
+                    }).await {
+                        warn!("can't response to interaction: {:?}", e);
+                    }
+                    return e;
                 }
-                return e;
             }
         };
 
