@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use serenity::{prelude::Context, model::prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType}, builder::CreateApplicationCommand};
+use serenity::{prelude::Context, model::prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId}, builder::CreateApplicationCommand};
 use tracing::warn;
 
 use crate::{HydrogenContext, lavalink::rest::{LavalinkUpdatePlayer, LavalinkVoiceState}, HydrogenCommandListener};
@@ -21,26 +21,21 @@ impl PlayCommand {
 
         let voice_manager = songbird::get(&context).await.ok_or("songbird not registered".to_owned())?;
         let guild_id = interaction.guild_id.ok_or("interaction doesn't have a guild_id".to_owned())?;
+        let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
 
-        let channel_id = {
-            let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
-            
-            match {
-                Ok(
-                    guild.voice_states.get(&interaction.user.id).ok_or("can't find the user voice state in the origin guild".to_owned())?
-                        .channel_id.ok_or("can't get the channel id from the voice state".to_owned())?
-                )
-            } {
-                Ok(v) => v,
-                Err(e) => {
-                    if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                        response
-                            .content("You aren't in a voice chat!")
-                    }).await {
-                        warn!("can't response to interaction: {:?}", e);
-                    }
-                    return e;
+        let channel_id = match move || -> Result<ChannelId, Result<(), String>> {
+            Ok(guild.voice_states.get(&interaction.user.id).ok_or(Err("can't find the user voice state in the origin guild".to_owned()))?
+                .channel_id.ok_or(Err("can't get the channel id from the voice state".to_owned()))?)
+        }() {
+            Ok(v) => v,
+            Err(e) => {
+                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                    response
+                        .content("You aren't in a voice chat!")
+                }).await {
+                    warn!("can't response to interaction: {:?}", e);
                 }
+                return e;
             }
         };
 
@@ -96,7 +91,7 @@ impl HydrogenCommandListener for PlayCommand {
 
     async fn execute(&self, hydrogen: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction) {
         if let Err(e) = self._execute(hydrogen, context, interaction).await {
-            warn!(e);
+            warn!("{}", e);
         }
     }
 }
