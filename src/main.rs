@@ -1,20 +1,20 @@
 use std::{env, collections::HashMap, sync::Arc};
 
-use lavalink::{HydrogenLavalinkHandler, LavalinkSocketReady};
+use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler};
 use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
 use songbird::SerenityInit;
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
 mod commands;
-use crate::commands::{PingCommand, PlayCommand};
+use crate::commands::play::PlayCommand;
 
 mod lavalink;
-use crate::lavalink::HydrogenLavalink;
+use crate::lavalink::Lavalink;
 
 #[derive(Clone)]
 struct HydrogenContext {
-    pub lavalink: Arc<HydrogenLavalink>
+    pub lavalink: Arc<Lavalink>
 }
 
 #[derive(Clone)]
@@ -30,8 +30,8 @@ trait HydrogenCommandListener {
 }
 
 #[async_trait]
-impl HydrogenLavalinkHandler for HydrogenHandler {
-    async fn lavalink_ready(&self, _: LavalinkSocketReady) {
+impl LavalinkHandler for HydrogenHandler {
+    async fn lavalink_ready(&self, _: Lavalink, _: LavalinkReadyEvent) {
         info!("lavalink initialized and connected");
     }
 }
@@ -54,7 +54,7 @@ impl EventHandler for HydrogenHandler {
         info!("commands registered");
 
         debug!("connecting to lavalink server...");
-        self.context.lavalink.init(&ready.user.id.0.to_string(), self.clone()).await.expect("can't connect to the lavalink server");
+        self.context.lavalink.connect(&ready.user.id.0.to_string(), self.clone()).await.expect("can't connect to the lavalink server");
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -90,7 +90,7 @@ async fn main() {
         let password = env::var("LAVALINK_PASSWORD").expect("you need to set LAVALINK_PASSWORD environment variable");
         let tls = env::var("LAVALINK_TLS").unwrap_or_default().to_lowercase();
 
-        Arc::new(HydrogenLavalink::new(&uri, &password, tls == "true" || tls == "enabled" || tls == "on").expect("can't initialize lavalink"))
+        Arc::new(Lavalink::new(&uri, &password, tls == "true" || tls == "enabled" || tls == "on").expect("can't initialize lavalink"))
     };
 
     debug!("initializing handler...");
@@ -101,7 +101,6 @@ async fn main() {
         commands: {
             let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
             
-            commands.insert("ping".to_owned(), Box::new(PingCommand));
             commands.insert("play".to_owned(), Box::new(PlayCommand));
 
             Arc::new(commands)
