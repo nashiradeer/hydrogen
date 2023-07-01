@@ -1,4 +1,4 @@
-use std::{env, collections::HashMap, sync::Arc};
+use std::{env, collections::HashMap, sync::Arc, process::exit};
 
 use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler};
 use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
@@ -33,6 +33,11 @@ trait HydrogenCommandListener {
 impl LavalinkHandler for HydrogenHandler {
     async fn lavalink_ready(&self, _: Lavalink, _: LavalinkReadyEvent) {
         info!("lavalink initialized and connected");
+    }
+
+    async fn lavalink_disconnect(&self, _node: Lavalink) {
+        error!("lavalink has disconnected");
+        exit(1);
     }
 }
 

@@ -24,6 +24,7 @@ struct LavalinkInternalOp {
 #[async_trait]
 pub trait LavalinkHandler {
     async fn lavalink_ready(&self, _node: Lavalink, _message: LavalinkReadyEvent) {}
+    async fn lavalink_disconnect(&self, _node: Lavalink) {}
 }
 
 #[derive(Debug)]
@@ -121,6 +122,7 @@ impl Lavalink {
 
             _ = socket.close(None).await;
             *this.session_id.write().await = None;
+            handler.lavalink_disconnect(this).await;
         });
 
         Ok(())
