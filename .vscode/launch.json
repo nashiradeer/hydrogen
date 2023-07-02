@@ -19,8 +19,10 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "HYDROGEN_LANG_PATH": "${workspaceFolder}/assets/langs"
-            }
+                "LANGUAGE_PATH": "${workspaceFolder}/assets/langs",
+                "RUST_LOG": "hydrogen=debug"
+            },
+            "envFile": "${workspaceFolder}/.env"
         },
         {
             "type": "lldb",
@@ -41,8 +43,10 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "HYDROGEN_LANG_PATH": "${workspaceFolder}/assets/langs"
-            }
+                "LANGUAGE_PATH": "${workspaceFolder}/assets/langs",
+                "RUST_LOG": "hydrogen=debug"
+            },
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }

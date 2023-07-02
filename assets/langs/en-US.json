@@ -1,7 +1,11 @@
 {
-    "test": {
-        "only_english": "This value only exists in english",
-        "variable": "This key are created in $HYDROGEN_VERSION",
-        "translate": "Value to be translated"
+    "play": {
+        "name": "play",
+        "description": "Searches and plays the requested song, initializing the player if necessary.",
+        "query_name": "query",
+        "query_description": "The query to search for.",
+        "unknown_voice_state": "You aren't in a voice chat!",
+        "cant_connect": "Can't connect to the voice chat!",
+        "playing": "Requested music: ${music}"
     }
 }
