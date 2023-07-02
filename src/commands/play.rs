@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serenity::{prelude::Context, model::prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId}, builder::CreateApplicationCommand};
 use tracing::warn;
 
-use crate::{HydrogenContext, lavalink::rest::{LavalinkUpdatePlayer, LavalinkVoiceState}, HydrogenCommandListener};
+use crate::{HydrogenContext, lavalink::rest::{LavalinkUpdatePlayer, LavalinkVoiceState}, HydrogenCommandListener, i18n::HydrogenI18n};
 
 pub struct PlayCommand;
 
@@ -31,7 +31,7 @@ impl PlayCommand {
             Err(e) => {
                 if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
                     response
-                        .content("You aren't in a voice chat!")
+                        .content(hydrogen.i18n.translate(&interaction.locale, "play", "unknown_voice_state"))
                 }).await {
                     warn!("can't response to interaction: {:?}", e);
                 }
@@ -51,7 +51,7 @@ impl PlayCommand {
                 Err(e) => {
                     if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
                         response
-                            .content("Can't connect to the voice chat!")
+                            .content(hydrogen.i18n.translate(&interaction.locale, "play", "cant_connect"))
                     }).await {
                         warn!("can't response to interaction: {:?}", e);
                     }
@@ -66,7 +66,7 @@ impl PlayCommand {
 
         if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
             response
-                .content(format!("Requested music: {}", track.info.title))
+                .content(hydrogen.i18n.translate(&interaction.locale, "play", "playing").replace("${music}", &track.info.title))
         }).await {
             warn!("can't response to interaction: {:?}", e);
         }
@@ -77,15 +77,22 @@ impl PlayCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for PlayCommand {
-    fn register<'a, 'b>(&'a self,command: &'b mut CreateApplicationCommand) ->  &'b mut CreateApplicationCommand {
+    fn register<'a, 'b>(&'a self, i18n: HydrogenI18n, command: &'b mut CreateApplicationCommand) ->  &'b mut CreateApplicationCommand {
+        i18n.translate_application_command_name("play", "name", command);
+        i18n.translate_application_command_description("play", "description", command);
+
         command
             .description("Searches and plays the requested song, initializing the player if necessary.")
-            .create_option(|option| option
-                .kind(CommandOptionType::String)
-                .name("query")
-                .description("The query to search for.")
-                .required(true)
-            )
+            .create_option(|option| {
+                i18n.translate_application_command_option_name("play", "query_name", option);
+                i18n.translate_application_command_option_description("play", "query_description", option);
+
+                option
+                    .kind(CommandOptionType::String)
+                    .name("query")
+                    .description("The query to search for.")
+                    .required(true)
+            })
             .dm_permission(false)
     }
 

@@ -1,6 +1,11 @@
 {
-    "test": {
-        "translate": "Valor a ser traduzido",
-        "variable": "Essa chave foi criada em $HYDROGEN_VERSION"
+    "play": {
+        "name": "tocar",
+        "description": "Procura e toca a música pedida, iniciando o tocador se necessário.",
+        "query_name": "consulta",
+        "query_description": "Termo de consulta para ser procurado.",
+        "unknown_voice_state": "Você não está em um canal de voz!",
+        "cant_connect": "Não foi possível se conectar ao canal de voz!",
+        "playing": "Música solicitada: ${music}"
     }
 }
