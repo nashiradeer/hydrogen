@@ -59,7 +59,10 @@ impl EventHandler for HydrogenHandler {
         info!("commands registered");
 
         debug!("connecting to lavalink server...");
-        self.context.lavalink.connect(&ready.user.id.0.to_string(), self.clone()).await.expect("can't connect to the lavalink server");
+        if let Err(e) = self.context.lavalink.connect(&ready.user.id.0.to_string(), self.clone()).await {
+            error!("can't connect to the lavalink server: {}", e);
+            exit(1);
+        }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
