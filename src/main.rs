@@ -1,19 +1,17 @@
 use std::{env, collections::HashMap, sync::Arc, process::exit};
 
+use commands::play::PlayCommand;
 use i18n::HydrogenI18n;
-use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler};
+use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler, Lavalink};
 use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
 use songbird::SerenityInit;
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
 mod commands;
-use crate::commands::play::PlayCommand;
-
-mod lavalink;
-use crate::lavalink::Lavalink;
-
 mod i18n;
+mod lavalink;
+mod player;
 
 #[derive(Clone)]
 struct HydrogenContext {
