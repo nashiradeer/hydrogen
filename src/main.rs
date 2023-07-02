@@ -126,8 +126,6 @@ async fn main() {
         }
     };
 
-    
-
     debug!("initializing client...");
     Client::builder(env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"), GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES)
         .event_handler(app)
