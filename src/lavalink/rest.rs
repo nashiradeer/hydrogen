@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkErrorResponse {
-    pub timestamp: i32,
+    pub timestamp: i64,
     pub status: i32,
     pub error: String,
     pub trace: Option<String>,
@@ -75,14 +75,6 @@ impl LavalinkUpdatePlayer {
 
         self
     }
-    
-    pub fn identifier(mut self, identifier: &str) -> Self {
-        if self.encoded_track == None {
-            self.identifier = Some(identifier.to_owned());
-        }
-
-        self
-    }
 
     pub fn voice_state(mut self, voice_state: LavalinkVoiceState) -> Self {
         self.voice = Some(voice_state);
@@ -128,7 +120,19 @@ pub struct LavalinkTrackInfo {
 pub struct LavalinkTrackLoading {
     pub playlist_info: LavalinkPlaylistInfo,
     pub tracks: Vec<LavalinkTrack>,
-    pub exception: Option<LavalinkException>
+    pub exception: Option<LavalinkException>,
+    pub load_type: LavalinkLoadResultType
+}
+
+
+#[derive(Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LavalinkLoadResultType {
+    TrackLoaded,
+    PlaylistLoaded,
+    SearchResult,
+    NoMatches,
+    LoadFailed
 }
 
 #[derive(Deserialize)]

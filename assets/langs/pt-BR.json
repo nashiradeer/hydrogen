@@ -1,4 +1,7 @@
 {
+    "embed": {
+        "footer_text": "Hydrogen por DeerSoftware"
+    },
     "play": {
         "name": "tocar",
         "description": "Procura e toca a música pedida, iniciando o tocador se necessário.",
@@ -6,6 +9,16 @@
         "query_description": "Termo de consulta para ser procurado.",
         "unknown_voice_state": "Você não está em um canal de voz!",
         "cant_connect": "Não foi possível se conectar ao canal de voz!",
-        "playing": "Música solicitada: ${music}"
+        "is_not_same_voice": "Você não está no mesmo canal que eu!",
+        "playing": "Música solicitada: ${music}",
+        "embed_title": "Tocando Música",
+        "playing_one_uri": "Tocando: [${author} - ${music}](${uri})",
+        "playing_one": "Tocando: ${author} - ${music}",
+        "enqueue_one_uri": "Enfileirado: [${author} - ${music}](${uri})",
+        "enqueue_one": "Enfileirado: ${music} by ${author}",
+        "playing_playlist_uri": "Tocando: [${author} - ${music}](${uri})\nEnfileirado: ${count} músicas",
+        "playing_playlist": "Tocando: ${author} - ${music}\nEnfileirado: ${count} músicas",
+        "enqueue_playlist": "Enfileirado: ${count} músicas",
+        "not_found": "Não foi achado nada com esse termo."
     }
 }

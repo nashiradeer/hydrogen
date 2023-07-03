@@ -1,10 +1,10 @@
-use std::{sync::{Arc, atomic::AtomicUsize}, fmt::Display, result};
+use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}, fmt::Display, result};
 
 use serenity::model::prelude::{GuildId, UserId};
 use songbird::ConnectionInfo;
 use tokio::sync::RwLock;
 
-use crate::lavalink::{Lavalink, LavalinkError, rest::{LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState}};
+use crate::lavalink::{Lavalink, LavalinkError, rest::{LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState, LavalinkLoadResultType}};
 
 #[derive(PartialEq, Eq)]
 pub enum LoopType {
@@ -78,30 +78,104 @@ impl HydrogenPlayer {
         }
     }
 
+    pub async fn next(&self, lavalink: Lavalink) -> Result<()> {
+        let queue_loop = self.queue_loop.read().await;
+        if queue_loop.ne(&LoopType::NoAutostart) {
+            if queue_loop.ne(&LoopType::Music) {
+                let index = self.index.fetch_add(1, Ordering::AcqRel) + 1;
+                let queue_len = self.musics.read().await.len();
+                if index >= queue_len {
+                    if queue_loop.eq(&LoopType::Queue) {
+                        self.index.store(0, Ordering::Release);
+                        self.start_playing(lavalink).await?;
+                    } else {
+                        self.index.store(queue_len, Ordering::Release);
+                    }
+                } else {
+                    self.start_playing(lavalink).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub async fn play(&self, lavalink: Lavalink, music: &str, requester_id: UserId) -> Result<HydrogenPlayResult> {
-        let musics = lavalink.track_load(music).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-        for music in musics.tracks.iter() {
-            self.musics.write().await.push(HydrogenMusic::from(music.clone(), requester_id));
+        let musics = {
+            let mut musics = lavalink.track_load(music).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+
+            if musics.tracks.len() == 0 {
+                musics = lavalink.track_load(&format!("ytsearch:{}", music)).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            }
+
+            musics
+        };
+
+        let starting_index = self.musics.read().await.len();
+        if musics.load_type == LavalinkLoadResultType::SearchResult {
+            if let Some(music) = musics.tracks.get(0) {
+                self.musics.write().await.push(HydrogenMusic::from(music.clone(), requester_id));
+                
+            } else {
+                return Ok(HydrogenPlayResult {
+                    track: None,
+                    count: 0,
+                    playing: false
+                });
+            }
+        } else {
+            for music in musics.tracks.iter() {
+                self.musics.write().await.push(HydrogenMusic::from(music.clone(), requester_id));
+            }
         }
 
         let mut playing = false;
 
-        if lavalink.get_player(&self.guild_id).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?.track.is_none() {
-            if let Some(music) = musics.tracks.get(0) {
-                let player = LavalinkUpdatePlayer::new()
-                    .encoded_track(&music.encoded)
-                    .voice_state(LavalinkVoiceState::new(&self.connection_info.token, &self.connection_info.endpoint, &self.connection_info.session_id));
+        let lavalink_not_playing = match lavalink.get_player(&self.guild_id).await {
+            Ok(v) => {
+                v.track.is_none()
+            },
+            Err(e) => {
+                if let LavalinkError::RestError(er) = e {
+                    if er.status != 404 {
+                        return Err(HydrogenPlayerError::Lavalink(LavalinkError::RestError(er)));
+                    }
+                } else {
+                    return Err(HydrogenPlayerError::Lavalink(e));
+                }
+                
+                true
+            }
+        };
 
-                lavalink.update_player(&self.guild_id, false, player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+        let mut this_play_track = self.musics.read().await.get(starting_index).cloned();
 
-                playing = true;
+        if lavalink_not_playing {
+            let index = starting_index + musics.playlist_info.selected_track.unwrap_or(0).try_into().unwrap_or(0);
+            self.index.store(index, Ordering::Release);
+            playing = self.start_playing(lavalink.clone()).await?;
+            if playing {
+                this_play_track = self.musics.read().await.get(index).cloned();
             }
         }
 
         Ok(HydrogenPlayResult {
-            track: musics.tracks.get(0).map(|v| HydrogenMusic::from(v.clone(), requester_id)),
-            count: musics.tracks.len(),
+            track: this_play_track,
+            count: self.musics.read().await.len() - starting_index,
             playing
         })
+    }
+
+    async fn start_playing(&self, lavalink: Lavalink) -> Result<bool> {
+        if let Some(music) = self.musics.read().await.get(self.index.load(Ordering::Acquire)) {
+            let player = LavalinkUpdatePlayer::new()
+                    .encoded_track(&music.encoded_track)
+                    .voice_state(LavalinkVoiceState::new(&self.connection_info.token, &self.connection_info.endpoint, &self.connection_info.session_id));
+
+            lavalink.update_player(&self.guild_id, false, player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 }

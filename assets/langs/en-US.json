@@ -1,4 +1,7 @@
 {
+    "embed": {
+        "footer_text": "Hydrogen by DeerSoftware"
+    },
     "play": {
         "name": "play",
         "description": "Searches and plays the requested song, initializing the player if necessary.",
@@ -6,6 +9,15 @@
         "query_description": "The query to search for.",
         "unknown_voice_state": "You aren't in a voice chat!",
         "cant_connect": "Can't connect to the voice chat!",
-        "playing": "Requested music: ${music}"
+        "is_not_same_voice": "You aren't in the same voice chat as me!",
+        "embed_title": "Playing Music",
+        "playing_one_uri": "Playing: [${author} - ${music}](${uri})",
+        "playing_one": "Playing: ${author} - ${music}",
+        "enqueue_one_uri": "Enqueued: [${author} - ${music}](${uri})",
+        "enqueue_one": "Enqueued: ${music} by ${author}",
+        "playing_playlist_uri": "Playing: [${author} - ${music}](${uri})\nEnqueued: ${count} musics",
+        "playing_playlist": "Playing: ${author} - ${music}\nEnqueued: ${count} musics",
+        "enqueue_playlist": "Enqueued: ${count} musics.",
+        "not_found": "Not found anything with this query."
     }
 }

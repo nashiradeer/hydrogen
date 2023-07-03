@@ -1,34 +1,91 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serenity::{prelude::Context, model::{prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId, Guild, UserId, GuildId}, channel}, builder::CreateApplicationCommand};
+use serenity::{prelude::Context, model::prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId, Guild, UserId, GuildId}, builder::CreateApplicationCommand};
 use songbird::{ConnectionInfo, Songbird};
 use tracing::warn;
 
-use crate::{HydrogenContext, lavalink::rest::{LavalinkUpdatePlayer, LavalinkVoiceState}, HydrogenCommandListener, i18n::HydrogenI18n, player::HydrogenPlayer};
+use crate::{HydrogenContext, HydrogenCommandListener, i18n::HydrogenI18n, player::{HydrogenPlayer, HydrogenPlayResult}};
 
 pub struct PlayCommand;
 
 impl PlayCommand {
+    #[inline]
     fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
         Ok(guild.voice_states.get(&user_id).ok_or(Err("can't find the user voice state in the origin guild".to_owned()))?
             .channel_id.ok_or(Err("can't get the channel id from the voice state".to_owned()))?)
     }
 
-    async fn join_channel(hydrogen: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction, voice_manager: Arc<Songbird>, guild_id: GuildId, channel_id: ChannelId) -> Result<ConnectionInfo, String> {
+    #[inline]
+    async fn join_channel<'a>(hydrogen: &'a HydrogenContext, context: &'a Context, interaction: &'a ApplicationCommandInteraction, voice_manager: &'a Arc<Songbird>, guild_id: GuildId, channel_id: ChannelId) -> Result<ConnectionInfo, String> {
         Ok(match voice_manager.join_gateway(guild_id, channel_id).await.1 {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
                     response
-                        .content(hydrogen.i18n.translate(&interaction.locale, "play", "cant_connect"))
+                        .embed(|embed|
+                            embed
+                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "cant_connect"))
+                                .color(0xf04747)
+                                .footer(|footer|
+                                    footer
+                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        )
                 }).await {
                     warn!("can't response to interaction: {:?}", e);
                 }
 
-                return Err("can't connect to voice chat".to_owned());
+                return Err(format!("can't connect to voice chat: {}", e));
             }
         })
+    }
+
+    #[inline]
+    fn get_message<'a>(result: HydrogenPlayResult, hydrogen: &'a HydrogenContext, interaction: &'a ApplicationCommandInteraction) -> String {
+        if let Some(track) = result.track {
+            if result.playing && result.count == 1 {
+                if let Some(uri) = track.uri {
+                    return hydrogen.i18n.translate(&interaction.locale, "play", "playing_one_uri")
+                        .replace("${music}", &track.title)
+                        .replace("${author}", &track.author)
+                        .replace("${uri}", &uri);
+                } else {
+                    return hydrogen.i18n.translate(&interaction.locale, "play", "playing_one")
+                        .replace("${music}", &track.title)
+                        .replace("${author}", &track.author);
+                }
+            } else if result.count == 1 {
+                if let Some(uri) = track.uri {
+                    return hydrogen.i18n.translate(&interaction.locale, "play", "enqueue_one_uri")
+                        .replace("${music}", &track.title)
+                        .replace("${author}", &track.author)
+                        .replace("${uri}", &uri);
+                } else {
+                    return hydrogen.i18n.translate(&interaction.locale, "play", "enqueue_one")
+                        .replace("${music}", &track.title)
+                        .replace("${author}", &track.author);
+                }
+            } else if result.playing {
+                if let Some(uri) = track.uri {
+                    return hydrogen.i18n.translate(&interaction.locale, "play", "playing_playlist_uri")
+                        .replace("${music}", &track.title)
+                        .replace("${author}", &track.author)
+                        .replace("${uri}", &uri)
+                        .replace("${count}", &result.count.to_string());
+                } else {
+                    return hydrogen.i18n.translate(&interaction.locale, "play", "playing_playlist")
+                        .replace("${music}", &track.title)
+                        .replace("${author}", &track.author)
+                        .replace("${count}", &result.count.to_string());
+                }
+            }
+        }
+        
+        return hydrogen.i18n.translate(&interaction.locale, "play", "enqueue_playlist")
+            .replace("${count}", &result.count.to_string());
     }
 
     async fn _execute(&self, hydrogen: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction) -> Result<(), String> {
@@ -47,12 +104,22 @@ impl PlayCommand {
         let guild_id = interaction.guild_id.ok_or("interaction doesn't have a guild_id".to_owned())?;
         let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
 
-        let channel_id = match Self::get_channel_id(guild, interaction.user.id) {
+        let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
                     response
-                        .content(hydrogen.i18n.translate(&interaction.locale, "play", "unknown_voice_state"))
+                        .embed(|embed|
+                            embed
+                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "unknown_voice_state"))
+                                .color(0xf04747)
+                                .footer(|footer|
+                                    footer
+                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        )
                 }).await {
                     warn!("can't response to interaction: {:?}", e);
                 }
@@ -60,38 +127,85 @@ impl PlayCommand {
             }
         };
 
-        
-        let player = match hydrogen.players.read().await.get(&guild_id).cloned() {
+        let connection_info = match voice_manager.get(guild_id) {
+            Some(v) => {
+                match v.lock().await.current_connection().cloned() {
+                    Some(v) => v,
+                    None => Self::join_channel(&hydrogen, &context, &interaction, &voice_manager, guild_id, voice_channel_id).await?
+                }
+            },
+            None => Self::join_channel(&hydrogen, &context, &interaction, &voice_manager, guild_id, voice_channel_id).await?
+        };
+
+        if let Some(channel_id) = connection_info.channel_id {
+            if channel_id != voice_channel_id.into() {
+                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                    response
+                        .embed(|embed|
+                            embed
+                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "is_not_same_voice"))
+                                .color(0xf04747)
+                                .footer(|footer|
+                                    footer
+                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        )
+                }).await {
+                    warn!("can't response to interaction: {:?}", e);
+                }
+
+                return Err("user isn't in the same channel".to_owned());
+            }
+        }
+
+        let maybe_player = hydrogen.players.read().await.get(&guild_id).cloned();
+        let player = match maybe_player {
             Some(v) => v,
             None => {
-                let connection_info = match voice_manager.get(guild_id) {
-                    Some(v) => {
-                        match v.lock().await.current_connection().cloned() {
-                            Some(v) => v,
-                            None => Self::join_channel(hydrogen, context, interaction, voice_manager, guild_id, channel_id).await?
-                        }
-                    },
-                    None => Self::join_channel(hydrogen, context, interaction, voice_manager, guild_id, channel_id).await?
-                };
-
                 let player = HydrogenPlayer::new(guild_id, connection_info);
-                hydrogen.players.blocking_write().insert(guild_id, player);
+                hydrogen.players.write().await.insert(guild_id, player.clone());
                 player
             }
         };
 
-        let result = player.play(hydrogen.lavalink, &query, interaction.user.id).await.map_err(|e| e.to_string())?;
+        let result = player.play(hydrogen.lavalink.clone(), &query, interaction.user.id).await.map_err(|e| e.to_string())?;
 
-
-        let mut message = String::new();
-        
-        
-
-        if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-            response
-                .content()
-        }).await {
-            warn!("can't response to interaction: {:?}", e);
+        if result.count > 0 {
+            if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                response
+                    .embed(|embed|
+                        embed
+                            .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                            .description(Self::get_message(result, &hydrogen, &interaction))
+                            .color(0x5865f2)
+                            .footer(|footer|
+                                footer
+                                    .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                    .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                            )
+                    )
+            }).await {
+                warn!("can't response to interaction: {:?}", e);
+            }
+        } else {
+            if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                response
+                    .embed(|embed|
+                        embed
+                            .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                            .description(hydrogen.i18n.translate(&interaction.locale, "play", "not_found"))
+                            .color(0xf04747)
+                            .footer(|footer|
+                                footer
+                                    .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                    .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                            )
+                    )
+            }).await {
+                warn!("can't response to interaction: {:?}", e);
+            }
         }
 
         Ok(())

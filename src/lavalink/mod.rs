@@ -44,7 +44,7 @@ pub enum LavalinkError {
     InvalidHeaderValue(InvalidHeaderValue),
     RestError(LavalinkErrorResponse),
     NotConnected,
-    InvalidResponse
+    InvalidResponse(serde_json::Error)
 }
 
 impl Display for LavalinkError {
@@ -54,9 +54,9 @@ impl Display for LavalinkError {
             Self::WebSocket(e) => e.fmt(f),
             Self::Reqwest(e) => e.fmt(f),
             Self::InvalidHeaderValue(e) => e.fmt(f),
+            Self::InvalidResponse(e) => e.fmt(f),
             Self::RestError(e) => write!(f, "rest error: {}", e.message),
-            Self::NotConnected => write!(f, "lavalink isn't connected"),
-            Self::InvalidResponse => write!(f, "lavalink server returned a invalid response")
+            Self::NotConnected => write!(f, "lavalink isn't connected")
         }
     }
 }
@@ -143,9 +143,10 @@ impl Lavalink {
 
     fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {
         serde_json::from_slice::<T>(&response).map_err(|_| {
-            serde_json::from_slice::<LavalinkErrorResponse>(&response)
-                .map(|v| LavalinkError::RestError(v))
-                .unwrap_or(LavalinkError::InvalidResponse)
+            match serde_json::from_slice::<LavalinkErrorResponse>(&response) {
+                Ok(v) => LavalinkError::RestError(v),
+                Err(e) => LavalinkError::InvalidResponse(e)
+            }
         })
     }
 
