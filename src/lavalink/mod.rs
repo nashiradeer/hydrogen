@@ -10,10 +10,19 @@ use serde::Deserialize;
 use tokio::{sync::RwLock, spawn};
 use tungstenite::Message;
 
-use self::{websocket::{LavalinkOpType, LavalinkReadyEvent}, rest::{LavalinkUpdatePlayer, LavalinkPlayer}};
+use self::{websocket::LavalinkReadyEvent, rest::{LavalinkUpdatePlayer, LavalinkPlayer, LavalinkErrorResponse, LavalinkTrackLoading}};
 
 pub mod rest;
 pub mod websocket;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum LavalinkOpType {
+    Ready,
+    PlayerUpdate,
+    Stats,
+    Event
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,17 +42,21 @@ pub enum LavalinkError {
     WebSocket(tungstenite::Error),
     Reqwest(reqwest::Error),
     InvalidHeaderValue(InvalidHeaderValue),
-    NotConnected
+    RestError(LavalinkErrorResponse),
+    NotConnected,
+    InvalidResponse
 }
 
 impl Display for LavalinkError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LavalinkError::Http(e) => write!(f, "{}", e),
-            LavalinkError::WebSocket(e) => write!(f, "{}", e),
-            LavalinkError::Reqwest(e) => write!(f, "{}", e),
-            LavalinkError::InvalidHeaderValue(e) => write!(f, "{}", e),
-            LavalinkError::NotConnected => write!(f, "lavalink isn't connected")
+            Self::Http(e) => e.fmt(f),
+            Self::WebSocket(e) => e.fmt(f),
+            Self::Reqwest(e) => e.fmt(f),
+            Self::InvalidHeaderValue(e) => e.fmt(f),
+            Self::RestError(e) => write!(f, "rest error: {}", e.message),
+            Self::NotConnected => write!(f, "lavalink isn't connected"),
+            Self::InvalidResponse => write!(f, "lavalink server returned a invalid response")
         }
     }
 }
@@ -128,15 +141,48 @@ impl Lavalink {
         Ok(())
     }
 
+    fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {
+        serde_json::from_slice::<T>(&response).map_err(|_| {
+            serde_json::from_slice::<LavalinkErrorResponse>(&response)
+                .map(|v| LavalinkError::RestError(v))
+                .unwrap_or(LavalinkError::InvalidResponse)
+        })
+    }
+
     pub async fn update_player(&self, guild_id: &str, no_replace: bool, player: LavalinkUpdatePlayer) -> Result<LavalinkPlayer> {
-        self.http_client.patch(format!(
+        let response = self.http_client.patch(format!(
             "{}/sessions/{}/players/{}?noReplace={}",
             self.http_uri,
             self.session_id.read().await.clone().ok_or(LavalinkError::NotConnected)?,
             guild_id,
             no_replace.to_string()
-        )).json(&player).send().await.or_else(|e| Err(LavalinkError::Reqwest(e)))?
-            .json::<LavalinkPlayer>().await.map_err(|e| LavalinkError::Reqwest(e))
+        )).json(&player).send().await.map_err(|e| LavalinkError::Reqwest(e))?
+            .bytes().await.map_err(|e| LavalinkError::Reqwest(e))?;
+
+        Self::parse_response(&response)
+    }
+
+    pub async fn track_load(&self, identifier: &str) -> Result<LavalinkTrackLoading> {
+        let response = self.http_client.get(format!(
+            "{}/loadtracks?identifier={}",
+            self.http_uri,
+            identifier
+        )).send().await.map_err(|e| LavalinkError::Reqwest(e))?
+            .bytes().await.map_err(|e| LavalinkError::Reqwest(e))?;
+
+        Self::parse_response(&response)
+    }
+
+    pub async fn get_player(&self, guild_id: &str) -> Result<LavalinkPlayer> {
+        let response = self.http_client.get(format!(
+            "{}/sessions/{}/players/{}",
+            self.http_uri,
+            self.session_id.read().await.clone().ok_or(LavalinkError::NotConnected)?,
+            guild_id
+        )).send().await.map_err(|e| LavalinkError::Reqwest(e))?
+            .bytes().await.map_err(|e| LavalinkError::Reqwest(e))?;
+
+        Self::parse_response(&response)
     }
 }
 

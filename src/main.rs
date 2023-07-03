@@ -3,8 +3,10 @@ use std::{env, collections::HashMap, sync::Arc, process::exit};
 use commands::play::PlayCommand;
 use i18n::HydrogenI18n;
 use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler, Lavalink};
-use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
+use player::HydrogenPlayer;
+use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command, GuildId}, async_trait, builder::CreateApplicationCommand};
 use songbird::SerenityInit;
+use tokio::sync::RwLock;
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
@@ -15,8 +17,9 @@ mod player;
 
 #[derive(Clone)]
 struct HydrogenContext {
-    pub lavalink: Arc<Lavalink>,
-    pub i18n: HydrogenI18n
+    pub i18n: HydrogenI18n,
+    pub players: Arc<RwLock<HashMap<GuildId, HydrogenPlayer>>>,
+    pub lavalink: Lavalink
 }
 
 #[derive(Clone)]
@@ -106,12 +109,13 @@ async fn main() {
         let password = env::var("LAVALINK_PASSWORD").expect("you need to set LAVALINK_PASSWORD environment variable");
         let tls = env::var("LAVALINK_TLS").unwrap_or_default().to_lowercase();
 
-        Arc::new(Lavalink::new(&uri, &password, tls == "true" || tls == "enabled" || tls == "on").expect("can't initialize lavalink"))
+        Lavalink::new(&uri, &password, tls == "true" || tls == "enabled" || tls == "on").expect("can't initialize lavalink")
     };
 
     debug!("initializing handler...");
     let app = HydrogenHandler {
         context: HydrogenContext {
+            players: Arc::new(RwLock::new(HashMap::new())),
             lavalink,
             i18n
         },

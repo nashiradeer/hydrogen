@@ -1,12 +1,36 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
-use serenity::{prelude::Context, model::prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId}, builder::CreateApplicationCommand};
+use serenity::{prelude::Context, model::{prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId, Guild, UserId, GuildId}, channel}, builder::CreateApplicationCommand};
+use songbird::{ConnectionInfo, Songbird};
 use tracing::warn;
 
-use crate::{HydrogenContext, lavalink::rest::{LavalinkUpdatePlayer, LavalinkVoiceState}, HydrogenCommandListener, i18n::HydrogenI18n};
+use crate::{HydrogenContext, lavalink::rest::{LavalinkUpdatePlayer, LavalinkVoiceState}, HydrogenCommandListener, i18n::HydrogenI18n, player::HydrogenPlayer};
 
 pub struct PlayCommand;
 
 impl PlayCommand {
+    fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
+        Ok(guild.voice_states.get(&user_id).ok_or(Err("can't find the user voice state in the origin guild".to_owned()))?
+            .channel_id.ok_or(Err("can't get the channel id from the voice state".to_owned()))?)
+    }
+
+    async fn join_channel(hydrogen: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction, voice_manager: Arc<Songbird>, guild_id: GuildId, channel_id: ChannelId) -> Result<ConnectionInfo, String> {
+        Ok(match voice_manager.join_gateway(guild_id, channel_id).await.1 {
+            Ok(v) => v,
+            Err(e) => {
+                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                    response
+                        .content(hydrogen.i18n.translate(&interaction.locale, "play", "cant_connect"))
+                }).await {
+                    warn!("can't response to interaction: {:?}", e);
+                }
+
+                return Err("can't connect to voice chat".to_owned());
+            }
+        })
+    }
+
     async fn _execute(&self, hydrogen: HydrogenContext, context: Context, interaction: ApplicationCommandInteraction) -> Result<(), String> {
         let query = interaction
             .data.options.get(0).ok_or("required 'query' parameter missing".to_owned())?
@@ -23,10 +47,7 @@ impl PlayCommand {
         let guild_id = interaction.guild_id.ok_or("interaction doesn't have a guild_id".to_owned())?;
         let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
 
-        let channel_id = match move || -> Result<ChannelId, Result<(), String>> {
-            Ok(guild.voice_states.get(&interaction.user.id).ok_or(Err("can't find the user voice state in the origin guild".to_owned()))?
-                .channel_id.ok_or(Err("can't get the channel id from the voice state".to_owned()))?)
-        }() {
+        let channel_id = match Self::get_channel_id(guild, interaction.user.id) {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
@@ -39,34 +60,36 @@ impl PlayCommand {
             }
         };
 
-        let mut player = LavalinkUpdatePlayer::new().identifier(&query);
+        
+        let player = match hydrogen.players.read().await.get(&guild_id).cloned() {
+            Some(v) => v,
+            None => {
+                let connection_info = match voice_manager.get(guild_id) {
+                    Some(v) => {
+                        match v.lock().await.current_connection().cloned() {
+                            Some(v) => v,
+                            None => Self::join_channel(hydrogen, context, interaction, voice_manager, guild_id, channel_id).await?
+                        }
+                    },
+                    None => Self::join_channel(hydrogen, context, interaction, voice_manager, guild_id, channel_id).await?
+                };
 
-        if voice_manager.get(guild_id).is_none() {
-            match voice_manager.join_gateway(guild_id, channel_id).await.1 {
-                Ok(v) => {
-                    player.voice_state(LavalinkVoiceState::new(&v.token, &v.endpoint, &v.session_id));
+                let player = HydrogenPlayer::new(guild_id, connection_info);
+                hydrogen.players.blocking_write().insert(guild_id, player);
+                player
+            }
+        };
 
-                    Ok(())
-                },
-                Err(e) => {
-                    if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                        response
-                            .content(hydrogen.i18n.translate(&interaction.locale, "play", "cant_connect"))
-                    }).await {
-                        warn!("can't response to interaction: {:?}", e);
-                    }
+        let result = player.play(hydrogen.lavalink, &query, interaction.user.id).await.map_err(|e| e.to_string())?;
 
-                    Err(format!("can't join the voice chat: {}", e))
-                }
-            }?;
-        }
 
-        let music = hydrogen.lavalink.update_player(&guild_id.0.to_string(), false, player).await.map_err(|e| format!("can't update lavalink player: {:?}", e))?;
-        let track = music.track.ok_or("lavalink update player don't has returned the track".to_owned())?;
+        let mut message = String::new();
+        
+        
 
         if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
             response
-                .content(hydrogen.i18n.translate(&interaction.locale, "play", "playing").replace("${music}", &track.info.title))
+                .content()
         }).await {
             warn!("can't response to interaction: {:?}", e);
         }
