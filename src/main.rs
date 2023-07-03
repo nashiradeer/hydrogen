@@ -2,7 +2,7 @@ use std::{env, collections::HashMap, sync::Arc, process::exit};
 
 use commands::play::PlayCommand;
 use i18n::HydrogenI18n;
-use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler, Lavalink};
+use lavalink::{websocket::{LavalinkReadyEvent, LavalinkTrackEndEvent, LavalinkTrackStartEvent, LavalinkTrackEndReason}, LavalinkHandler, Lavalink};
 use player::HydrogenPlayer;
 use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command, GuildId}, async_trait, builder::CreateApplicationCommand};
 use songbird::SerenityInit;
@@ -43,6 +43,27 @@ impl LavalinkHandler for HydrogenHandler {
     async fn lavalink_disconnect(&self, _node: Lavalink) {
         error!("lavalink has disconnected");
         exit(1);
+    }
+
+    async fn lavalink_track_start(&self, _node: Lavalink, _message: LavalinkTrackStartEvent) {
+
+    }
+
+    async fn lavalink_track_end(&self, node: Lavalink, message: LavalinkTrackEndEvent) {
+        if message.reason == LavalinkTrackEndReason::Finished {
+            let guild_id = match message.guild_id.parse::<u64>() {
+                Ok(v) => v,
+                Err(e) => {
+                    warn!("invalid guild id in track end event: {}", e);
+                    return;
+                }
+            };
+            if let Some(player) = self.context.players.read().await.get(&guild_id.into()) {
+                if let Err(e) = player.next(node).await {
+                    warn!("track end event error: {}", e);
+                }
+            }
+        }
     }
 }
 

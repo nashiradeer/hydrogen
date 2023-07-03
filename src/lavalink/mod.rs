@@ -10,7 +10,7 @@ use serde::Deserialize;
 use tokio::{sync::RwLock, spawn};
 use tungstenite::Message;
 
-use self::{websocket::LavalinkReadyEvent, rest::{LavalinkUpdatePlayer, LavalinkPlayer, LavalinkErrorResponse, LavalinkTrackLoading}};
+use self::{websocket::{LavalinkReadyEvent, LavalinkTrackStartEvent, LavalinkTrackEndEvent}, rest::{LavalinkUpdatePlayer, LavalinkPlayer, LavalinkErrorResponse, LavalinkTrackLoading}};
 
 pub mod rest;
 pub mod websocket;
@@ -30,10 +30,29 @@ struct LavalinkInternalOp {
     pub op: LavalinkOpType
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+enum LavalinkEventType {
+    TrackStartEvent,
+    TrackEndEvent,
+    TrackExceptionEvent,
+    TrackStuckEvent,
+    WebSocketClosedEvent
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LavalinkInternalEvent {
+    #[serde(rename = "type")]
+    pub event_type: LavalinkEventType
+}
+
 #[async_trait]
 pub trait LavalinkHandler {
     async fn lavalink_ready(&self, _node: Lavalink, _message: LavalinkReadyEvent) {}
     async fn lavalink_disconnect(&self, _node: Lavalink) {}
+    async fn lavalink_track_start(&self, _node: Lavalink, _message: LavalinkTrackStartEvent) {}
+    async fn lavalink_track_end(&self, _node: Lavalink, _message: LavalinkTrackEndEvent) {}
 }
 
 #[derive(Debug)]
@@ -125,6 +144,23 @@ impl Lavalink {
                                 if let Ok(ready) = serde_json::from_str::<LavalinkReadyEvent>(&message_str) {
                                     *this.session_id.write().await = Some(ready.session_id.clone());
                                     handler.lavalink_ready(this.clone(), ready).await;
+                                }
+                            },
+                            LavalinkOpType::Event => {
+                                if let Ok(event) = serde_json::from_str::<LavalinkInternalEvent>(&message_str) {
+                                    match event.event_type {
+                                        LavalinkEventType::TrackStartEvent => {
+                                            if let Ok(track_start) = serde_json::from_str::<LavalinkTrackStartEvent>(&message_str) {
+                                                handler.lavalink_track_start(this.clone(), track_start).await;
+                                            }
+                                        },
+                                        LavalinkEventType::TrackEndEvent => {
+                                            if let Ok(track_end) = serde_json::from_str::<LavalinkTrackEndEvent>(&message_str) {
+                                                handler.lavalink_track_end(this.clone(), track_end).await;
+                                            }
+                                        },
+                                        _ => ()
+                                    }
                                 }
                             },
                             _ => ()
