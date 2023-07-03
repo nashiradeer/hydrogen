@@ -164,7 +164,7 @@ impl PlayCommand {
         let player = match maybe_player {
             Some(v) => v,
             None => {
-                let player = HydrogenPlayer::new(guild_id, connection_info);
+                let player = HydrogenPlayer::new(guild_id, interaction.channel_id, interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()), connection_info);
                 hydrogen.players.write().await.insert(guild_id, player.clone());
                 player
             }

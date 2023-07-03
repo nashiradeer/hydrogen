@@ -20,5 +20,11 @@
         "playing_playlist": "Tocando: ${author} - ${music}\nEnfileirado: ${count} músicas",
         "enqueue_playlist": "Enfileirado: ${count} músicas",
         "not_found": "Não foi achado nada com esse termo."
+    },
+    "playing": {
+        "title": "Tocando Agora",
+        "description_uri": "[${author} - ${music}](${uri})",
+        "description": "${author} - ${music}",
+        "empty": "_Tocando nada_"
     }
 }

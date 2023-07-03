@@ -14,10 +14,16 @@
         "playing_one_uri": "Playing: [${author} - ${music}](${uri})",
         "playing_one": "Playing: ${author} - ${music}",
         "enqueue_one_uri": "Enqueued: [${author} - ${music}](${uri})",
-        "enqueue_one": "Enqueued: ${music} by ${author}",
+        "enqueue_one": "Enqueued: ${author} - ${music}",
         "playing_playlist_uri": "Playing: [${author} - ${music}](${uri})\nEnqueued: ${count} musics",
         "playing_playlist": "Playing: ${author} - ${music}\nEnqueued: ${count} musics",
         "enqueue_playlist": "Enqueued: ${count} musics.",
         "not_found": "Not found anything with this query."
+    },
+    "playing": {
+        "title": "Playing Now",
+        "description_uri": "[${author} - ${music}](${uri})",
+        "description": "${author} - ${music}",
+        "empty": "_Nothing playing_"
     }
 }

@@ -4,7 +4,7 @@ use commands::play::PlayCommand;
 use i18n::HydrogenI18n;
 use lavalink::{websocket::{LavalinkReadyEvent, LavalinkTrackEndEvent, LavalinkTrackStartEvent, LavalinkTrackEndReason}, LavalinkHandler, Lavalink};
 use player::HydrogenPlayer;
-use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command, GuildId}, async_trait, builder::CreateApplicationCommand};
+use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::{prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command, GuildId, ReactionType}, application::component::ButtonStyle}, async_trait, builder::{CreateApplicationCommand, CreateComponents, CreateEmbedAuthor}, http::Http, client::Cache};
 use songbird::SerenityInit;
 use tokio::sync::RwLock;
 use tracing::{error, info, debug, warn};
@@ -25,6 +25,8 @@ struct HydrogenContext {
 #[derive(Clone)]
 struct HydrogenHandler {
     context: HydrogenContext,
+    cache: Arc<RwLock<Option<Arc<Cache>>>>,
+    http: Arc<RwLock<Option<Arc<Http>>>>,
     commands: Arc<HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>>
 }
 
@@ -45,8 +47,16 @@ impl LavalinkHandler for HydrogenHandler {
         exit(1);
     }
 
-    async fn lavalink_track_start(&self, _node: Lavalink, _message: LavalinkTrackStartEvent) {
+    async fn lavalink_track_start(&self, _: Lavalink, message: LavalinkTrackStartEvent) {
+        let guild_id = match message.guild_id.parse::<u64>() {
+            Ok(v) => v,
+            Err(e) => {
+                warn!("invalid guild id in track end event: {}", e);
+                return;
+            }
+        };
 
+        self.update_player_message(guild_id.into()).await;
     }
 
     async fn lavalink_track_end(&self, node: Lavalink, message: LavalinkTrackEndEvent) {
@@ -62,6 +72,8 @@ impl LavalinkHandler for HydrogenHandler {
                 if let Err(e) = player.next(node).await {
                     warn!("track end event error: {}", e);
                 }
+
+                self.update_player_message(guild_id.into()).await;
             }
         }
     }
@@ -71,6 +83,8 @@ impl LavalinkHandler for HydrogenHandler {
 impl EventHandler for HydrogenHandler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("client initialized and connected to: {}", ready.user.name);
+        *self.cache.write().await = Some(ctx.cache.clone());
+        *self.http.write().await = Some(ctx.http.clone());
 
         debug!("registering commands...");
         for (name, command) in self.commands.iter() {
@@ -109,6 +123,158 @@ impl EventHandler for HydrogenHandler {
     }
 }
 
+impl HydrogenHandler {
+    pub async fn update_player_message(&self, guild_id: GuildId) {
+        if let Some(http) = self.http.read().await.clone() {
+            let cache_http = self.cache.read().await.clone().map(|v| (v, http.clone()));
+
+            if let Some(player) = self.context.players.read().await.get(&guild_id.into()) {
+                let (translated_message, requester) = match player.now().await {
+                    Some(v) => {
+                        let message = match v.uri {
+                            Some(v) => self.context.i18n.translate(&player.guild_locale(), "playing", "description_uri")
+                                        .replace("${uri}", &v),
+                            None => self.context.i18n.translate(&player.guild_locale(), "playing", "description")
+                        }
+                            .replace("${music}", &v.title)
+                            .replace("${author}", &v.author);
+
+                        (message, Some(v.requester_id))
+                    },
+                    None => (
+                        self.context.i18n.translate(&player.guild_locale(), "playing", "empty"),
+                        None
+                    )
+                };
+
+                let mut author_obj: Option<CreateEmbedAuthor> = None;
+                if let Some(author) = requester {
+                    let result_author_user = match cache_http {
+                        Some(v) => author.to_user((&v.0, v.1.as_ref())).await,
+                        None => author.to_user(http.clone()).await
+                    };
+
+                    if let Ok(author_user) = result_author_user {
+                        let mut inner_author_obj = CreateEmbedAuthor::default();
+
+                        inner_author_obj.name(author_user.name.clone());
+
+                        if let Some(avatar_url) = author_user.avatar_url() {
+                            inner_author_obj.icon_url(avatar_url);
+                        }
+
+                        author_obj = Some(inner_author_obj.to_owned());
+                    }
+                }
+
+                if let Some(message_id) = player.message_id.read().await.clone() {
+                    match player.text_channel_id().edit_message(http.clone(), message_id, |message|
+                        message
+                            .embed(|embed| {
+                                if let Some(author_obj) = author_obj.clone() {
+                                    embed.set_author(author_obj);
+                                }
+
+                                embed
+                                    .title(self.context.i18n.translate(&player.guild_locale(), "playing", "title"))
+                                    .description(&translated_message)
+                                    .color(0x5865f2)
+                                    .footer(|footer|
+                                        footer
+                                            .text(self.context.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
+                                            .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                    )
+                            })
+                            .set_components(Self::play_components(requester.is_none()))
+                    ).await {
+                        Ok(_) => return,
+                        Err(e) => {
+                            warn!("can't edit player message: {}", e);
+                        }
+                    }
+                }
+
+                match player.text_channel_id().send_message(http.clone(), |message|
+                    message
+                        .embed(|embed| {
+                            if let Some(author_obj) = author_obj {
+                                embed.set_author(author_obj);
+                            }
+
+                            embed
+                                .title(self.context.i18n.translate(&player.guild_locale(), "playing", "title"))
+                                .description(translated_message)
+                                .color(0x5865f2)
+                                .footer(|footer|
+                                    footer
+                                        .text(self.context.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        })
+                        .set_components(Self::play_components(requester.is_none()))
+                ).await {
+                    Ok(v) => *player.message_id.write().await = Some(v.id),
+                    Err(e) => warn!("can't send a new playing message: {}", e)
+                };
+            }
+        } else {
+            error!("http client not initialized");
+        }
+    }
+
+    pub fn play_components(disable_all: bool) -> CreateComponents {
+        CreateComponents::default()
+            .create_action_row(|action_row|
+                action_row
+                    .create_button(|button|
+                        button
+                            .custom_id("prev")
+                            .disabled(disable_all)
+                            .emoji('⏮')
+                            .style(ButtonStyle::Secondary)
+                    )
+                    .create_button(|button|
+                        button
+                            .custom_id("pause")
+                            .disabled(disable_all)
+                            .emoji('⏸')
+                            .style(ButtonStyle::Secondary)
+                    )
+                    .create_button(|button|
+                        button
+                            .custom_id("skip")
+                            .disabled(disable_all)
+                            .emoji('⏭')
+                            .style(ButtonStyle::Secondary)
+                    )
+            )
+            .create_action_row(|action_row|
+                action_row
+                    .create_button(|button|
+                        button
+                            .custom_id("loop")
+                            .disabled(disable_all)
+                            .emoji(ReactionType::Unicode("⤵️".to_owned()))
+                            .style(ButtonStyle::Secondary)
+                    )
+                    .create_button(|button|
+                        button
+                            .custom_id("stop")
+                            .disabled(disable_all)
+                            .emoji('⏹')
+                            .style(ButtonStyle::Secondary)
+                    )
+                    .create_button(|button|
+                        button
+                            .custom_id("queue")
+                            .disabled(disable_all)
+                            .emoji(ReactionType::Unicode("ℹ️".to_owned()))
+                            .style(ButtonStyle::Secondary)
+                    )
+            ).to_owned()
+    }
+}
+
 #[tokio::main]
 async fn main() {
     registry()
@@ -140,6 +306,8 @@ async fn main() {
             lavalink,
             i18n
         },
+        cache: Arc::new(RwLock::new(None)),
+        http: Arc::new(RwLock::new(None)),
         commands: {
             let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
             

@@ -1,6 +1,7 @@
 use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}, fmt::Display, result};
 
-use serenity::model::prelude::{GuildId, UserId};
+use rand::Rng;
+use serenity::model::prelude::{GuildId, UserId, ChannelId, MessageId};
 use songbird::ConnectionInfo;
 use tokio::sync::RwLock;
 
@@ -11,7 +12,8 @@ pub enum LoopType {
     None,
     NoAutostart,
     Music,
-    Queue
+    Queue,
+    Random
 }
 
 #[derive(Clone)]
@@ -60,38 +62,63 @@ pub struct HydrogenPlayResult {
 
 #[derive(Clone)]
 pub struct HydrogenPlayer {
-    pub musics: Arc<RwLock<Vec<HydrogenMusic>>>,
-    pub index: Arc<AtomicUsize>,
-    pub queue_loop: Arc<RwLock<LoopType>>,
-    pub guild_id: String,
-    pub connection_info: ConnectionInfo
+    musics: Arc<RwLock<Vec<HydrogenMusic>>>,
+    index: Arc<AtomicUsize>,
+    queue_loop: Arc<RwLock<LoopType>>,
+    guild_id: String,
+    connection_info: ConnectionInfo,
+    text_channel_id: ChannelId,
+    guild_locale: String,
+    pub message_id: Arc<RwLock<Option<MessageId>>>
 }
 
 impl HydrogenPlayer {
-    pub fn new(guild_id: GuildId, connection_info: ConnectionInfo) -> Self {
+    pub fn new(guild_id: GuildId, text_channel_id: ChannelId, guild_locale: String, connection_info: ConnectionInfo) -> Self {
         Self {
             musics: Arc::new(RwLock::new(Vec::new())),
             index: Arc::new(AtomicUsize::new(0)),
             queue_loop: Arc::new(RwLock::new(LoopType::None)),
             guild_id: guild_id.0.to_string(),
-            connection_info
+            message_id: Arc::new(RwLock::new(None)),
+            text_channel_id,
+            connection_info,
+            guild_locale
         }
+    }
+
+    pub fn text_channel_id(&self) -> ChannelId {
+        self.text_channel_id
+    }
+
+    pub fn guild_locale(&self) -> String {
+        self.guild_locale.clone()
+    }
+
+    pub async fn now(&self) -> Option<HydrogenMusic> {
+        self.musics.read().await.get(self.index.load(Ordering::Relaxed)).cloned()
     }
 
     pub async fn next(&self, lavalink: Lavalink) -> Result<()> {
         let queue_loop = self.queue_loop.read().await;
         if queue_loop.ne(&LoopType::NoAutostart) {
             if queue_loop.ne(&LoopType::Music) {
-                let index = self.index.fetch_add(1, Ordering::AcqRel) + 1;
-                let queue_len = self.musics.read().await.len();
-                if index >= queue_len {
-                    if queue_loop.eq(&LoopType::Queue) {
-                        self.index.store(0, Ordering::Release);
-                        self.start_playing(lavalink).await?;
+                if queue_loop.ne(&LoopType::Random) {
+                    let index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
+                    let queue_len = self.musics.read().await.len();
+                    if index >= queue_len {
+                        if queue_loop.eq(&LoopType::Queue) {
+                            self.index.store(0, Ordering::Relaxed);
+                            self.start_playing(lavalink).await?;
+                        } else {
+                            self.index.store(queue_len, Ordering::Relaxed);
+                        }
                     } else {
-                        self.index.store(queue_len, Ordering::Release);
+                        self.start_playing(lavalink).await?;
                     }
                 } else {
+                    let queue_len = self.musics.read().await.len();
+                    let new_index = rand::thread_rng().gen_range(0..queue_len);
+                    self.index.store(new_index, Ordering::Relaxed);
                     self.start_playing(lavalink).await?;
                 }
             }
@@ -151,7 +178,7 @@ impl HydrogenPlayer {
 
         if lavalink_not_playing {
             let index = starting_index + musics.playlist_info.selected_track.unwrap_or(0).try_into().unwrap_or(0);
-            self.index.store(index, Ordering::Release);
+            self.index.store(index, Ordering::Relaxed);
             playing = self.start_playing(lavalink.clone()).await?;
             if playing {
                 this_play_track = self.musics.read().await.get(index).cloned();
@@ -166,7 +193,7 @@ impl HydrogenPlayer {
     }
 
     async fn start_playing(&self, lavalink: Lavalink) -> Result<bool> {
-        if let Some(music) = self.musics.read().await.get(self.index.load(Ordering::Acquire)) {
+        if let Some(music) = self.musics.read().await.get(self.index.load(Ordering::Relaxed)) {
             let player = LavalinkUpdatePlayer::new()
                     .encoded_track(&music.encoded_track)
                     .voice_state(LavalinkVoiceState::new(&self.connection_info.token, &self.connection_info.endpoint, &self.connection_info.session_id));
