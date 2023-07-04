@@ -221,6 +221,18 @@ impl Lavalink {
 
         Self::parse_response(&response)
     }
+
+    pub async fn destroy_player(&self, guild_id: &str) -> Result<()> {
+        self.http_client.get(format!(
+            "{}/sessions/{}/players/{}",
+            self.http_uri,
+            self.session_id.read().await.clone().ok_or(LavalinkError::NotConnected)?,
+            guild_id
+        )).send().await.map_err(|e| LavalinkError::Reqwest(e))?
+            .bytes().await.map_err(|e| LavalinkError::Reqwest(e))?;
+
+        Ok(())
+    }
 }
 
 pub fn generate_key() -> String {

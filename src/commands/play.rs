@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serenity::{prelude::Context, model::prelude::{application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId, Guild, UserId, GuildId}, builder::CreateApplicationCommand};
-use songbird::{ConnectionInfo, Songbird};
+use songbird::{Songbird, Call};
+use tokio::sync::Mutex;
 use tracing::warn;
 
 use crate::{HydrogenContext, HydrogenCommandListener, i18n::HydrogenI18n, player::{HydrogenPlayer, HydrogenPlayResult}};
@@ -17,9 +18,10 @@ impl PlayCommand {
     }
 
     #[inline]
-    async fn join_channel<'a>(hydrogen: &'a HydrogenContext, context: &'a Context, interaction: &'a ApplicationCommandInteraction, voice_manager: &'a Arc<Songbird>, guild_id: GuildId, channel_id: ChannelId) -> Result<ConnectionInfo, String> {
-        Ok(match voice_manager.join_gateway(guild_id, channel_id).await.1 {
-            Ok(v) => v,
+    async fn join_channel<'a>(hydrogen: &'a HydrogenContext, context: &'a Context, interaction: &'a ApplicationCommandInteraction, voice_manager: &'a Arc<Songbird>, guild_id: GuildId, channel_id: ChannelId) -> Result<Arc<Mutex<Call>>, String> {
+        let voice = voice_manager.join_gateway(guild_id, channel_id).await;
+        Ok(match voice.1 {
+            Ok(_) => voice.0,
             Err(e) => {
                 if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
                     response
@@ -127,36 +129,39 @@ impl PlayCommand {
             }
         };
 
-        let connection_info = match voice_manager.get(guild_id) {
+        let call = match voice_manager.get(guild_id) {
             Some(v) => {
-                match v.lock().await.current_connection().cloned() {
-                    Some(v) => v,
-                    None => Self::join_channel(&hydrogen, &context, &interaction, &voice_manager, guild_id, voice_channel_id).await?
+                if v.lock().await.current_connection().cloned().is_none() {
+                    Self::join_channel(&hydrogen, &context, &interaction, &voice_manager, guild_id, voice_channel_id).await?;
                 }
+
+                v
             },
             None => Self::join_channel(&hydrogen, &context, &interaction, &voice_manager, guild_id, voice_channel_id).await?
         };
 
-        if let Some(channel_id) = connection_info.channel_id {
-            if channel_id != voice_channel_id.into() {
-                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                    response
-                        .embed(|embed|
-                            embed
-                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "is_not_same_voice"))
-                                .color(0xf04747)
-                                .footer(|footer|
-                                    footer
-                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        )
-                }).await {
-                    warn!("can't response to interaction: {:?}", e);
-                }
+        if let Some(connection_info) = call.lock().await.current_connection().cloned() {
+            if let Some(channel_id) = connection_info.channel_id {
+                if channel_id != voice_channel_id.into() {
+                    if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                        response
+                            .embed(|embed|
+                                embed
+                                    .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                                    .description(hydrogen.i18n.translate(&interaction.locale, "play", "is_not_same_voice"))
+                                    .color(0xf04747)
+                                    .footer(|footer|
+                                        footer
+                                            .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                            .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                    )
+                            )
+                    }).await {
+                        warn!("can't response to interaction: {:?}", e);
+                    }
 
-                return Err("user isn't in the same channel".to_owned());
+                    return Err("user isn't in the same channel".to_owned());
+                }
             }
         }
 
@@ -164,7 +169,7 @@ impl PlayCommand {
         let player = match maybe_player {
             Some(v) => v,
             None => {
-                let player = HydrogenPlayer::new(guild_id, interaction.channel_id, interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()), connection_info);
+                let player = HydrogenPlayer::new(guild_id, interaction.channel_id, interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()), call);
                 hydrogen.players.write().await.insert(guild_id, player.clone());
                 player
             }

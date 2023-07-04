@@ -1,9 +1,9 @@
-use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}, fmt::Display, result};
+use std::{sync::{Arc, atomic::{AtomicUsize, Ordering, AtomicBool}}, fmt::Display, result, time::Duration};
 
 use rand::Rng;
 use serenity::model::prelude::{GuildId, UserId, ChannelId, MessageId};
-use songbird::ConnectionInfo;
-use tokio::sync::RwLock;
+use songbird::{Call, error::JoinError};
+use tokio::{sync::{RwLock, Mutex}, time::sleep, task::JoinHandle, spawn};
 
 use crate::lavalink::{Lavalink, LavalinkError, rest::{LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState, LavalinkLoadResultType}};
 
@@ -42,12 +42,14 @@ impl HydrogenMusic {
 #[derive(Debug)]
 pub enum HydrogenPlayerError {
     Lavalink(LavalinkError),
+    Join(JoinError),
 }
 
 impl Display for HydrogenPlayerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Lavalink(e) => e.fmt(f)
+            Self::Lavalink(e) => e.fmt(f),
+            Self::Join(e) => e.fmt(f)
         }
     }
 }
@@ -66,22 +68,26 @@ pub struct HydrogenPlayer {
     index: Arc<AtomicUsize>,
     queue_loop: Arc<RwLock<LoopType>>,
     guild_id: String,
-    connection_info: ConnectionInfo,
+    call: Arc<Mutex<Call>>,
     text_channel_id: ChannelId,
     guild_locale: String,
+    destroy_handle: Arc<RwLock<Option<Arc<JoinHandle<()>>>>>,
+    destroyed: Arc<AtomicBool>,
     pub message_id: Arc<RwLock<Option<MessageId>>>
 }
 
 impl HydrogenPlayer {
-    pub fn new(guild_id: GuildId, text_channel_id: ChannelId, guild_locale: String, connection_info: ConnectionInfo) -> Self {
+    pub fn new(guild_id: GuildId, text_channel_id: ChannelId, guild_locale: String, call: Arc<Mutex<Call>>) -> Self {
         Self {
             musics: Arc::new(RwLock::new(Vec::new())),
             index: Arc::new(AtomicUsize::new(0)),
             queue_loop: Arc::new(RwLock::new(LoopType::None)),
             guild_id: guild_id.0.to_string(),
             message_id: Arc::new(RwLock::new(None)),
+            destroyed: Arc::new(AtomicBool::new(false)),
+            destroy_handle: Arc::new(RwLock::new(None)),
             text_channel_id,
-            connection_info,
+            call,
             guild_locale
         }
     }
@@ -92,6 +98,10 @@ impl HydrogenPlayer {
 
     pub fn guild_locale(&self) -> String {
         self.guild_locale.clone()
+    }
+
+    pub async fn call(&self) -> Arc<Mutex<Call>> {
+        self.call.clone()
     }
 
     pub async fn now(&self) -> Option<HydrogenMusic> {
@@ -193,16 +203,46 @@ impl HydrogenPlayer {
     }
 
     async fn start_playing(&self, lavalink: Lavalink) -> Result<bool> {
-        if let Some(music) = self.musics.read().await.get(self.index.load(Ordering::Relaxed)) {
-            let player = LavalinkUpdatePlayer::new()
-                    .encoded_track(&music.encoded_track)
-                    .voice_state(LavalinkVoiceState::new(&self.connection_info.token, &self.connection_info.endpoint, &self.connection_info.session_id));
+        if let Some(connection_info) = self.call.lock().await.current_connection().cloned() {
+            if let Some(music) = self.musics.read().await.get(self.index.load(Ordering::Relaxed)) {
+                let player = LavalinkUpdatePlayer::new()
+                        .encoded_track(&music.encoded_track)
+                        .voice_state(LavalinkVoiceState::new(&connection_info.token, &connection_info.endpoint, &connection_info.session_id));
 
-            lavalink.update_player(&self.guild_id, false, player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                lavalink.update_player(&self.guild_id, false, player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
 
-            return Ok(true);
+                return Ok(true);
+            }
         }
 
         Ok(false)
+    }
+
+    pub async fn destroy(&self, lavalink: Lavalink) -> Result<()> {
+        if !self.destroyed.load(Ordering::Relaxed) {
+            self.destroyed.store(true, Ordering::Relaxed);
+            *self.destroy_handle.write().await = None;
+            lavalink.destroy_player(&self.guild_id).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            self.call.lock().await.leave().await.map_err(|e| HydrogenPlayerError::Join(e))?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn timed_destroy(&self, lavalink: Lavalink, duration: Duration) {
+        let self_cloned = self.clone();
+        let lavalink_cloned = lavalink.clone();
+        *self.destroy_handle.write().await = Some(Arc::new(spawn(async move {
+            sleep(duration).await;
+            _ = self_cloned.destroy(lavalink_cloned).await;
+        })));
+    }
+
+    pub async fn cancel_destroy(&self) {
+        let maybe_handle = self.destroy_handle.read().await.clone();
+        if let Some(handle) = maybe_handle {
+            handle.abort();
+            *self.destroy_handle.write().await = None;
+        }
     }
 }
