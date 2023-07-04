@@ -6,7 +6,7 @@ use songbird::{Songbird, Call};
 use tokio::sync::Mutex;
 use tracing::warn;
 
-use crate::{HydrogenContext, HydrogenCommandListener, i18n::HydrogenI18n, player::{HydrogenPlayer, HydrogenPlayResult}};
+use crate::{HydrogenContext, HydrogenCommandListener, i18n::HydrogenI18n, player::HydrogenPlayCommand};
 
 pub struct PlayCommand;
 
@@ -46,7 +46,7 @@ impl PlayCommand {
     }
 
     #[inline]
-    fn get_message<'a>(result: HydrogenPlayResult, hydrogen: &'a HydrogenContext, interaction: &'a ApplicationCommandInteraction) -> String {
+    fn get_message<'a>(result: HydrogenPlayCommand, hydrogen: &'a HydrogenContext, interaction: &'a ApplicationCommandInteraction) -> String {
         if let Some(track) = result.track {
             if result.playing && result.count == 1 {
                 if let Some(uri) = track.uri {
@@ -102,6 +102,7 @@ impl PlayCommand {
             warn!("can't defer the response: {}", e);
         }
 
+        let manager = hydrogen.manager.read().await.clone().ok_or("manager not initialized".to_owned())?;
         let voice_manager = songbird::get(&context).await.ok_or("songbird not registered".to_owned())?;
         let guild_id = interaction.guild_id.ok_or("interaction doesn't have a guild_id".to_owned())?;
         let guild = context.cache.guild(guild_id).ok_or("guild isn't present in the cache".to_owned())?;
@@ -164,18 +165,14 @@ impl PlayCommand {
                 }
             }
         }
-
-        let maybe_player = hydrogen.players.read().await.get(&guild_id).cloned();
-        let player = match maybe_player {
-            Some(v) => v,
-            None => {
-                let player = HydrogenPlayer::new(guild_id, interaction.channel_id, interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()), call);
-                hydrogen.players.write().await.insert(guild_id, player.clone());
-                player
-            }
-        };
-
-        let result = player.play(hydrogen.lavalink.clone(), &query, interaction.user.id).await.map_err(|e| e.to_string())?;
+        let result = manager.new_or_play(
+            guild_id,
+            &interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()),
+            &query,
+            interaction.user.id,
+            interaction.channel_id,
+            call
+        ).await.map_err(|e| e.to_string())?;
 
         if result.count > 0 {
             if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
