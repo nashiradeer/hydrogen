@@ -1,5 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LavalinkErrorResponse {
+    pub timestamp: i64,
+    pub status: i32,
+    pub error: String,
+    pub trace: Option<String>,
+    pub message: String,
+    pub path: String
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkVoiceState {
@@ -57,16 +68,24 @@ impl LavalinkUpdatePlayer {
         }
     }
     
-    pub fn identifier(mut self, identifier: &str) -> Self {
-        if self.encoded_track == None {
-            self.identifier = Some(identifier.to_owned());
+    pub fn encoded_track(&mut self, encoded_track: &str) -> &mut Self {
+        if self.identifier == None {
+            self.encoded_track = Some(Some(encoded_track.to_owned()));
         }
 
         self
     }
 
-    pub fn voice_state(&mut self, voice_state: LavalinkVoiceState) {
+    pub fn voice_state(&mut self, voice_state: LavalinkVoiceState) -> &mut Self {
         self.voice = Some(voice_state);
+
+        self
+    }
+
+    pub fn position(&mut self, position: i32) -> &mut Self {
+        self.position = Some(position);
+
+        self
     }
 }
 
@@ -80,7 +99,7 @@ pub struct LavalinkPlayer {
     pub voice: LavalinkVoiceState
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkTrack {
     pub encoded: String,
@@ -88,7 +107,7 @@ pub struct LavalinkTrack {
     pub info: LavalinkTrackInfo
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkTrackInfo {
     pub identifier: String,
@@ -100,4 +119,47 @@ pub struct LavalinkTrackInfo {
     pub title: String,
     pub uri: Option<String>,
     pub source_name: String
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LavalinkTrackLoading {
+    pub playlist_info: LavalinkPlaylistInfo,
+    pub tracks: Vec<LavalinkTrack>,
+    pub exception: Option<LavalinkException>,
+    pub load_type: LavalinkLoadResultType
+}
+
+
+#[derive(Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LavalinkLoadResultType {
+    TrackLoaded,
+    PlaylistLoaded,
+    SearchResult,
+    NoMatches,
+    LoadFailed
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LavalinkPlaylistInfo {
+    pub name: Option<String>,
+    pub selected_track: Option<i32>
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LavalinkException {
+    pub message: Option<String>,
+    pub severity: LavalinkSeverity,
+    pub cause: String
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LavalinkSeverity {
+    Common,
+    Suspicious,
+    Fault
 }

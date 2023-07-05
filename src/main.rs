@@ -1,29 +1,31 @@
 use std::{env, collections::HashMap, sync::Arc, process::exit};
 
+use commands::play::PlayCommand;
 use i18n::HydrogenI18n;
-use lavalink::{websocket::LavalinkReadyEvent, LavalinkHandler};
-use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, async_trait, builder::CreateApplicationCommand};
+use lavalink::LavalinkNodeInfo;
+use manager::HydrogenManager;
+use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::{prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command, VoiceServerUpdateEvent}, voice::VoiceState}, async_trait, builder::CreateApplicationCommand};
 use songbird::SerenityInit;
+use tokio::sync::RwLock;
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
 mod commands;
-use crate::commands::play::PlayCommand;
-
-mod lavalink;
-use crate::lavalink::Lavalink;
-
 mod i18n;
+mod lavalink;
+mod manager;
+mod player;
 
 #[derive(Clone)]
 struct HydrogenContext {
-    pub lavalink: Arc<Lavalink>,
-    pub i18n: HydrogenI18n
+    pub i18n: HydrogenI18n,
+    pub manager: Arc<RwLock<Option<HydrogenManager>>>
 }
 
 #[derive(Clone)]
 struct HydrogenHandler {
     context: HydrogenContext,
+    lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
     commands: Arc<HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>>
 }
 
@@ -34,21 +36,14 @@ trait HydrogenCommandListener {
 }
 
 #[async_trait]
-impl LavalinkHandler for HydrogenHandler {
-    async fn lavalink_ready(&self, _: Lavalink, _: LavalinkReadyEvent) {
-        info!("lavalink initialized and connected");
-    }
-
-    async fn lavalink_disconnect(&self, _node: Lavalink) {
-        error!("lavalink has disconnected");
-        exit(1);
-    }
-}
-
-#[async_trait]
 impl EventHandler for HydrogenHandler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("client initialized and connected to: {}", ready.user.name);
+
+        debug!("initializing hydrogen manager...");
+        let manager = HydrogenManager::new(ctx.cache.clone(), ctx.http.clone(), self.context.i18n.clone());
+        *self.context.manager.write().await = Some(manager.clone());
+        info!("hydrogen manager initialized");
 
         debug!("registering commands...");
         for (name, command) in self.commands.iter() {
@@ -59,31 +54,65 @@ impl EventHandler for HydrogenHandler {
                 error!("can't register '{}' command: {}", name, e);
             }
         }
-
         info!("commands registered");
 
-        debug!("connecting to lavalink server...");
-        if let Err(e) = self.context.lavalink.connect(&ready.user.id.0.to_string(), self.clone()).await {
-            error!("can't connect to the lavalink server: {}", e);
+
+        info!("connecting to the lavalink nodes...");
+        for i in 0..self.lavalink_nodes.len() {
+            if let Some(node) = self.lavalink_nodes.get(i) {
+                if let Err(e) = manager.connect_lavalink(node.clone()).await {
+                    error!("can't connect to the lavalink node {}: {}", i, e);
+                }
+            }
+        }
+
+        if manager.lavalink_node_count().await == 0 {
+            error!("there's not lavalink nodes connected");
             exit(1);
         }
+
+        info!("connected to {} lavalink nodes", manager.lavalink_node_count().await);
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match interaction {
             Interaction::ApplicationCommand(command) => {
-                let command_name = command.data.name.as_str();
+                let command_name = command.data.name.clone();
                 debug!("executing application command: {}", command_name);
 
-                if let Some(listener) = self.commands.get(command_name) {
+                if let Some(listener) = self.commands.get(&command_name) {
                     listener.execute(self.context.clone(), ctx, command).await;
                 }
                 else {
                     warn!("unknown command: {}", command_name);
                 }
+
+                debug!("application command executed: {}", command_name);
             }
             _ => (),
         }
+    }
+
+    async fn voice_state_update(&self, _: Context, old: Option<VoiceState>, new: VoiceState) {
+        debug!("processing voice state update...");
+        let option_manager = self.context.manager.read().await.clone();
+        if let Some(manager) = option_manager {
+            if let Err(e) = manager.update_voice_state(old, new).await {
+                warn!("error when updating player voice state: {}", e);
+            }
+        }
+        debug!("processed voice state update");
+    }
+
+    async fn voice_server_update(&self, _: Context, voice_server: VoiceServerUpdateEvent) {
+        debug!("processing voice server update...");
+        let option_manager = self.context.manager.read().await.clone();
+        if let Some(manager) = option_manager {
+            if let Err(e) = manager.update_voice_server(voice_server).await {
+                warn!("error when updating player voice server: {}", e);
+            }
+        }
+        debug!("processed voice server update");
     }
 }
 
@@ -102,19 +131,39 @@ async fn main() {
         HydrogenI18n::new(path, HydrogenI18n::DEFAULT_LANGUAGE)
     }.expect("can't initialize i18n");
 
-    debug!("initializing lavalink...");
-    let lavalink = {
-        let uri = env::var("LAVALINK_URL").expect("you need to set LAVALINK_URL environment variable");
-        let password = env::var("LAVALINK_PASSWORD").expect("you need to set LAVALINK_PASSWORD environment variable");
-        let tls = env::var("LAVALINK_TLS").unwrap_or_default().to_lowercase();
+    debug!("parsing lavalink config...");
+    let lavalink_nodes = {
+        let mut lavalink_nodes = Vec::new();
+        let lavalink_env = env::var("LAVALINK").expect("you need to set LAVALINK environment variable");
 
-        Arc::new(Lavalink::new(&uri, &password, tls == "true" || tls == "enabled" || tls == "on").expect("can't initialize lavalink"))
+        for single_node in lavalink_env.split(";") {
+            let mut node_components = single_node.split(",");
+            let Some(host) = node_components.next() else {
+                break;
+            };
+
+            let password = node_components.next().expect("some lavalink node doesn't have password set");
+            let tls = node_components.next().unwrap_or("");
+
+            lavalink_nodes.push(LavalinkNodeInfo {
+                host: host.to_owned(),
+                password: password.to_owned(),
+                tls: tls == "true" || tls == "enabled" || tls == "on"
+            });
+        }
+
+        if lavalink_nodes.len() == 0 {
+            error!("at least one lavalink node is required to work");
+            exit(1);
+        }
+
+        Arc::new(lavalink_nodes)
     };
 
     debug!("initializing handler...");
     let app = HydrogenHandler {
         context: HydrogenContext {
-            lavalink,
+            manager: Arc::new(RwLock::new(None)),
             i18n
         },
         commands: {
@@ -123,10 +172,9 @@ async fn main() {
             commands.insert("play".to_owned(), Box::new(PlayCommand));
 
             Arc::new(commands)
-        }
+        },
+        lavalink_nodes
     };
-
-    
 
     debug!("initializing client...");
     Client::builder(env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"), GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES)
