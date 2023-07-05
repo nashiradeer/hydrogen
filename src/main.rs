@@ -57,7 +57,7 @@ impl EventHandler for HydrogenHandler {
         info!("commands registered");
 
 
-        debug!("connecting to lavalink server...");
+        info!("connecting to the lavalink nodes...");
         for i in 0..self.lavalink_nodes.len() {
             if let Some(node) = self.lavalink_nodes.get(i) {
                 if let Err(e) = manager.connect_lavalink(node.clone()).await {
@@ -70,40 +70,49 @@ impl EventHandler for HydrogenHandler {
             error!("there's not lavalink nodes connected");
             exit(1);
         }
+
+        info!("connected to {} lavalink nodes", manager.lavalink_node_count().await);
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match interaction {
             Interaction::ApplicationCommand(command) => {
-                let command_name = command.data.name.as_str();
+                let command_name = command.data.name.clone();
                 debug!("executing application command: {}", command_name);
 
-                if let Some(listener) = self.commands.get(command_name) {
+                if let Some(listener) = self.commands.get(&command_name) {
                     listener.execute(self.context.clone(), ctx, command).await;
                 }
                 else {
                     warn!("unknown command: {}", command_name);
                 }
+
+                debug!("application command executed: {}", command_name);
             }
             _ => (),
         }
     }
 
-    async fn voice_state_update(&self, _: Context, _: Option<VoiceState>, new: VoiceState) {
-        debug!("voice state update: {:?}", new);
-        let option_manager = {
-            let manager_locked = self.context.manager.read().await;
-            manager_locked.clone()
-        };
+    async fn voice_state_update(&self, _: Context, old: Option<VoiceState>, new: VoiceState) {
+        debug!("processing voice state update...");
+        let option_manager = self.context.manager.read().await.clone();
         if let Some(manager) = option_manager {
-            if let Err(e) = manager.update_lavalink_connection(new).await {
-                warn!("error when updating lavalink connection: {}", e);
+            if let Err(e) = manager.update_voice_state(old, new).await {
+                warn!("error when updating player voice state: {}", e);
             }
         }
+        debug!("processed voice state update");
     }
 
     async fn voice_server_update(&self, _: Context, voice_server: VoiceServerUpdateEvent) {
-        debug!("voice server update: {:?}", voice_server);
+        debug!("processing voice server update...");
+        let option_manager = self.context.manager.read().await.clone();
+        if let Some(manager) = option_manager {
+            if let Err(e) = manager.update_voice_server(voice_server).await {
+                warn!("error when updating player voice server: {}", e);
+            }
+        }
+        debug!("processed voice server update");
     }
 }
 

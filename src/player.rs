@@ -1,9 +1,9 @@
 use std::{sync::{Arc, atomic::{AtomicUsize, Ordering, AtomicBool}}, fmt::Display, result};
 
 use rand::Rng;
-use serenity::model::{prelude::{GuildId, UserId, ChannelId}, voice::VoiceState};
-use songbird::{Call, error::JoinError};
-use tokio::sync::{RwLock, Mutex};
+use serenity::model::prelude::{GuildId, UserId, ChannelId};
+use songbird::{error::JoinError, Songbird, ConnectionInfo};
+use tokio::sync::RwLock;
 
 use crate::lavalink::{Lavalink, LavalinkError, rest::{LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState, LavalinkLoadResultType}, LavalinkConnection};
 
@@ -56,6 +56,37 @@ impl Display for HydrogenPlayerError {
 
 pub type Result<T> = result::Result<T, HydrogenPlayerError>;
 
+#[derive(Clone)]
+pub struct HydrogenPlayerConnection {
+    pub session_id: String,
+    pub token: String,
+    pub endpoint: String,
+    pub channel_id: Option<songbird::id::ChannelId>
+}
+
+impl HydrogenPlayerConnection {
+    pub fn new(session_id: &str, token: &str, endpoint: &str, channel_id: Option<songbird::id::ChannelId>) -> Self {
+        Self {
+            session_id: session_id.to_owned(),
+            token: token.to_owned(),
+            endpoint: endpoint.to_owned(),
+            channel_id
+        }
+    }
+}
+
+impl Into<LavalinkVoiceState> for HydrogenPlayerConnection {
+    fn into(self) -> LavalinkVoiceState {
+        LavalinkVoiceState::new(&self.token, &self.endpoint, &self.session_id)
+    }
+}
+
+impl From<ConnectionInfo> for HydrogenPlayerConnection {
+    fn from(value: ConnectionInfo) -> Self {
+        Self::new(&value.session_id, &value.token, &value.endpoint, value.channel_id)
+    }
+}
+
 pub struct HydrogenPlayCommand {
     pub track: Option<HydrogenMusic>,
     pub count: usize,
@@ -64,29 +95,31 @@ pub struct HydrogenPlayCommand {
 
 #[derive(Clone)]
 pub struct HydrogenPlayer {
-    call: Arc<Mutex<Call>>,
+    pub connection: Arc<RwLock<HydrogenPlayerConnection>>,
     destroyed: Arc<AtomicBool>,
-    guild_id: String,
+    guild_id: GuildId,
     guild_locale: String,
     index: Arc<AtomicUsize>,
     lavalink: Lavalink,
     queue: Arc<RwLock<Vec<HydrogenMusic>>>,
     queue_loop: Arc<RwLock<LoopType>>,
     text_channel_id: ChannelId,
+    voice_manager: Arc<Songbird>
 }
 
 impl HydrogenPlayer {
-    pub fn new(lavalink: Lavalink, guild_id: GuildId, text_channel_id: ChannelId, guild_locale: &str, call: Arc<Mutex<Call>>) -> Self {
+    pub fn new(lavalink: Lavalink, guild_id: GuildId, voice_manager: Arc<Songbird>, connection: HydrogenPlayerConnection, text_channel_id: ChannelId, guild_locale: &str) -> Self {
         Self {
+            connection: Arc::new(RwLock::new(connection)),
             destroyed: Arc::new(AtomicBool::new(false)),
-            guild_id: guild_id.0.to_string(),
             index: Arc::new(AtomicUsize::new(0)),
-            lavalink: lavalink,
             queue: Arc::new(RwLock::new(Vec::new())),
             queue_loop: Arc::new(RwLock::new(LoopType::None)),
             guild_locale: guild_locale.to_owned(),
-            call,
-            text_channel_id
+            guild_id,
+            lavalink,
+            text_channel_id,
+            voice_manager
         }
     }
 
@@ -104,6 +137,10 @@ impl HydrogenPlayer {
 
     pub async fn now(&self) -> Option<HydrogenMusic> {
         self.queue.read().await.get(self.index.load(Ordering::Relaxed)).cloned()
+    }
+
+    pub async fn queue(&self) -> Vec<HydrogenMusic> {
+        self.queue.read().await.clone()
     }
 
     pub async fn next(&self) -> Result<()> {
@@ -165,7 +202,7 @@ impl HydrogenPlayer {
 
         let mut playing = false;
 
-        let lavalink_not_playing = match self.lavalink.get_player(&self.guild_id).await {
+        let lavalink_not_playing = match self.lavalink.get_player(self.guild_id.0).await {
             Ok(v) => {
                 v.track.is_none()
             },
@@ -201,16 +238,15 @@ impl HydrogenPlayer {
     }
 
     async fn start_playing(&self) -> Result<bool> {
-        if let Some(connection_info) = self.call.lock().await.current_connection().cloned() {
-            if let Some(music) = self.queue.read().await.get(self.index.load(Ordering::Relaxed)) {
-                let mut player = LavalinkUpdatePlayer::new();
-                player.encoded_track(&music.encoded_track)
-                    .voice_state(LavalinkVoiceState::new(&connection_info.token, &connection_info.endpoint, &connection_info.session_id));
+        let connection = self.connection.read().await;
+        if let Some(music) = self.queue.read().await.get(self.index.load(Ordering::Relaxed)) {
+            let mut player = LavalinkUpdatePlayer::new();
+            player.encoded_track(&music.encoded_track)
+                .voice_state(connection.clone().into());
 
-                self.lavalink.update_player(&self.guild_id, false, &player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            self.lavalink.update_player(self.guild_id.0, false, &player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
 
-                return Ok(true);
-            }
+            return Ok(true);
         }
 
         Ok(false)
@@ -218,10 +254,10 @@ impl HydrogenPlayer {
 
     pub async fn destroy(&self) -> Result<()> {
         if !self.destroyed.load(Ordering::Acquire) {
-            self.call.lock().await.leave().await.map_err(|e| HydrogenPlayerError::Join(e))?;
+            self.voice_manager.leave(self.guild_id).await.map_err(|e| HydrogenPlayerError::Join(e))?;
 
             if self.lavalink.connected().await == LavalinkConnection::Connected {
-                self.lavalink.destroy_player(&self.guild_id).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                self.lavalink.destroy_player(self.guild_id.0).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
             }
         }
         self.destroyed.store(true, Ordering::Release);
@@ -229,15 +265,17 @@ impl HydrogenPlayer {
         Ok(())
     }
 
-    pub async fn update_lavalink(&self, voice_state: VoiceState) -> Result<()> {
-        let info = self.lavalink.get_player(&self.guild_id).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-        if let Some(track) = info.track {
-            let mut player = LavalinkUpdatePlayer::new();
-            player.encoded_track(&track.encoded)
-                .position(track.info.position)
-                .voice_state(LavalinkVoiceState::new(&voice_state.token.unwrap_or(info.voice.token), &info.voice.endpoint, &voice_state.session_id));
+    pub async fn update_connection(&self) -> Result<()> {
+        let connection = self.connection.read().await;
+        if let Ok(info) = self.lavalink.get_player(self.guild_id.0).await {
+            if let Some(track) = info.track {
+                let mut player = LavalinkUpdatePlayer::new();
+                player.encoded_track(&track.encoded)
+                    .position(track.info.position)
+                    .voice_state(connection.clone().into());
 
-            self.lavalink.update_player(&self.guild_id, false, &player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                self.lavalink.update_player(self.guild_id.0, false, &player).await.map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            }
         }
 
         Ok(())

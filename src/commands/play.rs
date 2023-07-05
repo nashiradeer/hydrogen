@@ -170,8 +170,8 @@ impl PlayCommand {
             &interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()),
             &query,
             interaction.user.id,
-            interaction.channel_id,
-            call
+            voice_manager.clone(),
+            interaction.channel_id
         ).await.map_err(|e| e.to_string())?;
 
         if result.count > 0 {

@@ -1,13 +1,13 @@
-use std::{fmt::Display, result, sync::Arc};
+use std::{fmt::Display, result, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use async_tungstenite::{tokio::{connect_async, TokioAdapter}, WebSocketStream, stream::Stream};
 use base64::{prelude::BASE64_STANDARD, Engine};
-use futures::{StreamExt, stream::SplitStream};
+use futures::{StreamExt, stream::SplitStream, SinkExt};
 use http::{header::InvalidHeaderValue, HeaderMap, Request};
 use reqwest::Client;
 use serde::Deserialize;
-use tokio::{sync::RwLock, spawn, net::TcpStream};
+use tokio::{sync::RwLock, spawn, net::TcpStream, time::sleep};
 use tokio_rustls::client::TlsStream;
 use tungstenite::Message;
 
@@ -63,7 +63,8 @@ pub enum LavalinkError {
     Reqwest(reqwest::Error),
     InvalidHeaderValue(InvalidHeaderValue),
     RestError(LavalinkErrorResponse),
-    InvalidResponse(serde_json::Error)
+    InvalidResponse(serde_json::Error),
+    NotConnected
 }
 
 impl Display for LavalinkError {
@@ -74,7 +75,8 @@ impl Display for LavalinkError {
             Self::Reqwest(e) => e.fmt(f),
             Self::InvalidHeaderValue(e) => e.fmt(f),
             Self::InvalidResponse(e) => e.fmt(f),
-            Self::RestError(e) => write!(f, "rest error: {}", e.message)
+            Self::RestError(e) => write!(f, "rest error: {}", e.message),
+            Self::NotConnected => write!(f, "lavalink websocket hasn't connected before timeout")
         }
     }
 }
@@ -131,7 +133,7 @@ impl Lavalink {
             .uri(websocket_uri)
             .body(()).or_else(|e| Err(LavalinkError::Http(e)))?;
         
-        let (_, stream) = connect_async(request).await.or_else(|e| Err(LavalinkError::WebSocket(e)))?.0.split();
+        let (mut sink, stream) = connect_async(request).await.or_else(|e| Err(LavalinkError::WebSocket(e)))?.0.split();
         let lavalink = Self {
             session_id: Arc::new(RwLock::new(String::new())),
             host: Arc::new(node.host),
@@ -146,6 +148,14 @@ impl Lavalink {
             read_socket(handler, lavalink_clone, stream).await;
         });
 
+        sleep(Duration::from_millis(1000)).await;
+        {
+            if lavalink.connected.read().await.ne(&LavalinkConnection::Connected) {
+                _ = sink.close().await;
+                return Err(LavalinkError::NotConnected);
+            }
+        }
+
         Ok(lavalink)
     }
 
@@ -153,7 +163,7 @@ impl Lavalink {
         self.connected.read().await.clone()
     }
 
-    pub async fn update_player(&self, guild_id: &str, no_replace: bool, player: &LavalinkUpdatePlayer) -> Result<LavalinkPlayer> {
+    pub async fn update_player(&self, guild_id: u64, no_replace: bool, player: &LavalinkUpdatePlayer) -> Result<LavalinkPlayer> {
         let response = self.http_client.patch(format!(
             "{}://{}/v3/sessions/{}/players/{}?noReplace={}",
             match self.tls {
@@ -185,7 +195,7 @@ impl Lavalink {
         parse_response(&response)
     }
 
-    pub async fn get_player(&self, guild_id: &str) -> Result<LavalinkPlayer> {
+    pub async fn get_player(&self, guild_id: u64) -> Result<LavalinkPlayer> {
         let response = self.http_client.get(format!(
             "{}://{}/v3/sessions/{}/players/{}",
             match self.tls {
@@ -201,7 +211,7 @@ impl Lavalink {
         parse_response(&response)
     }
 
-    pub async fn destroy_player(&self, guild_id: &str) -> Result<()> {
+    pub async fn destroy_player(&self, guild_id: u64) -> Result<()> {
         self.http_client.delete(format!(
             "{}://{}/v3/sessions/{}/players/{}",
             match self.tls {
