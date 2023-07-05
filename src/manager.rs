@@ -1,9 +1,9 @@
 use std::{sync::{Arc, atomic::{AtomicUsize, Ordering}}, collections::HashMap, fmt::Display, result, time::Duration, process::exit};
 
 use async_trait::async_trait;
-use serenity::{client::Cache, http::{Http, CacheHttp}, model::{prelude::{GuildId, Channel, ChannelType, ReactionType, component::ButtonStyle, UserId, ChannelId}, voice::VoiceState}, builder::{CreateEmbedAuthor, CreateComponents}};
+use serenity::{client::Cache, http::{Http, CacheHttp}, model::{prelude::{GuildId, Channel, ChannelType, ReactionType, component::ButtonStyle, UserId, ChannelId, MessageId}, voice::VoiceState}, builder::{CreateEmbedAuthor, CreateComponents}};
 use songbird::Call;
-use tokio::{sync::{RwLock, Mutex}, spawn, time::sleep};
+use tokio::{sync::{RwLock, Mutex}, spawn, task::JoinHandle, time::sleep};
 use tracing::{info, error, warn};
 
 use crate::{i18n::HydrogenI18n, lavalink::{Lavalink, LavalinkError, LavalinkHandler, websocket::{LavalinkTrackStartEvent, LavalinkTrackEndEvent, LavalinkTrackEndReason}, LavalinkNodeInfo}, player::{HydrogenPlayer, HydrogenPlayCommand, HydrogenPlayerError}};
@@ -32,10 +32,12 @@ pub type Result<T> = result::Result<T, HydrogenManagerError>;
 #[derive(Clone)]
 pub struct HydrogenManager {
     cache: Arc<Cache>,
+    destroy_handle: Arc<RwLock<HashMap<GuildId, JoinHandle<()>>>>,
     http: Arc<Http>,
     i18n: HydrogenI18n,
     lavalink: Arc<RwLock<Vec<Lavalink>>>,
     load_balancer: Arc<AtomicUsize>,
+    message: Arc<RwLock<HashMap<GuildId, MessageId>>>,
     player: Arc<RwLock<HashMap<GuildId, HydrogenPlayer>>>
 }
 
@@ -43,7 +45,9 @@ impl HydrogenManager {
     pub fn new(cache: Arc<Cache>, http: Arc<Http>, i18n: HydrogenI18n) -> Self {
         Self {
             lavalink: Arc::new(RwLock::new(Vec::new())),
+            destroy_handle: Arc::new(RwLock::new(HashMap::new())),
             load_balancer: Arc::new(AtomicUsize::new(0)),
+            message: Arc::new(RwLock::new(HashMap::new())),
             player: Arc::new(RwLock::new(HashMap::new())),
             cache,
             http,
@@ -52,8 +56,15 @@ impl HydrogenManager {
     }
 
     pub async fn connect_lavalink(&self, node: LavalinkNodeInfo) -> Result<()> {
-        self.lavalink.write().await.push(Lavalink::connect(node, self.cache.current_user().id.0, self.clone()).await.map_err(|e| HydrogenManagerError::Lavalink(e))?);
+        let mut lavalink_vector = self.lavalink.write().await;
+        let lavalink = Lavalink::connect(node, self.cache.current_user().id.0, self.clone()).await.map_err(|e| HydrogenManagerError::Lavalink(e))?;
+        lavalink_vector.push(lavalink);
         Ok(())
+    }
+
+    pub async fn lavalink_node_count(&self) -> usize {
+        let nodes = self.lavalink.read().await;
+        nodes.len()
     }
 
     async fn increment_load_balancer(&self) -> usize {
@@ -71,79 +82,124 @@ impl HydrogenManager {
         index
     }
 
-    pub async fn new_or_play(&self, guild_id: GuildId, guild_locale: &str, music: &str, requester_id: UserId, text_channel_id: ChannelId, call: Arc<Mutex<Call>>) -> Result<HydrogenPlayCommand> {
-        let player_option = self.player.read().await.get(&guild_id).cloned();
-        if let Some(player) = player_option {
-            return Ok(player.play(music, requester_id).await.map_err(|e| HydrogenManagerError::Player(e))?);
-        } else {
-            let lavalink = self.lavalink.read().await.get(self.increment_load_balancer().await).cloned().ok_or(HydrogenManagerError::WithoutNodes)?;
-            let player = HydrogenPlayer::new(lavalink, guild_id, text_channel_id, guild_locale, call);
-            self.player.write().await.insert(guild_id, player.clone());
-            return Ok(player.play(music, requester_id).await.map_err(|e| HydrogenManagerError::Player(e))?);
-        }
+    pub async fn init(&self, guild_id: GuildId, guild_locale: &str, text_channel_id: ChannelId, call: Arc<Mutex<Call>>) -> Result<HydrogenPlayer> {
+        let mut players = self.player.write().await;
+        let lavalink_vector = self.lavalink.read().await;
+        let lavalink_index = self.increment_load_balancer().await;
+
+        let lavalink = lavalink_vector.get(lavalink_index).cloned().ok_or(HydrogenManagerError::WithoutNodes)?;
+        let player = HydrogenPlayer::new(lavalink, guild_id, text_channel_id, guild_locale, call);
+
+        players.insert(guild_id, player.clone());
+
+        Ok(player)
     }
 
-    pub async fn voice_state_update(&self, new: VoiceState) -> Result<()> {
-        if new.user_id != self.cache.current_user().id {
-            let Some(guild_id) = new.guild_id else {
-                return Ok(());
-            };
+    pub async fn init_or_play(&self, guild_id: GuildId, guild_locale: &str, music: &str, requester_id: UserId, text_channel_id: ChannelId, call: Arc<Mutex<Call>>) -> Result<HydrogenPlayCommand> {
+        let player_option = {
+            let option = self.player.read().await;
+            option.get(&guild_id).cloned()
+        };
+
+        if let Some(player) = player_option {
+            return Ok(player.play(music, requester_id).await.map_err(|e| HydrogenManagerError::Player(e))?);
+        }
+        
+        let player = self.init(guild_id, guild_locale, text_channel_id, call).await?;
+
+        Ok(player.play(music, requester_id).await.map_err(|e| HydrogenManagerError::Player(e))?)
+    }
+
+    pub async fn update_lavalink_connection(&self, voice_state: VoiceState) -> Result<()> {
+        let players = self.player.read().await;
+        
+        let Some(guild_id) = voice_state.guild_id else {
+            return Ok(());
+        };
+
+        let Some(player) = players.get(&guild_id) else {
+            return Ok(());
+        };
+
+        let Some(channel_id) = voice_state.channel_id else {
+            return Ok(());
+        };
+
+        let Some(Channel::Guild(channel)): Option<Channel> = self.cache.channel(channel_id.0) else {
+            return Ok(());
+        };
+
+        if channel.kind == ChannelType::Voice || channel.kind == ChannelType::Stage {
+            let members_count = channel.members(self.cache.clone()).await.map_err(|e| HydrogenManagerError::Serenity(e))?.len();
             
-            let Some(player) = self.player.read().await.get(&guild_id).cloned() else {
-                return Ok(());
-            };
-
-            let Some(connection_info) = player.call().await.lock().await.current_connection().cloned() else {
-                return Ok(());
-            };
-
-            let Some(channel_id) = connection_info.channel_id else {
-                return Ok(());
-            };
-
-            let Some(Channel::Guild(channel)): Option<Channel> = self.cache.channel(channel_id.0) else {
-                return Ok(());
-            };
-
-            if channel.kind == ChannelType::Voice || channel.kind == ChannelType::Stage {
-                let members_count = channel.members(self.cache.clone()).await.map_err(|e| HydrogenManagerError::Serenity(e))?.len();
-                
-                if members_count <= 1 {
-                    self.timed_destroy(guild_id, Duration::from_secs(10)).await;
-                    self.update_play_message(player.clone(), &self.i18n.translate(&player.guild_locale(), "playing", "timeout_trigger"), 0x5865f2, true, None).await;
-                } else {
-                    self.cancel_destroy(guild_id).await;
-                    self.update_now_playing(guild_id).await;
-                }
+            if members_count <= 1 {
+                self.timed_destroy(guild_id, Duration::from_secs(10)).await;
+                self.update_play_message(guild_id, &self.i18n.translate(&player.guild_locale(), "playing", "timeout_trigger"), 0x5865f2, true, None).await;
+            } else {
+                self.cancel_destroy(guild_id).await;
+                self.update_now_playing(guild_id).await;
             }
+        }
+
+        if voice_state.user_id == self.cache.current_user().id {
+            player.update_lavalink(voice_state).await.map_err(|e| HydrogenManagerError::Player(e))?;
         }
 
         Ok(())
     }
 
+    pub async fn destroy(&self, guild_id: GuildId) -> Result<()> {
+        let mut players = self.player.write().await;
+        let mut messages = self.message.write().await;
+        let mut destroy_handles = self.destroy_handle.write().await;
+        
+        if let Some(player) = players.get(&guild_id) {
+            player.destroy().await.map_err(|e| HydrogenManagerError::Player(e))?;
+
+            if let Some(message) = messages.get(&guild_id) {
+                self.http.delete_message(player.text_channel_id().0, message.0).await.map_err(|e| HydrogenManagerError::Serenity(e))?;
+            }
+        }
+
+        if let Some(destroy_handle) = destroy_handles.get(&guild_id) {
+            destroy_handle.abort();
+        }
+
+        players.remove(&guild_id);
+        messages.remove(&guild_id);
+        destroy_handles.remove(&guild_id);
+
+        Ok(())
+    }
+
     pub async fn timed_destroy(&self, guild_id: GuildId, duration: Duration) {
-        let self_cloned = self.clone();
-        let player_option = self.player.read().await.get(&guild_id).cloned();
-        if let Some(player) = player_option {
-            let player_cloned = player.clone();
-            let mut player_abort = player.destroy_handle.write().await;
-            if player_abort.is_none() {
-                *player_abort = Some(Arc::new(spawn(async move {
+        let players = self.player.read().await;
+        let mut destroy_handles = self.destroy_handle.write().await;
+
+        if players.get(&guild_id).is_some() {
+            if destroy_handles.get(&guild_id).is_none() {
+                let self_clone = self.clone();
+                let guild_id_clone = guild_id.clone();
+                destroy_handles.insert(guild_id, spawn(async move {
                     sleep(duration).await;
-                    self_cloned.player.write().await.remove(&guild_id);
-                    _ = player_cloned.destroy().await;
-                })));
+
+                    {
+                        let mut _destroy_handles = self_clone.destroy_handle.write().await;
+                        _destroy_handles.remove(&guild_id_clone);
+                    }
+
+                    _ = self_clone.destroy(guild_id_clone).await;
+                }));
             }
         }
     }
 
     pub async fn cancel_destroy(&self, guild_id: GuildId) {
-        if let Some(player) = self.player.read().await.get(&guild_id) {
-            let mut handle_guard = player.destroy_handle.write().await;
-            if let Some(handle) = handle_guard.clone() {
-                handle.abort();
-                *handle_guard = None;
-            }
+        let mut destroy_handles = self.destroy_handle.write().await;
+
+        if let Some(handle) = destroy_handles.get(&guild_id) {
+            handle.abort();
+            destroy_handles.remove(&guild_id);
         }
     }
 
@@ -182,16 +238,46 @@ impl HydrogenManager {
                 }
             }
 
-            self.update_play_message(player.clone(), &translated_message, 0x5865f2, requester.is_none(), author_obj).await;
+            self.update_play_message(guild_id, &translated_message, 0x5865f2, requester.is_none(), author_obj).await;
         }
     }
 
-    async fn update_play_message(&self, player: HydrogenPlayer, description: &str, color: i32, disable_buttons: bool, author_obj: Option<CreateEmbedAuthor>) {
-        if let Some(message_id) = player.message_id.read().await.clone() {
-            match player.text_channel_id().edit_message(self.http.clone(), message_id, |message|
+    async fn update_play_message(&self, guild_id: GuildId, description: &str, color: i32, disable_buttons: bool, author_obj: Option<CreateEmbedAuthor>) {
+        let players = self.player.read().await;
+        let mut messages = self.message.write().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            if let Some(message) = messages.get(&guild_id) {
+                match player.text_channel_id().edit_message(self.http.clone(), message, |message|
+                    message
+                        .embed(|embed| {
+                            if let Some(author_obj) = author_obj.clone() {
+                                embed.set_author(author_obj);
+                            }
+
+                            embed
+                                .title(self.i18n.translate(&player.guild_locale(), "playing", "title"))
+                                .description(description)
+                                .color(color)
+                                .footer(|footer|
+                                    footer
+                                        .text(self.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        })
+                        .set_components(Self::play_components(disable_buttons))
+                ).await {
+                    Ok(_) => return,
+                    Err(e) => {
+                        warn!("can't edit player message: {}", e);
+                    }
+                }
+            }
+
+            match player.text_channel_id().send_message(self.http.clone(), |message|
                 message
                     .embed(|embed| {
-                        if let Some(author_obj) = author_obj.clone() {
+                        if let Some(author_obj) = author_obj {
                             embed.set_author(author_obj);
                         }
 
@@ -207,35 +293,13 @@ impl HydrogenManager {
                     })
                     .set_components(Self::play_components(disable_buttons))
             ).await {
-                Ok(_) => return,
-                Err(e) => {
-                    warn!("can't edit player message: {}", e);
-                }
-            }
+                Ok(v) => {
+                    messages.insert(guild_id, v.id);
+                    ()
+                },
+                Err(e) => warn!("can't send a new playing message: {}", e)
+            };
         }
-
-        match player.text_channel_id().send_message(self.http.clone(), |message|
-            message
-                .embed(|embed| {
-                    if let Some(author_obj) = author_obj {
-                        embed.set_author(author_obj);
-                    }
-
-                    embed
-                        .title(self.i18n.translate(&player.guild_locale(), "playing", "title"))
-                        .description(description)
-                        .color(color)
-                        .footer(|footer|
-                            footer
-                                .text(self.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
-                                .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                        )
-                })
-                .set_components(Self::play_components(disable_buttons))
-        ).await {
-            Ok(v) => *player.message_id.write().await = Some(v.id),
-            Err(e) => warn!("can't send a new playing message: {}", e)
-        };
     }
 
     pub fn play_components(disable_all: bool) -> CreateComponents {
@@ -290,23 +354,13 @@ impl HydrogenManager {
             ).to_owned()
     }
 
-    async fn find_lavalink(&self, lavalink: &Lavalink) -> Option<usize> {
-        let nodes = self.lavalink.read().await;
-        for i in 0..nodes.len() {
-            if let Some(node) = nodes.get(i) {
-                if node.eq(lavalink).await {
-                    return Some(i);
-                }
-            }
-        }
-        None
-    }
 }
 
 #[async_trait]
 impl LavalinkHandler for HydrogenManager {
     async fn lavalink_ready(&self, node: Lavalink, _: bool) {
-        if let Some(index) = self.find_lavalink(&node).await {
+        let lavalink_nodes = self.lavalink.read().await;
+        if let Some(index) = find_lavalink(&lavalink_nodes, &node).await {
             info!("managed lavalink {} initialized and connected", index);
         } else {
             info!("unknown lavalink initialized and connected");
@@ -314,13 +368,15 @@ impl LavalinkHandler for HydrogenManager {
     }
 
     async fn lavalink_disconnect(&self, node: Lavalink) {
-        if let Some(index) = self.find_lavalink(&node).await {
+        let mut lavalink_nodes = self.lavalink.write().await;
+        if let Some(index) = find_lavalink(&lavalink_nodes, &node).await {
             warn!("managed lavalink {} has disconnected", index);
+            lavalink_nodes.remove(index);
         } else {
             warn!("unknown lavalink has disconnected");
         }
 
-        if self.lavalink.read().await.len() == 0 {
+        if lavalink_nodes.len() == 0 {
             error!("there's not lavalink available anymore, exiting...");
             exit(1);
         }
@@ -377,4 +433,15 @@ impl CacheHttp for HydrogenManager {
     fn http(&self) -> &Http {
         &self.http
     }
+}
+
+async fn find_lavalink(nodes: &Vec<Lavalink>, lavalink: &Lavalink) -> Option<usize> {
+    for i in 0..nodes.len() {
+        if let Some(node) = nodes.get(i) {
+            if node.eq(lavalink).await {
+                return Some(i);
+            }
+        }
+    }
+    None
 }

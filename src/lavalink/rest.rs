@@ -68,7 +68,7 @@ impl LavalinkUpdatePlayer {
         }
     }
     
-    pub fn encoded_track(mut self, encoded_track: &str) -> Self {
+    pub fn encoded_track(&mut self, encoded_track: &str) -> &mut Self {
         if self.identifier == None {
             self.encoded_track = Some(Some(encoded_track.to_owned()));
         }
@@ -76,8 +76,14 @@ impl LavalinkUpdatePlayer {
         self
     }
 
-    pub fn voice_state(mut self, voice_state: LavalinkVoiceState) -> Self {
+    pub fn voice_state(&mut self, voice_state: LavalinkVoiceState) -> &mut Self {
         self.voice = Some(voice_state);
+
+        self
+    }
+
+    pub fn position(&mut self, position: i32) -> &mut Self {
+        self.position = Some(position);
 
         self
     }

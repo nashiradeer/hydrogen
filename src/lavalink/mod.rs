@@ -153,7 +153,7 @@ impl Lavalink {
         self.connected.read().await.clone()
     }
 
-    pub async fn update_player(&self, guild_id: &str, no_replace: bool, player: LavalinkUpdatePlayer) -> Result<LavalinkPlayer> {
+    pub async fn update_player(&self, guild_id: &str, no_replace: bool, player: &LavalinkUpdatePlayer) -> Result<LavalinkPlayer> {
         let response = self.http_client.patch(format!(
             "{}://{}/v3/sessions/{}/players/{}?noReplace={}",
             match self.tls {

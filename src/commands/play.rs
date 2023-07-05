@@ -165,7 +165,7 @@ impl PlayCommand {
                 }
             }
         }
-        let result = manager.new_or_play(
+        let result = manager.init_or_play(
             guild_id,
             &interaction.guild_locale.clone().unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()),
             &query,

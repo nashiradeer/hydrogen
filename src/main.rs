@@ -4,7 +4,7 @@ use commands::play::PlayCommand;
 use i18n::HydrogenI18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
-use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::{prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command}, voice::VoiceState}, async_trait, builder::CreateApplicationCommand};
+use serenity::{prelude::{EventHandler, GatewayIntents, Context}, Client, model::{prelude::{Ready, interaction::{Interaction, application_command::ApplicationCommandInteraction}, command::Command, VoiceServerUpdateEvent}, voice::VoiceState}, async_trait, builder::CreateApplicationCommand};
 use songbird::SerenityInit;
 use tokio::sync::RwLock;
 use tracing::{error, info, debug, warn};
@@ -65,6 +65,11 @@ impl EventHandler for HydrogenHandler {
                 }
             }
         }
+
+        if manager.lavalink_node_count().await == 0 {
+            error!("there's not lavalink nodes connected");
+            exit(1);
+        }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -85,11 +90,20 @@ impl EventHandler for HydrogenHandler {
     }
 
     async fn voice_state_update(&self, _: Context, _: Option<VoiceState>, new: VoiceState) {
-        if let Some(manager) = self.context.manager.read().await.clone() {
-            if let Err(e) = manager.voice_state_update(new).await {
-                warn!("voice state update: {}", e);
+        debug!("voice state update: {:?}", new);
+        let option_manager = {
+            let manager_locked = self.context.manager.read().await;
+            manager_locked.clone()
+        };
+        if let Some(manager) = option_manager {
+            if let Err(e) = manager.update_lavalink_connection(new).await {
+                warn!("error when updating lavalink connection: {}", e);
             }
         }
+    }
+
+    async fn voice_server_update(&self, _: Context, voice_server: VoiceServerUpdateEvent) {
+        debug!("voice server update: {:?}", voice_server);
     }
 }
 
