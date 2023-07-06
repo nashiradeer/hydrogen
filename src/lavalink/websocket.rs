@@ -4,14 +4,14 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkReadyEvent {
     pub resumed: bool,
-    pub session_id: String
+    pub session_id: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkTrackStartEvent {
     pub guild_id: String,
-    pub encoded_track: String
+    pub encoded_track: String,
 }
 
 #[derive(Deserialize)]
@@ -19,7 +19,7 @@ pub struct LavalinkTrackStartEvent {
 pub struct LavalinkTrackEndEvent {
     pub guild_id: String,
     pub encoded_track: String,
-    pub reason: LavalinkTrackEndReason
+    pub reason: LavalinkTrackEndReason,
 }
 
 #[derive(Deserialize, PartialEq, Eq)]
@@ -29,5 +29,5 @@ pub enum LavalinkTrackEndReason {
     LoadFailed,
     Stopped,
     Replaced,
-    Cleanup
+    Cleanup,
 }

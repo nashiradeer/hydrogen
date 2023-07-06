@@ -1,2 +1,2 @@
-pub mod play;
 pub mod join;
+pub mod play;
