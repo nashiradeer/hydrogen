@@ -201,6 +201,12 @@ impl HydrogenManager {
         self.player.read().await.contains_key(&guild_id)
     }
 
+    pub async fn get_voice_channel_id(&self, guild_id: GuildId) -> Option<songbird::id::ChannelId> {
+        let players = self.player.read().await;
+        let connection = players.get(&guild_id)?.connection.read().await;
+        connection.channel_id.clone()
+    }
+
     pub async fn update_voice_state(
         &self,
         old_voice_state: Option<VoiceState>,

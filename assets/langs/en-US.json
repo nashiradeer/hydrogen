@@ -37,5 +37,12 @@
         "cant_connect": "Unable to connect to your voice chat, please check that I have permission to access it.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "success": "All ready! The music player has already started and I'm already connected to your voice chat."
+    },
+    "stop": {
+        "embed_title": "Stopping the music player",
+        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "success": "The music player has stopped, thanks for using Hydrogen, hope to see you soon."
     }
 }
