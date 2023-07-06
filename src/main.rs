@@ -18,9 +18,10 @@ mod lavalink;
 mod manager;
 mod player;
 
+pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
+pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
+
 pub static HYDROGEN_LOGO_URL: &str = "https://gitlab.com/deersoftware/hydrogen/-/raw/main/icon.png";
-pub static HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
-pub static HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
 
 #[derive(Clone)]
 struct HydrogenContext {
