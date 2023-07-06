@@ -10,6 +10,8 @@ use tokio::sync::RwLock;
 use tracing::{error, info, debug, warn};
 use tracing_subscriber::{registry, fmt::layer, layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
+use crate::commands::join::JoinCommand;
+
 mod commands;
 mod i18n;
 mod lavalink;
@@ -17,6 +19,8 @@ mod manager;
 mod player;
 
 pub static HYDROGEN_LOGO_URL: &str = "https://gitlab.com/deersoftware/hydrogen/-/raw/main/icon.png";
+pub static HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
+pub static HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
 
 #[derive(Clone)]
 struct HydrogenContext {
@@ -172,6 +176,7 @@ async fn main() {
             let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =  HashMap::new();
             
             commands.insert("play".to_owned(), Box::new(PlayCommand));
+            commands.insert("join".to_owned(), Box::new(JoinCommand));
 
             Arc::new(commands)
         },
