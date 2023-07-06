@@ -38,5 +38,12 @@
         "cant_connect": "Não foi possível conectar-se ao seu chat de voz, verifique se tenho permissão para acessá-lo.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "unknown_voice_state": "Não foi possível determinar em qual chat de voz você está, entre em um chat de voz ou verifique minhas permissões se você já estiver em um.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "success": "Tudo pronto! O reprodutor de música já foi iniciado e já estou conectado ao seu chat de voz."
+    },
+    "stop": {
+        "embed_title": "Parando o reprodutor de música",
+        "player_not_exists": "Não foi possível encontrar um reprodutor de música nesse servidor.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "not_same_voice_chat": "Um reprodutor de música foi encontrado, mas aparentemente você não está no mesmo chat de voz que ele.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "unknown_voice_state": "Não foi possível determinar em qual chat de voz você está, entre em um chat de voz ou verifique minhas permissões se você já estiver em um.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "success": "O reprodutor de música foi parado, obrigado por usar o Hydrogen, espero vê-lo em breve."
     }
 }

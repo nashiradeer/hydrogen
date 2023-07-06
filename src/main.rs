@@ -11,6 +11,7 @@ use serenity::{
         prelude::{
             command::Command,
             interaction::{application_command::ApplicationCommandInteraction, Interaction},
+            message_component::MessageComponentInteraction,
             Ready, VoiceServerUpdateEvent,
         },
         voice::VoiceState,
@@ -25,9 +26,10 @@ use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
 };
 
-use crate::commands::join::JoinCommand;
+use crate::{commands::join::JoinCommand, components::stop::StopComponent};
 
 mod commands;
+mod components;
 mod i18n;
 mod lavalink;
 mod manager;
@@ -49,6 +51,7 @@ struct HydrogenHandler {
     context: HydrogenContext,
     lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
     commands: Arc<HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>>,
+    components: Arc<HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>>>,
 }
 
 #[async_trait]
@@ -63,6 +66,16 @@ trait HydrogenCommandListener {
         hydrogen_context: HydrogenContext,
         context: Context,
         interaction: ApplicationCommandInteraction,
+    );
+}
+
+#[async_trait]
+trait HydrogenComponentListener {
+    async fn execute(
+        &self,
+        hydrogen: HydrogenContext,
+        context: Context,
+        interaction: MessageComponentInteraction,
     );
 }
 
@@ -129,6 +142,18 @@ impl EventHandler for HydrogenHandler {
                 }
 
                 debug!("application command executed: {}", command_name);
+            }
+            Interaction::MessageComponent(component) => {
+                let component_name = component.data.custom_id.clone();
+                debug!("executing message component: {}", component_name);
+
+                if let Some(listener) = self.components.get(&component_name) {
+                    listener.execute(self.context.clone(), ctx, component).await;
+                } else {
+                    warn!("unknown component: {}", component_name);
+                }
+
+                debug!("message component executed: {}", component_name);
             }
             _ => (),
         }
@@ -220,6 +245,14 @@ async fn main() {
             commands.insert("join".to_owned(), Box::new(JoinCommand));
 
             Arc::new(commands)
+        },
+        components: {
+            let mut components: HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>> =
+                HashMap::new();
+
+            components.insert("stop".to_owned(), Box::new(StopComponent));
+
+            Arc::new(components)
         },
         lavalink_nodes,
     };
