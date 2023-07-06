@@ -29,5 +29,14 @@
         "timeout_trigger": "O canal de voz está vazio, eu irei sair em 10 segundos.",
         "timeout": "O canal de voz esteve vazio por mais 10 segundos.",
         "stop": "O player foi parado."
+    },
+    "join": {
+        "name": "entrar",
+        "description": "Conecta-me ao seu chat de voz iniciando um reprodutor de música sem reproduzir nada.",
+        "embed_title": "Entrando no chat de voz",
+        "player_exists": "Não é possível iniciar um novo reprodutor de música enquanto já existe um para esse servidor.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "cant_connect": "Não foi possível conectar-se ao seu chat de voz, verifique se tenho permissão para acessá-lo.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "unknown_voice_state": "Não foi possível determinar em qual chat de voz você está, entre em um chat de voz ou verifique minhas permissões se você já estiver em um.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "success": "Tudo pronto! O reprodutor de música já foi iniciado e já estou conectado ao seu chat de voz."
     }
 }

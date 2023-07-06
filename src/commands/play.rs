@@ -96,11 +96,8 @@ impl PlayCommand {
             .value.clone().ok_or("required 'query' parameter missing".to_owned())?
             .as_str().ok_or("can't convert required 'query' to str".to_owned())?
             .to_owned();
-
         
-        if let Err(e) = interaction.defer_ephemeral(&context.http).await {
-            warn!("can't defer the response: {}", e);
-        }
+        interaction.defer_ephemeral(&context.http).await.map_err(|e| format!("can't defer the response: {}", e))?;
 
         let manager = hydrogen.manager.read().await.clone().ok_or("manager not initialized".to_owned())?;
         let voice_manager = songbird::get(&context).await.ok_or("songbird not registered".to_owned())?;

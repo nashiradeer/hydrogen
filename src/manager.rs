@@ -89,18 +89,24 @@ impl HydrogenManager {
     }
 
     pub async fn init(&self, guild_id: GuildId, guild_locale: &str, voice_manager: Arc<Songbird>, text_channel_id: ChannelId) -> Result<HydrogenPlayer> {
-        let call = voice_manager.get(guild_id).ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
-        let connection_info = call.lock().await.current_connection().cloned().ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
+        let player = {
+            let call = voice_manager.get(guild_id).ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
+            let connection_info = call.lock().await.current_connection().cloned().ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
 
-        let mut players = self.player.write().await;
-        let lavalink_nodes = self.lavalink.read().await;
+            let mut players = self.player.write().await;
+            let lavalink_nodes = self.lavalink.read().await;
 
-        let lavalink_index = self.increment_load_balancer().await;
+            let lavalink_index = self.increment_load_balancer().await;
 
-        let lavalink = lavalink_nodes.get(lavalink_index).cloned().ok_or(HydrogenManagerError::LavalinkNotConnected)?;
-        let player = HydrogenPlayer::new(lavalink, guild_id, voice_manager, connection_info.into(), text_channel_id, guild_locale);
+            let lavalink = lavalink_nodes.get(lavalink_index).cloned().ok_or(HydrogenManagerError::LavalinkNotConnected)?;
+            let player = HydrogenPlayer::new(lavalink, guild_id, voice_manager, connection_info.into(), text_channel_id, guild_locale);
 
-        players.insert(guild_id, player.clone());
+            players.insert(guild_id, player.clone());
+
+            player
+        };
+
+        self.update_now_playing(guild_id).await;
 
         Ok(player)
     }
@@ -118,6 +124,10 @@ impl HydrogenManager {
         let player = self.init(guild_id, guild_locale, voice_manager, text_channel_id).await?;
 
         Ok(player.play(music, requester_id).await.map_err(|e| HydrogenManagerError::Player(e))?)
+    }
+
+    pub async fn contains_player(&self, guild_id: GuildId) -> bool {
+        self.player.read().await.contains_key(&guild_id)
     }
 
     pub async fn update_voice_state(&self, old_voice_state: Option<VoiceState>, voice_state: VoiceState) -> Result<()> {
