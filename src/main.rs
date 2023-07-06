@@ -16,6 +16,8 @@ mod lavalink;
 mod manager;
 mod player;
 
+pub static HYDROGEN_LOGO_URL: &str = "https://gitlab.com/deersoftware/hydrogen/-/raw/main/icon.png";
+
 #[derive(Clone)]
 struct HydrogenContext {
     pub i18n: HydrogenI18n,
