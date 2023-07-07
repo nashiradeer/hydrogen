@@ -25,8 +25,7 @@
         "description_uri": "[${author} - ${music}](${uri})",
         "description": "${author} - ${music}",
         "empty": "_Nothing playing_",
-        "timeout_trigger": "The voice chat is empty, I will exit from it in 10 seconds.",
-        "timeout": "Voice chat has been empty for more than 10 seconds.",
+        "timeout_trigger": "The voice chat is empty, I will exit from it in {time} seconds.",
         "stop": "The player has been stopped."
     },
     "join": {
