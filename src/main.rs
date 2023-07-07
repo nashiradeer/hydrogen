@@ -37,6 +37,7 @@ mod player;
 
 pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
 pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
+pub const HYDROGEN_QUEUE_LIMIT: usize = 1000;
 
 pub static HYDROGEN_LOGO_URL: &str = "https://gitlab.com/deersoftware/hydrogen/-/raw/main/icon.png";
 
