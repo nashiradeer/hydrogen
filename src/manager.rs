@@ -274,7 +274,7 @@ impl HydrogenManager {
                             &self
                                 .i18n
                                 .translate(&player.guild_locale(), "playing", "timeout_trigger")
-                                .replace("time", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
+                                .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
                             0x5865f2,
                             true,
                             None,
