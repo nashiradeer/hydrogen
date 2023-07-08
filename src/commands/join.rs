@@ -199,7 +199,7 @@ impl JoinCommand {
                 &interaction
                     .guild_locale
                     .clone()
-                    .unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()),
+                    .unwrap_or(interaction.locale.clone()),
                 voice_manager.clone(),
                 interaction.channel_id,
             )
