@@ -4,7 +4,7 @@
     },
     "play": {
         "name": "reproduzir",
-        "description": "Reproduz ou enfileira uma música no reprodutor de música, iniciando um novo reprodutor, caso ainda não exista.",
+        "description": "Reproduz ou enfileira uma música no reprodutor de música.",
         "query_name": "consulta",
         "query_description": "O parâmetro de consulta, que pode ser um URL ou um termo para ser pesquisado no YouTube.",
         "unknown_voice_state": "Não foi possível determinar em qual chat de voz você está, entre em um chat de voz ou verifique minhas permissões se você já estiver em um.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues).",
