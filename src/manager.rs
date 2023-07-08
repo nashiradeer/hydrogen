@@ -509,21 +509,21 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("prev")
-                            .disabled(disable_all && false)
+                            .disabled(disable_all || true)
                             .emoji('⏮')
                             .style(ButtonStyle::Secondary)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("pause")
-                            .disabled(disable_all && false)
+                            .disabled(disable_all || true)
                             .emoji('⏸')
                             .style(ButtonStyle::Secondary)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("skip")
-                            .disabled(disable_all && false)
+                            .disabled(disable_all || true)
                             .emoji('⏭')
                             .style(ButtonStyle::Secondary)
                     })
@@ -533,7 +533,7 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("loop")
-                            .disabled(disable_all && false)
+                            .disabled(disable_all || true)
                             .emoji(ReactionType::Unicode("⤵️".to_owned()))
                             .style(ButtonStyle::Secondary)
                     })
@@ -547,7 +547,7 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("queue")
-                            .disabled(disable_all && false)
+                            .disabled(disable_all || true)
                             .emoji(ReactionType::Unicode("ℹ️".to_owned()))
                             .style(ButtonStyle::Secondary)
                     })
