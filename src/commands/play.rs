@@ -327,7 +327,7 @@ impl PlayCommand {
                 &interaction
                     .guild_locale
                     .clone()
-                    .unwrap_or(HydrogenI18n::DEFAULT_LANGUAGE.to_owned()),
+                    .unwrap_or(interaction.locale.clone()),
                 &query,
                 interaction.user.id,
                 voice_manager.clone(),
