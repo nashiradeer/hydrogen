@@ -39,6 +39,7 @@ pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
 pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
 pub const HYDROGEN_EMPTY_CHAT_TIMEOUT: u64 = 10;
 pub const HYDROGEN_QUEUE_LIMIT: usize = 1000;
+pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 
 pub static HYDROGEN_LOGO_URL: &str = "https://gitlab.com/deersoftware/hydrogen/-/raw/main/icon.png";
 
