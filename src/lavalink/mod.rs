@@ -11,9 +11,16 @@ use futures::{stream::SplitStream, SinkExt, StreamExt};
 use http::{header::InvalidHeaderValue, HeaderMap, Request};
 use reqwest::Client;
 use serde::Deserialize;
-use tokio::{net::TcpStream, spawn, sync::RwLock, time::sleep};
+use tokio::{
+    net::TcpStream,
+    select, spawn,
+    sync::{oneshot, RwLock},
+    time::sleep,
+};
 use tokio_rustls::client::TlsStream;
 use tungstenite::Message;
+
+use crate::LAVALINK_CONNECTION_TIMEOUT;
 
 use self::{
     rest::{LavalinkErrorResponse, LavalinkPlayer, LavalinkTrackLoading, LavalinkUpdatePlayer},
@@ -171,25 +178,27 @@ impl Lavalink {
             http_client,
         };
 
+        let (sender, mut receiver) = oneshot::channel();
+
         let lavalink_clone = lavalink.clone();
         spawn(async move {
-            read_socket(handler, lavalink_clone, stream).await;
+            read_socket(handler, lavalink_clone, Some(sender), stream).await;
         });
 
-        sleep(Duration::from_millis(1000)).await;
-        {
-            if lavalink
-                .connected
-                .read()
-                .await
-                .ne(&LavalinkConnection::Connected)
-            {
+        select! {
+            _ = sleep(Duration::from_millis(LAVALINK_CONNECTION_TIMEOUT)) => {
                 _ = sink.close().await;
-                return Err(LavalinkError::NotConnected);
+                Err(LavalinkError::NotConnected)
+            }
+            msg = &mut receiver => {
+                if let Err(_) = msg {
+                    _ = sink.close().await;
+                    return Err(LavalinkError::NotConnected);
+                }
+
+                Ok(lavalink)
             }
         }
-
-        Ok(lavalink)
     }
 
     pub async fn connected(&self) -> LavalinkConnection {
@@ -303,6 +312,7 @@ impl Lavalink {
 async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
     handler: H,
     origin: Lavalink,
+    mut sender: Option<oneshot::Sender<()>>,
     mut stream: SplitStream<
         WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>,
     >,
@@ -320,6 +330,15 @@ async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
                                 .await
                                 .replace_range(.., &ready.session_id);
                             *origin.connected.write().await = LavalinkConnection::Connected;
+
+                            if let Some(some_sender) = sender {
+                                if let Err(_) = some_sender.send(()) {
+                                    break;
+                                }
+
+                                sender = None;
+                            }
+
                             handler.lavalink_ready(origin.clone(), ready.resumed).await;
                         }
                     }
