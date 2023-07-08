@@ -30,8 +30,7 @@
         "description_uri": "[${author} - ${music}](${uri})",
         "description": "${author} - ${music}",
         "empty": "_Tocando nada_",
-        "timeout_trigger": "O canal de voz está vazio, eu irei sair em 10 segundos.",
-        "timeout": "O canal de voz esteve vazio por mais 10 segundos.",
+        "timeout_trigger": "O canal de voz está vazio, eu irei sair em {time} segundos.",
         "stop": "O player foi parado."
     },
     "join": {
