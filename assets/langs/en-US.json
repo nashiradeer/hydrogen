@@ -16,24 +16,27 @@
         "enqueue_one_uri": "Enqueued: [${author} - ${music}](${uri})",
         "enqueue_one": "Enqueued: ${author} - ${music}",
         "playing_playlist_uri": "Playing: [${author} - ${music}](${uri})\nEnqueued: ${count} musics",
+        "playing_playlist_uri_truncated": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**\n\n**${count}** songs from your playlist have been queued, [**${music}**](${uri}) from ${author} has been selected to play now.",
         "playing_playlist": "Playing: ${author} - ${music}\nEnqueued: ${count} musics",
+        "playing_playlist_truncated": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**\n\n**${count}** songs from your playlist have been queued, **${music}** from ${author} has been selected to play now.",
         "enqueue_playlist": "Enqueued: ${count} musics.",
-        "not_found": "Not found anything with this query."
+        "enqueue_playlist_truncated": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**\n\n**${count}** songs from your playlist have been queued.",
+        "not_found": "Not found anything with this query.",
+        "truncated": "It's not possible to add more songs to the queue as the queue is already at the allowed limit, please remove some songs before trying again.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues)."
     },
     "playing": {
         "title": "Playing Now",
         "description_uri": "[${author} - ${music}](${uri})",
         "description": "${author} - ${music}",
         "empty": "_Nothing playing_",
-        "timeout_trigger": "The voice chat is empty, I will exit from it in 10 seconds.",
-        "timeout": "Voice chat has been empty for more than 10 seconds.",
+        "timeout_trigger": "The voice chat is empty, I will exit from it in {time} seconds.",
         "stop": "The player has been stopped."
     },
     "join": {
         "name": "join",
         "description": "Connects me to your voice chat by starting a music player without playing anything.",
         "embed_title": "Joining to the voice chat",
-        "player_exists": "It is not possible to start a new music player while one already exists for that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "player_exists": "It's not possible to start a new music player while one already exists for that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "cant_connect": "Unable to connect to your voice chat, please check that I have permission to access it.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "success": "All ready! The music player has already started and I'm already connected to your voice chat."

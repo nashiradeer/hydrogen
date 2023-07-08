@@ -34,6 +34,7 @@ use crate::{
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
     },
     player::{HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError},
+    HYDROGEN_EMPTY_CHAT_TIMEOUT,
 };
 
 #[derive(Debug)]
@@ -263,14 +264,17 @@ impl HydrogenManager {
                         .len();
 
                     if members_count <= 1 {
-                        self.timed_destroy(guild_id, Duration::from_secs(10)).await;
+                        self.timed_destroy(
+                            guild_id,
+                            Duration::from_secs(HYDROGEN_EMPTY_CHAT_TIMEOUT),
+                        )
+                        .await;
                         self.update_play_message(
                             guild_id,
-                            &self.i18n.translate(
-                                &player.guild_locale(),
-                                "playing",
-                                "timeout_trigger",
-                            ),
+                            &self
+                                .i18n
+                                .translate(&player.guild_locale(), "playing", "timeout_trigger")
+                                .replace("time", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
                             0x5865f2,
                             true,
                             None,
@@ -505,21 +509,21 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("prev")
-                            .disabled(disable_all)
+                            .disabled(disable_all && false)
                             .emoji('⏮')
                             .style(ButtonStyle::Secondary)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("pause")
-                            .disabled(disable_all)
+                            .disabled(disable_all && false)
                             .emoji('⏸')
                             .style(ButtonStyle::Secondary)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("skip")
-                            .disabled(disable_all)
+                            .disabled(disable_all && false)
                             .emoji('⏭')
                             .style(ButtonStyle::Secondary)
                     })
@@ -529,7 +533,7 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("loop")
-                            .disabled(disable_all)
+                            .disabled(disable_all && false)
                             .emoji(ReactionType::Unicode("⤵️".to_owned()))
                             .style(ButtonStyle::Secondary)
                     })
@@ -543,7 +547,7 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("queue")
-                            .disabled(disable_all)
+                            .disabled(disable_all && false)
                             .emoji(ReactionType::Unicode("ℹ️".to_owned()))
                             .style(ButtonStyle::Secondary)
                     })

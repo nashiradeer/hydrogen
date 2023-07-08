@@ -17,17 +17,20 @@
         "enqueue_one_uri": "Enfileirado: [${author} - ${music}](${uri})",
         "enqueue_one": "Enfileirado: ${music} by ${author}",
         "playing_playlist_uri": "Tocando: [${author} - ${music}](${uri})\nEnfileirado: ${count} músicas",
+        "playing_playlist_uri_truncated": "**Aviso: a lista de reprodução é muito maior do que o limite de tamanho da fila, o total de músicas adicionadas na fila foi truncado.**\n\n**${count}** músicas da sua lista de reprodução foram colocadas na fila, [**${music}**](${uri}) de **${author}** foi selecionado para tocar agora.",
         "playing_playlist": "Tocando: ${author} - ${music}\nEnfileirado: ${count} músicas",
+        "playing_playlist_truncated": "**Aviso: a lista de reprodução é muito maior do que o limite de tamanho da fila, o total de músicas adicionadas na fila foi truncado.**\n\n**${count}** músicas da sua lista de reprodução foram colocadas na fila, **${music}** de **${author}** foi selecionado para tocar agora.",
         "enqueue_playlist": "Enfileirado: ${count} músicas",
-        "not_found": "Não foi achado nada com esse termo."
+        "enqueue_playlist_truncated": "**Aviso: a lista de reprodução é muito maior do que o limite de tamanho da fila, o total de músicas adicionadas na fila foi truncado.**\n\n**${count}** músicas da sua lista de reprodução foram colocadas na fila.",
+        "not_found": "Não foi achado nada com esse termo.",
+        "truncated": "Não é possível adicionar mais músicas à fila, pois a fila já está no limite permitido, remova algumas músicas antes de tentar novamente.\nSe você acredita que isso é um erro, informe-o [aqui](https://gitlab.com/deersoftware/hydrogen/-/issues)."
     },
     "playing": {
         "title": "Tocando Agora",
         "description_uri": "[${author} - ${music}](${uri})",
         "description": "${author} - ${music}",
         "empty": "_Tocando nada_",
-        "timeout_trigger": "O canal de voz está vazio, eu irei sair em 10 segundos.",
-        "timeout": "O canal de voz esteve vazio por mais 10 segundos.",
+        "timeout_trigger": "O canal de voz está vazio, eu irei sair em {time} segundos.",
         "stop": "O player foi parado."
     },
     "join": {
