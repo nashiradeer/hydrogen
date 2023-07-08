@@ -15,6 +15,7 @@ use tracing::warn;
 
 use crate::{
     i18n::HydrogenI18n, player::HydrogenPlayCommand, HydrogenCommandListener, HydrogenContext,
+    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct PlayCommand;
@@ -47,20 +48,34 @@ impl PlayCommand {
         Ok(match voice.1 {
             Ok(_) => voice.0,
             Err(e) => {
-                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                    response
-                        .embed(|embed|
+                if let Err(e) = interaction
+                    .edit_original_interaction_response(&context.http, |response| {
+                        response.embed(|embed| {
                             embed
-                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "cant_connect"))
-                                .color(0xf04747)
-                                .footer(|footer|
+                                .title(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "embed_title",
+                                ))
+                                .description(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "cant_connect",
+                                ))
+                                .color(HYDROGEN_ERROR_COLOR)
+                                .footer(|footer| {
                                     footer
-                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        )
-                }).await {
+                                        .text(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                    })
+                    .await
+                {
                     warn!("can't response to interaction: {:?}", e);
                 }
 
@@ -205,20 +220,34 @@ impl PlayCommand {
         let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
             Ok(v) => v,
             Err(e) => {
-                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                    response
-                        .embed(|embed|
+                if let Err(e) = interaction
+                    .edit_original_interaction_response(&context.http, |response| {
+                        response.embed(|embed| {
                             embed
-                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "unknown_voice_state"))
-                                .color(0xf04747)
-                                .footer(|footer|
+                                .title(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "embed_title",
+                                ))
+                                .description(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "unknown_voice_state",
+                                ))
+                                .color(HYDROGEN_ERROR_COLOR)
+                                .footer(|footer| {
                                     footer
-                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        )
-                }).await {
+                                        .text(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                    })
+                    .await
+                {
                     warn!("can't response to interaction: {:?}", e);
                 }
                 return e;
@@ -257,20 +286,34 @@ impl PlayCommand {
         if let Some(connection_info) = call.lock().await.current_connection().cloned() {
             if let Some(channel_id) = connection_info.channel_id {
                 if channel_id != voice_channel_id.into() {
-                    if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                        response
-                            .embed(|embed|
+                    if let Err(e) = interaction
+                        .edit_original_interaction_response(&context.http, |response| {
+                            response.embed(|embed| {
                                 embed
-                                    .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                                    .description(hydrogen.i18n.translate(&interaction.locale, "play", "is_not_same_voice"))
-                                    .color(0xf04747)
-                                    .footer(|footer|
+                                    .title(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "play",
+                                        "embed_title",
+                                    ))
+                                    .description(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "play",
+                                        "is_not_same_voice",
+                                    ))
+                                    .color(HYDROGEN_ERROR_COLOR)
+                                    .footer(|footer| {
                                         footer
-                                            .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                            .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                    )
-                            )
-                    }).await {
+                                            .text(hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "embed",
+                                                "footer_text",
+                                            ))
+                                            .icon_url(HYDROGEN_LOGO_URL)
+                                    })
+                            })
+                        })
+                        .await
+                    {
                         warn!("can't response to interaction: {:?}", e);
                     }
 
@@ -294,55 +337,93 @@ impl PlayCommand {
             .map_err(|e| e.to_string())?;
 
         if result.count > 0 {
-            if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                response
-                    .embed(|embed|
+            if let Err(e) = interaction
+                .edit_original_interaction_response(&context.http, |response| {
+                    response.embed(|embed| {
                         embed
-                            .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                            .title(hydrogen.i18n.translate(
+                                &interaction.locale,
+                                "play",
+                                "embed_title",
+                            ))
                             .description(Self::get_message(result, &hydrogen, &interaction))
-                            .color(0x5865f2)
-                            .footer(|footer|
+                            .color(HYDROGEN_PRIMARY_COLOR)
+                            .footer(|footer| {
                                 footer
-                                    .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                    .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                            )
-                    )
-            }).await {
+                                    .text(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL)
+                            })
+                    })
+                })
+                .await
+            {
                 warn!("can't response to interaction: {:?}", e);
             }
         } else {
             if !result.truncated {
-                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                    response
-                        .embed(|embed|
+                if let Err(e) = interaction
+                    .edit_original_interaction_response(&context.http, |response| {
+                        response.embed(|embed| {
                             embed
-                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "not_found"))
-                                .color(0xf04747)
-                                .footer(|footer|
+                                .title(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "embed_title",
+                                ))
+                                .description(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "not_found",
+                                ))
+                                .color(HYDROGEN_ERROR_COLOR)
+                                .footer(|footer| {
                                     footer
-                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        )
-                }).await {
+                                        .text(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                    })
+                    .await
+                {
                     warn!("can't response to interaction: {:?}", e);
                 }
             } else {
-                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                    response
-                        .embed(|embed|
+                if let Err(e) = interaction
+                    .edit_original_interaction_response(&context.http, |response| {
+                        response.embed(|embed| {
                             embed
-                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "truncated"))
-                                .color(0xf04747)
-                                .footer(|footer|
+                                .title(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "embed_title",
+                                ))
+                                .description(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "play",
+                                    "truncated",
+                                ))
+                                .color(HYDROGEN_ERROR_COLOR)
+                                .footer(|footer| {
                                     footer
-                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        )
-                }).await {
+                                        .text(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                    })
+                    .await
+                {
                     warn!("can't response to interaction: {:?}", e);
                 }
             }
