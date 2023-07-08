@@ -12,9 +12,12 @@ use serenity::model::prelude::{ChannelId, GuildId, UserId};
 use songbird::{error::JoinError, ConnectionInfo, Songbird};
 use tokio::sync::RwLock;
 
-use crate::lavalink::{
-    rest::{LavalinkLoadResultType, LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState},
-    Lavalink, LavalinkConnection, LavalinkError,
+use crate::{
+    lavalink::{
+        rest::{LavalinkLoadResultType, LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState},
+        Lavalink, LavalinkConnection, LavalinkError,
+    },
+    HYDROGEN_QUEUE_LIMIT,
 };
 
 #[derive(PartialEq, Eq)]
@@ -111,6 +114,7 @@ pub struct HydrogenPlayCommand {
     pub track: Option<HydrogenMusic>,
     pub count: usize,
     pub playing: bool,
+    pub truncated: bool,
 }
 
 #[derive(Clone)]
@@ -221,26 +225,39 @@ impl HydrogenPlayer {
             musics
         };
 
+        let mut truncated = false;
         let starting_index = self.queue.read().await.len();
         if musics.load_type == LavalinkLoadResultType::SearchResult {
             if let Some(music) = musics.tracks.get(0) {
-                self.queue
-                    .write()
-                    .await
-                    .push(HydrogenMusic::from(music.clone(), requester_id));
+                let queue_length = self.queue.read().await.len();
+                if queue_length < HYDROGEN_QUEUE_LIMIT {
+                    self.queue
+                        .write()
+                        .await
+                        .push(HydrogenMusic::from(music.clone(), requester_id));
+                } else {
+                    truncated = true;
+                }
             } else {
                 return Ok(HydrogenPlayCommand {
                     track: None,
                     count: 0,
                     playing: false,
+                    truncated: false,
                 });
             }
         } else {
             for music in musics.tracks.iter() {
-                self.queue
-                    .write()
-                    .await
-                    .push(HydrogenMusic::from(music.clone(), requester_id));
+                let queue_length = self.queue.read().await.len();
+                if queue_length < HYDROGEN_QUEUE_LIMIT {
+                    self.queue
+                        .write()
+                        .await
+                        .push(HydrogenMusic::from(music.clone(), requester_id));
+                } else {
+                    truncated = true;
+                    break;
+                }
             }
         }
 
@@ -264,13 +281,18 @@ impl HydrogenPlayer {
         let mut this_play_track = self.queue.read().await.get(starting_index).cloned();
 
         if lavalink_not_playing {
-            let index = starting_index
+            let mut index = starting_index
                 + musics
                     .playlist_info
                     .selected_track
                     .unwrap_or(0)
                     .try_into()
                     .unwrap_or(0);
+
+            if index >= self.queue.read().await.len() {
+                index = starting_index;
+            }
+
             self.index.store(index, Ordering::Relaxed);
             playing = self.start_playing().await?;
             if playing {
@@ -282,6 +304,7 @@ impl HydrogenPlayer {
             track: this_play_track,
             count: self.queue.read().await.len() - starting_index,
             playing,
+            truncated,
         })
     }
 

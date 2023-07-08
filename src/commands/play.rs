@@ -107,29 +107,59 @@ impl PlayCommand {
                         .replace("${author}", &track.author);
                 }
             } else if result.playing {
-                if let Some(uri) = track.uri {
-                    return hydrogen
-                        .i18n
-                        .translate(&interaction.locale, "play", "playing_playlist_uri")
-                        .replace("${music}", &track.title)
-                        .replace("${author}", &track.author)
-                        .replace("${uri}", &uri)
-                        .replace("${count}", &result.count.to_string());
+                if !result.truncated {
+                    if let Some(uri) = track.uri {
+                        return hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "play", "playing_playlist_uri")
+                            .replace("${music}", &track.title)
+                            .replace("${author}", &track.author)
+                            .replace("${uri}", &uri)
+                            .replace("${count}", &result.count.to_string());
+                    } else {
+                        return hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "play", "playing_playlist")
+                            .replace("${music}", &track.title)
+                            .replace("${author}", &track.author)
+                            .replace("${count}", &result.count.to_string());
+                    }
                 } else {
-                    return hydrogen
-                        .i18n
-                        .translate(&interaction.locale, "play", "playing_playlist")
-                        .replace("${music}", &track.title)
-                        .replace("${author}", &track.author)
-                        .replace("${count}", &result.count.to_string());
+                    if let Some(uri) = track.uri {
+                        return hydrogen
+                            .i18n
+                            .translate(
+                                &interaction.locale,
+                                "play",
+                                "playing_playlist_uri_truncated",
+                            )
+                            .replace("${music}", &track.title)
+                            .replace("${author}", &track.author)
+                            .replace("${uri}", &uri)
+                            .replace("${count}", &result.count.to_string());
+                    } else {
+                        return hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "play", "playing_playlist_truncated")
+                            .replace("${music}", &track.title)
+                            .replace("${author}", &track.author)
+                            .replace("${count}", &result.count.to_string());
+                    }
                 }
             }
         }
 
-        return hydrogen
+        if result.truncated {
+            return hydrogen
+                .i18n
+                .translate(&interaction.locale, "play", "enqueue_playlist_truncated")
+                .replace("${count}", &result.count.to_string());
+        }
+
+        hydrogen
             .i18n
             .translate(&interaction.locale, "play", "enqueue_playlist")
-            .replace("${count}", &result.count.to_string());
+            .replace("${count}", &result.count.to_string())
     }
 
     async fn _execute(
@@ -281,21 +311,40 @@ impl PlayCommand {
                 warn!("can't response to interaction: {:?}", e);
             }
         } else {
-            if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
-                response
-                    .embed(|embed|
-                        embed
-                            .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
-                            .description(hydrogen.i18n.translate(&interaction.locale, "play", "not_found"))
-                            .color(0xf04747)
-                            .footer(|footer|
-                                footer
-                                    .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
-                                    .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                            )
-                    )
-            }).await {
-                warn!("can't response to interaction: {:?}", e);
+            if !result.truncated {
+                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                    response
+                        .embed(|embed|
+                            embed
+                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "not_found"))
+                                .color(0xf04747)
+                                .footer(|footer|
+                                    footer
+                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        )
+                }).await {
+                    warn!("can't response to interaction: {:?}", e);
+                }
+            } else {
+                if let Err(e) = interaction.edit_original_interaction_response(&context.http, |response| {
+                    response
+                        .embed(|embed|
+                            embed
+                                .title(hydrogen.i18n.translate(&interaction.locale, "play", "embed_title"))
+                                .description(hydrogen.i18n.translate(&interaction.locale, "play", "truncated"))
+                                .color(0xf04747)
+                                .footer(|footer|
+                                    footer
+                                        .text(hydrogen.i18n.translate(&interaction.locale, "embed", "footer_text"))
+                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
+                                )
+                        )
+                }).await {
+                    warn!("can't response to interaction: {:?}", e);
+                }
             }
         }
 
