@@ -11,5 +11,6 @@ FROM alpine:3.18
 WORKDIR /app
 COPY --from=builder /app/target/release/hydrogen /app/hydrogen
 COPY assets/langs/ lang/
+ENV RUST_LOG=hydrogen=info
 ENV LANGUAGE_PATH=/app/lang
 CMD ["/app/hydrogen"]
