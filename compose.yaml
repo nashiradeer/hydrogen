@@ -1,0 +1,24 @@
+services:
+  lavalink:
+    image: fredboat/lavalink:3-alpine
+    container_name: lavalink
+    restart: unless-stopped
+    environment:
+      - SERVER_PORT=2333
+      - LAVALINK_SERVER_PASSWORD=youshallnotpass
+    networks:
+      - lavalink
+  hydrogen:
+    image: nashiradeer/hydrogen:0
+    container_name: hydrogen
+    restart: unless-stopped
+    networks:
+      - lavalink
+    environment:
+      - DISCORD_TOKEN=
+      - LAVALINK=lavalink:2333,youshallnotpass
+    depends_on:
+      - lavalink
+networks:
+  lavalink:
+    name: lavalink
