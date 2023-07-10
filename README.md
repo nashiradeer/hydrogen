@@ -22,19 +22,31 @@ If you want to contribute with the translations, they are in files named by the 
 
 - <https://discord.com/developers/docs/reference#locales>
 
+## Using Docker
+
+If you don't want to compile from source, you can use the official Docker image, this is the only alternative officially supported by DeerSoftware, you can access it at: <https://hub.docker.com/r/nashiradeer/hydrogen>
+
 ## Building
 
-This project can be built from simple commands in Cargo, there are no changes, scripts or requirements in the process of building this project, if you don't know how to do this, below is a step by step on how to assemble the debug or release versions of project.
+This project can be built from simple commands in Cargo or Docker, there are no changes, scripts or requirements in the process of building this project, if you don't know how to do this, below is a step by step on how to assemble the debug or release versions of project.
+
+### Docker
+
+1. Run in a terminal: `docker build .`
+
+This will build a new fully ready-to-use Hydrogen image, no additional work is required.
 
 ### Debug
 
-1. Run in a terminal: `cargo build`
+1. Install libc headers, required to build dependencies.
+2. Run in a terminal: `cargo build`
 
 When finished, you will find the executable under `target/debug` and it will be named `hydrogen` on UNIX platforms or `hydrogen.exe` on Windows platforms.
 
 ### Release
 
-1. Run in a terminal: `cargo build -r`
+1. Install libc headers, required to build dependencies.
+2. Run in a terminal: `cargo build -r`
 
 When finished, you will find the executable under `target/release` and it will be named `hydrogen` on UNIX platforms or `hydrogen.exe` on Windows platforms.
 
@@ -46,7 +58,7 @@ Before we configure Hydrogen, we need to ensure that the following dependencies 
 
 To configure Hydrogen you will use the following environment variables:
 
-- LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (required)
+- LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (required if not Docker image)
 - LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
 - DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
 
