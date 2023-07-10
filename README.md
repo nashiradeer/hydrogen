@@ -40,8 +40,49 @@ When finished, you will find the executable under `target/release` and it will b
 
 ## Running
 
-_TODO: Add details regarding Hydrogen dependencies and settings._
+Before we configure Hydrogen, we need to ensure that the following dependencies are up and running:
+
+- [Lavalink Server compatible with the Lavalink API v3](https://github.com/lavalink-devs/Lavalink/)
+
+To configure Hydrogen you will use the following environment variables:
+
+- LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (required)
+- LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
+- DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
+
+### LAVALINK environment variable syntax
+
+```plain
+value           = single-node *(";" single-node)
+single-node     = host "," password ["," tls]
+host            = ip ":" port
+tls             = "true" / "enabled" / "on"
+```
+
+*Due to a bug, the TLS parameter needs to be written in lower case.
 
 ## Credits
 
-_TODO: Add due credit to DeerSoftware, the contributors and developers of the libraries and projects used._
+Hydrogen is a project by DeerSoftware, created by Nashira Deer, based on Hellion by Nashira Deer, and licensed under the GNU General Public License v3.
+
+Thanks to the following projects for making the development of Hydrogen possible:
+
+- [async-trait](https://github.com/dtolnay/async-trait) by [dtolnay](https://github.com/dtolnay), licensed with [Apache License 2.0](https://github.com/dtolnay/async-trait/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/async-trait/blob/master/LICENSE-MIT)
+- [async-tungstenite](https://github.com/sdroege/async-tungstenite) by [sdroege](https://github.com/sdroege), licensed with [MIT License](https://github.com/sdroege/async-tungstenite/blob/main/LICENSE)
+- [base64](https://github.com/marshallpierce/rust-base64) by [marshallpierce](https://github.com/marshallpierce), licensed with [Apache License 2.0](https://github.com/marshallpierce/rust-base64/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/marshallpierce/rust-base64/blob/master/LICENSE-MIT)
+- [futures](https://github.com/rust-lang/futures-rs) by [rust-lang](https://github.com/rust-lang), licensed with [Apache License 2.0](https://github.com/rust-lang/futures-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT)
+- [http](https://github.com/hyperium/http) by [hyperium](https://github.com/hyperium), licensed with [Apache License 2.0](https://github.com/hyperium/http/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/hyperium/http/blob/master/LICENSE-MIT)
+- [Lavalink](https://github.com/lavalink-devs/Lavalink/) by [lavalink-devs](https://github.com/lavalink-devs), licensed with [MIT License](https://github.com/lavalink-devs/Lavalink/blob/master/LICENSE)
+- [Rand](https://github.com/rust-random/rand) by [rust-random](https://github.com/rust-random), licensed with [Apache License 2.0](https://github.com/rust-random/rand/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-random/rand/blob/master/LICENSE-MIT)
+- [Reqwest](https://github.com/seanmonstar/reqwest) by [seanmonstar](https://github.com/seanmonstar), licensed with [Apache License 2.0](https://github.com/seanmonstar/reqwest/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/seanmonstar/reqwest/blob/master/LICENSE-MIT)
+- [Rust](https://github.com/rust-lang/rust) by [rust-lang](https://github.com/rust-lang), licensed with [Apache License 2.0](https://github.com/rust-lang/rust/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/rust/blob/master/LICENSE-MIT)
+- [Rustls](https://github.com/rustls/rustls) by [rustls](https://github.com/rustls), licensed with [Apache License 2.0](https://github.com/rustls/rustls/blob/main/LICENSE-APACHE), [ISC License](https://github.com/rustls/rustls/blob/main/LICENSE-ISC), and [MIT License](https://github.com/rustls/rustls/blob/main/LICENSE-MIT)
+- [Serde](https://github.com/serde-rs/serde) by [serde-rs](https://github.com/serde-rs), licensed with [Apache License 2.0](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT)
+- [Serde JSON](https://github.com/serde-rs/json) by [serde-rs](https://github.com/serde-rs), licensed with [Apache License 2.0](https://github.com/serde-rs/json/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/json/blob/master/LICENSE-MIT)
+- [Serenity](https://github.com/serenity-rs/serenity) by [serenity-rs](https://github.com/serenity-rs), licensed with [ISC License](https://github.com/serenity-rs/serenity/blob/current/LICENSE.md)
+- [Songbird](https://github.com/serenity-rs/songbird) by [serenity-rs](https://github.com/serenity-rs), licensed with [ISC License](https://github.com/serenity-rs/songbird/blob/current/LICENSE.md)
+- [Tokio](https://github.com/tokio-rs/tokio) by [tokio-rs](https://github.com/tokio-rs), licensed with [MIT License](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
+- [tokio-rustls](https://github.com/rustls/tokio-rustls) by [rustls](https://github.com/rustls), licensed with [Apache License 2.0](https://github.com/rustls/tokio-rustls/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/rustls/tokio-rustls/blob/main/LICENSE-MIT)
+- [Tracing](https://github.com/tokio-rs/tracing) by [tokio-rs](https://github.com/tokio-rs), licensed with [MIT License](https://github.com/tokio-rs/tracing/blob/master/LICENSE)
+- [tracing-subscriber](https://github.com/tokio-rs/tracing) by [tokio-rs](https://github.com/tokio-rs), licensed with [MIT License](https://github.com/tokio-rs/tracing/blob/master/LICENSE)
+- [Tungstenite](https://github.com/snapview/tungstenite-rs) by [snapview](https://github.com/snapview), licensed with [Apache License 2.0](https://github.com/snapview/tungstenite-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/snapview/tungstenite-rs/blob/master/LICENSE-MIT)
