@@ -1,6 +1,6 @@
 [package]
 name = "hydrogen"
-version = "0.0.1"
+version = "0.0.1-alpha.1"
 authors = [
     "DeerSoftware <contact@deersoftware.dev>",
     "Nashira Deer <nashiradeer@deersoftware.dev>",
