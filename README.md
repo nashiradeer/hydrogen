@@ -18,7 +18,7 @@ If you want to contribute to this project, you can create your fork or branch, m
 
 *Remembering that so far this project does not follow any standard or convention regarding naming branches, naming and describing Merge Requests or naming and describing Issues, just be coherent and concise in your naming and description, if you want to suggest a standard or convention for this project, use the Issues tab.
 
-If you want to contribute with the translations, they are in files named by the language code used and provided by Discord (link to this list below), inside the `assets/langs` folder and formatted in JSON with a syntax similar to that used by Crowdin. Please copy and modify the original English file (`en-US.json`), remembering that the words wrapped in ${} are variables inserted at runtime so they should not be translated, you can use the file `pt-BR.json` as an example.
+If you want to contribute with the translations, you can do this through our [Crowdin](https://crowdin.com/project/hydrogen), but if you prefer to edit the files directly, they are named by the language code used and provided by Discord (link to this list below), inside the folder `assets/langs` and formatted in JSON with syntax similar to that used by Crowdin. Copy and modify the original English file (`en-US.json`), remembering that the words involved in ${} are variables inserted at runtime, so they should not be translated, you can use the `pt-BR.json` file as an example.
 
 - <https://discord.com/developers/docs/reference#locales>
 
