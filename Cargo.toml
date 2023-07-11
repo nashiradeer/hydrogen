@@ -1,6 +1,6 @@
 [package]
 name = "hydrogen"
-version = "0.0.1-alpha.1"
+version = "0.0.1-alpha.2"
 authors = [
     "DeerSoftware <contact@deersoftware.dev>",
     "Nashira Deer <nashiradeer@deersoftware.dev>",
@@ -27,26 +27,18 @@ tungstenite = "0.19.0"
 [dependencies.async-tungstenite]
 package = "async-tungstenite"
 version = "0.22.2"
-features = [
-    "tokio-runtime",
-    "tokio-rustls-webpki-roots"
-]
+features = ["tokio-runtime", "tokio-rustls-webpki-roots"]
 
 [dependencies.reqwest]
 package = "reqwest"
 version = "0.11.18"
 default-features = false
-features = [
-    "rustls-tls-webpki-roots",
-    "json"
-]
+features = ["rustls-tls-webpki-roots", "json"]
 
 [dependencies.serde]
 package = "serde"
 version = "1.0.160"
-features = [
-    "derive"
-]
+features = ["derive"]
 
 [dependencies.serenity]
 package = "serenity"
@@ -68,10 +60,7 @@ features = [
 package = "songbird"
 version = "0.3.2"
 default-features = false
-features = [
-    "gateway",
-    "serenity-rustls"
-]
+features = ["gateway", "serenity-rustls"]
 
 [dependencies.tokio]
 package = "tokio"
@@ -81,6 +70,4 @@ features = ["macros", "rt-multi-thread"]
 [dependencies.tracing-subscriber]
 package = "tracing-subscriber"
 version = "0.3.17"
-features = [
-    "env-filter"
-]
+features = ["env-filter"]
