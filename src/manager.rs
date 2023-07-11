@@ -33,7 +33,7 @@ use crate::{
         websocket::{LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackStartEvent},
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
     },
-    player::{HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError},
+    player::{HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError, LoopType},
     HYDROGEN_EMPTY_CHAT_TIMEOUT,
 };
 
@@ -65,6 +65,13 @@ impl Display for HydrogenManagerError {
 }
 
 pub type Result<T> = result::Result<T, HydrogenManagerError>;
+
+#[derive(Clone, PartialEq, Eq)]
+enum HydrogenPlayerState {
+    Nothing,
+    Playing,
+    Thinking,
+}
 
 #[derive(Clone)]
 pub struct HydrogenManager {
@@ -269,6 +276,7 @@ impl HydrogenManager {
                             Duration::from_secs(HYDROGEN_EMPTY_CHAT_TIMEOUT),
                         )
                         .await;
+
                         self.update_play_message(
                             guild_id,
                             &self
@@ -276,7 +284,9 @@ impl HydrogenManager {
                                 .translate(&player.guild_locale(), "playing", "timeout_trigger")
                                 .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
                             0x5865f2,
-                            true,
+                            HydrogenPlayerState::Thinking,
+                            false,
+                            player.loop_type().await,
                             None,
                         )
                         .await;
@@ -385,6 +395,8 @@ impl HydrogenManager {
 
     async fn update_now_playing(&self, guild_id: GuildId) {
         if let Some(player) = self.player.read().await.get(&guild_id.into()) {
+            let mut player_state = HydrogenPlayerState::Playing;
+
             let (translated_message, requester) = match player.now().await {
                 Some(v) => {
                     let message = match v.uri {
@@ -424,11 +436,17 @@ impl HydrogenManager {
                 }
             }
 
+            if requester.is_none() && player.queue().await.len() == 0 {
+                player_state = HydrogenPlayerState::Nothing;
+            }
+
             self.update_play_message(
                 guild_id,
                 &translated_message,
                 0x5865f2,
-                requester.is_none() && player.queue().await.len() == 0,
+                player_state,
+                false,
+                player.loop_type().await,
                 author_obj,
             )
             .await;
@@ -440,7 +458,9 @@ impl HydrogenManager {
         guild_id: GuildId,
         description: &str,
         color: i32,
-        disable_buttons: bool,
+        player_state: HydrogenPlayerState,
+        paused: bool,
+        loop_type: LoopType,
         author_obj: Option<CreateEmbedAuthor>,
     ) {
         let players = self.player.read().await;
@@ -465,7 +485,7 @@ impl HydrogenManager {
                                         .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
                                 )
                         })
-                        .set_components(Self::play_components(disable_buttons))
+                        .set_components(Self::play_components(player_state.clone(), paused, loop_type.clone()))
                 ).await {
                     Ok(_) => return,
                     Err(e) => {
@@ -491,7 +511,7 @@ impl HydrogenManager {
                                     .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
                             )
                     })
-                    .set_components(Self::play_components(disable_buttons))
+                    .set_components(Self::play_components(player_state, paused, loop_type))
             ).await {
                 Ok(v) => {
                     messages.insert(guild_id, v.id);
@@ -502,30 +522,92 @@ impl HydrogenManager {
         }
     }
 
-    pub fn play_components(disable_all: bool) -> CreateComponents {
+    fn play_components(
+        state: HydrogenPlayerState,
+        paused: bool,
+        loop_queue: LoopType,
+    ) -> CreateComponents {
+        let mut prev_style = ButtonStyle::Primary;
+        let mut pause_style = ButtonStyle::Primary;
+        let mut skip_style = ButtonStyle::Primary;
+
+        let mut prev_disabled = false;
+        let mut pause_disabled = false;
+        let mut skip_disabled = false;
+        let mut loop_disabled = false;
+        let mut stop_disabled = false;
+        // QUEUE WILL REMAIN AS WIP UNTIL ALPHA 3.
+        let mut queue_disabled = true;
+
+        let mut pause_emoji = ReactionType::Unicode(String::from("⏸"));
+        let mut loop_emoji = ReactionType::Unicode(String::from("⬇️"));
+
+        match loop_queue {
+            LoopType::None => (),
+            LoopType::NoAutostart => {
+                loop_emoji = ReactionType::Unicode(String::from("⏺"));
+            }
+            LoopType::Music => {
+                loop_emoji = ReactionType::Unicode(String::from("🔂"));
+            }
+            LoopType::Queue => {
+                loop_emoji = ReactionType::Unicode(String::from("🔁"));
+            }
+            LoopType::Random => {
+                loop_emoji = ReactionType::Unicode(String::from("🔀"));
+            }
+        };
+
+        if paused {
+            pause_style = ButtonStyle::Success;
+            pause_emoji = ReactionType::Unicode(String::from("▶️"));
+        }
+
+        match state {
+            HydrogenPlayerState::Playing => (),
+            HydrogenPlayerState::Nothing => {
+                prev_disabled = true;
+                pause_disabled = true;
+                skip_disabled = true;
+                queue_disabled = true;
+
+                prev_style = ButtonStyle::Secondary;
+                pause_style = ButtonStyle::Secondary;
+                skip_style = ButtonStyle::Secondary;
+            }
+            HydrogenPlayerState::Thinking => {
+                prev_disabled = true;
+                pause_disabled = true;
+                skip_disabled = true;
+                loop_disabled = true;
+                stop_disabled = true;
+                queue_disabled = true;
+            }
+        }
+
         CreateComponents::default()
             .create_action_row(|action_row| {
                 action_row
                     .create_button(|button| {
                         button
                             .custom_id("prev")
-                            .disabled(disable_all || true)
+                            .disabled(prev_disabled)
                             .emoji('⏮')
-                            .style(ButtonStyle::Secondary)
+                            .style(prev_style)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("pause")
-                            .disabled(disable_all || true)
-                            .emoji('⏸')
-                            .style(ButtonStyle::Secondary)
+                            .disabled(pause_disabled)
+                            .emoji(pause_emoji)
+                            .style(pause_style)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("skip")
-                            .disabled(disable_all || true)
+                            .disabled(skip_disabled)
                             .emoji('⏭')
-                            .style(ButtonStyle::Secondary)
+                            .style(skip_style)
                     })
             })
             .create_action_row(|action_row| {
@@ -533,21 +615,21 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("loop")
-                            .disabled(disable_all || true)
-                            .emoji(ReactionType::Unicode("⤵️".to_owned()))
+                            .disabled(loop_disabled)
+                            .emoji(loop_emoji)
                             .style(ButtonStyle::Secondary)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("stop")
-                            .disabled(false)
+                            .disabled(stop_disabled)
                             .emoji('⏹')
-                            .style(ButtonStyle::Secondary)
+                            .style(ButtonStyle::Danger)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("queue")
-                            .disabled(disable_all || true)
+                            .disabled(queue_disabled)
                             .emoji(ReactionType::Unicode("ℹ️".to_owned()))
                             .style(ButtonStyle::Secondary)
                     })

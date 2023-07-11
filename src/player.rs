@@ -20,7 +20,7 @@ use crate::{
     HYDROGEN_QUEUE_LIMIT,
 };
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum LoopType {
     None,
     NoAutostart,
@@ -152,6 +152,10 @@ impl HydrogenPlayer {
             text_channel_id,
             voice_manager,
         }
+    }
+
+    pub async fn loop_type(&self) -> LoopType {
+        self.queue_loop.read().await.clone()
     }
 
     pub fn lavalink(&self) -> Lavalink {
