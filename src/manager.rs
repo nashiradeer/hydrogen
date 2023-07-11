@@ -636,6 +636,27 @@ impl HydrogenManager {
             })
             .to_owned()
     }
+
+    pub async fn get_loop_type(&self, guild_id: GuildId) -> LoopType {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            return player.loop_type().await;
+        }
+
+        return LoopType::None;
+    }
+
+    pub async fn set_loop_type(&self, guild_id: GuildId, loop_type: LoopType) {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            player.set_loop_type(loop_type).await;
+        }
+
+        drop(players);
+        self.update_now_playing(guild_id).await;
+    }
 }
 
 #[async_trait]
