@@ -158,6 +158,10 @@ impl HydrogenPlayer {
         self.queue_loop.read().await.clone()
     }
 
+    pub async fn set_loop_type(&self, loop_type: LoopType) {
+        *self.queue_loop.write().await = loop_type;
+    }
+
     pub fn lavalink(&self) -> Lavalink {
         self.lavalink.clone()
     }
@@ -195,7 +199,8 @@ impl HydrogenPlayer {
                             self.index.store(0, Ordering::Relaxed);
                             self.start_playing().await?;
                         } else {
-                            self.index.store(queue.len(), Ordering::Relaxed);
+                            self.index.store(queue.len() - 1, Ordering::Relaxed);
+                            // PAUSE
                         }
                     } else {
                         self.start_playing().await?;
@@ -205,7 +210,15 @@ impl HydrogenPlayer {
                     self.index.store(random_index, Ordering::Relaxed);
                     self.start_playing().await?;
                 }
+            } else {
+                self.start_playing().await?;
             }
+        } else {
+            let index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
+            if index >= queue.len() {
+                self.index.store(queue.len() - 1, Ordering::Relaxed);
+            }
+            // PAUSE
         }
         Ok(())
     }
@@ -329,6 +342,8 @@ impl HydrogenPlayer {
                 .update_player(self.guild_id.0, false, &player)
                 .await
                 .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+
+            // UNPAUSE
 
             return Ok(true);
         }

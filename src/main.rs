@@ -26,7 +26,10 @@ use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
 };
 
-use crate::{commands::join::JoinCommand, components::stop::StopComponent};
+use crate::{
+    commands::join::JoinCommand,
+    components::{loop_switch::LoopComponent, stop::StopComponent},
+};
 
 mod commands;
 mod components;
@@ -254,6 +257,7 @@ async fn main() {
                 HashMap::new();
 
             components.insert("stop".to_owned(), Box::new(StopComponent));
+            components.insert("loop".to_owned(), Box::new(LoopComponent));
 
             Arc::new(components)
         },

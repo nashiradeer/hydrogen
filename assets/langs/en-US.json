@@ -46,5 +46,17 @@
         "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "success": "The music player has stopped, thanks for using Hydrogen, hope to see you soon."
+    },
+    "loop": {
+        "embed_title": "Looping the queue",
+        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "success": "The queue's loop mode has been changed to: **${loop}**.",
+        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "autostart": "Normal",
+        "no_autostart": "Autostart disabled",
+        "music": "Music",
+        "queue": "Queue",
+        "random": "Random"
     }
 }
