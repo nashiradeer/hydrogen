@@ -285,7 +285,7 @@ impl HydrogenManager {
                                 .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
                             0x5865f2,
                             HydrogenPlayerState::Thinking,
-                            false,
+                            player.pause(),
                             player.loop_type().await,
                             None,
                         )
@@ -445,7 +445,7 @@ impl HydrogenManager {
                 &translated_message,
                 0x5865f2,
                 player_state,
-                false,
+                player.pause(),
                 player.loop_type().await,
                 author_obj,
             )
@@ -656,6 +656,31 @@ impl HydrogenManager {
 
         drop(players);
         self.update_now_playing(guild_id).await;
+    }
+
+    pub async fn get_paused(&self, guild_id: GuildId) -> bool {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            return player.pause();
+        }
+
+        return false;
+    }
+
+    pub async fn set_paused(&self, guild_id: GuildId, paused: bool) -> Result<()> {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            player
+                .set_pause(paused)
+                .await
+                .map_err(|e| HydrogenManagerError::Player(e))?;
+        }
+
+        drop(players);
+        self.update_now_playing(guild_id).await;
+        Ok(())
     }
 }
 
