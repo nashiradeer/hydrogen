@@ -56,6 +56,7 @@ impl HydrogenMusic {
 pub enum HydrogenPlayerError {
     Lavalink(LavalinkError),
     Join(JoinError),
+    EmptyQueue,
 }
 
 impl Display for HydrogenPlayerError {
@@ -63,6 +64,7 @@ impl Display for HydrogenPlayerError {
         match self {
             Self::Lavalink(e) => e.fmt(f),
             Self::Join(e) => e.fmt(f),
+            Self::EmptyQueue => write!(f, "the queue is empty"),
         }
     }
 }
@@ -230,6 +232,17 @@ impl HydrogenPlayer {
 
     pub async fn queue(&self) -> Vec<HydrogenMusic> {
         self.queue.read().await.clone()
+    }
+
+    pub async fn skip(&self) -> Result<HydrogenMusic> {
+        let queue = self.queue.read().await;
+        let mut index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
+        if index >= queue.len() {
+            self.index.store(0, Ordering::Relaxed);
+            index = 0;
+        }
+        self.start_playing().await?;
+        queue.get(index).cloned().ok_or(HydrogenPlayerError::EmptyQueue)
     }
 
     pub async fn next(&self) -> Result<()> {
