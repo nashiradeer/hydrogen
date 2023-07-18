@@ -36,14 +36,14 @@ impl SkipComponent {
         if let Some(uri) = track.uri {
             return hydrogen
                 .i18n
-                .translate(&interaction.locale, "skip", "playing_one_uri")
+                .translate(&interaction.locale, "skip", "success_uri")
                 .replace("${music}", &track.title)
                 .replace("${author}", &track.author)
                 .replace("${uri}", &uri);
         } else {
             return hydrogen
                 .i18n
-                .translate(&interaction.locale, "skip", "playing_one")
+                .translate(&interaction.locale, "skip", "success")
                 .replace("${music}", &track.title)
                 .replace("${author}", &track.author);
         }
@@ -128,7 +128,7 @@ impl SkipComponent {
                                         .description(hydrogen.i18n.translate(
                                             &interaction.locale,
                                             "skip",
-                                            "error",
+                                            "player_not_exists",
                                         ))
                                         .color(HYDROGEN_ERROR_COLOR)
                                         .footer(|footer| {
