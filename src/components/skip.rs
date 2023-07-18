@@ -6,8 +6,8 @@ use serenity::{
 use tracing::warn;
 
 use crate::{
-    HydrogenComponentListener, HydrogenContext, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL,
-    HYDROGEN_PRIMARY_COLOR,
+    player::HydrogenMusic, HydrogenComponentListener, HydrogenContext, HYDROGEN_ERROR_COLOR,
+    HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct SkipComponent;
@@ -25,6 +25,28 @@ impl SkipComponent {
             .ok_or(Err(
                 "can't get the channel id from the voice state".to_owned()
             ))?)
+    }
+
+    #[inline]
+    fn get_message<'a>(
+        track: HydrogenMusic,
+        hydrogen: &'a HydrogenContext,
+        interaction: &'a MessageComponentInteraction,
+    ) -> String {
+        if let Some(uri) = track.uri {
+            return hydrogen
+                .i18n
+                .translate(&interaction.locale, "skip", "playing_one_uri")
+                .replace("${music}", &track.title)
+                .replace("${author}", &track.author)
+                .replace("${uri}", &uri);
+        } else {
+            return hydrogen
+                .i18n
+                .translate(&interaction.locale, "skip", "playing_one")
+                .replace("${music}", &track.title)
+                .replace("${author}", &track.author);
+        }
     }
 
     async fn _execute(
@@ -91,9 +113,45 @@ impl SkipComponent {
 
         if let Some(my_channel_id) = manager.get_voice_channel_id(guild_id).await {
             if my_channel_id == voice_channel_id.into() {
-                let paused = !manager.get_paused(guild_id).await;
+                let music = match manager.skip(guild_id).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        if let Err(e) = interaction
+                            .edit_original_interaction_response(&context.http, |response| {
+                                response.embed(|embed| {
+                                    embed
+                                        .title(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "skip",
+                                            "embed_title",
+                                        ))
+                                        .description(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "skip",
+                                            "error",
+                                        ))
+                                        .color(HYDROGEN_ERROR_COLOR)
+                                        .footer(|footer| {
+                                            footer
+                                                .text(hydrogen.i18n.translate(
+                                                    &interaction.locale,
+                                                    "embed",
+                                                    "footer_text",
+                                                ))
+                                                .icon_url(HYDROGEN_LOGO_URL)
+                                        })
+                                })
+                            })
+                            .await
+                        {
+                            warn!("can't response to interaction: {:?}", e);
+                        }
 
-                if let Err(e) = manager.set_paused(guild_id, paused).await {
+                        return Err(format!("can't skip the current music: {}", e));
+                    }
+                };
+
+                let Some(music) = music else {
                     if let Err(e) = interaction
                         .edit_original_interaction_response(&context.http, |response| {
                             response.embed(|embed| {
@@ -106,7 +164,7 @@ impl SkipComponent {
                                     .description(hydrogen.i18n.translate(
                                         &interaction.locale,
                                         "skip",
-                                        "cant_pause",
+                                        "empty_queue",
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(|footer| {
@@ -125,8 +183,8 @@ impl SkipComponent {
                         warn!("can't response to interaction: {:?}", e);
                     }
 
-                    return Err(format!("can't resume/pause the player: {}", e));
-                }
+                    return Ok(());
+                };
 
                 if let Err(e) = interaction
                     .edit_original_interaction_response(&context.http, |response| {
@@ -137,11 +195,7 @@ impl SkipComponent {
                                     "skip",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "skip",
-                                    translation_key,
-                                ))
+                                .description(Self::get_message(music, &hydrogen, &interaction))
                                 .color(HYDROGEN_PRIMARY_COLOR)
                                 .footer(|footer| {
                                     footer

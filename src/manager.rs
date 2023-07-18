@@ -217,14 +217,17 @@ impl HydrogenManager {
         connection.channel_id.clone()
     }
 
-    pub async fn skip(&self, guild_id: GuildId) -> Result<HydrogenMusic> {
+    pub async fn skip(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
         let players = self.player.read().await;
 
         let player = players
             .get(&guild_id)
             .ok_or(HydrogenManagerError::PlayerNotFound)?;
 
-        player.skip().await.map_err(|e| HydrogenManagerError::Player(e))
+        player
+            .skip()
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
     }
 
     pub async fn update_voice_state(
