@@ -232,6 +232,17 @@ impl HydrogenPlayer {
         self.queue.read().await.clone()
     }
 
+    pub async fn skip(&self) -> Result<Option<HydrogenMusic>> {
+        let queue = self.queue.read().await;
+        let mut index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
+        if index >= queue.len() {
+            self.index.store(0, Ordering::Relaxed);
+            index = 0;
+        }
+        self.start_playing().await?;
+        Ok(queue.get(index).cloned())
+    }
+
     pub async fn next(&self) -> Result<()> {
         let queue_loop = self.queue_loop.read().await;
         let queue = self.queue.read().await;

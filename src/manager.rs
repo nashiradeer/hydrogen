@@ -33,7 +33,7 @@ use crate::{
         websocket::{LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackStartEvent},
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
     },
-    player::{HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError, LoopType},
+    player::{HydrogenMusic, HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError, LoopType},
     HYDROGEN_EMPTY_CHAT_TIMEOUT,
 };
 
@@ -46,6 +46,7 @@ pub enum HydrogenManagerError {
     VoiceManagerNotConnected,
     GuildIdMissing,
     GuildChannelNotFound,
+    PlayerNotFound,
 }
 
 impl Display for HydrogenManagerError {
@@ -60,6 +61,7 @@ impl Display for HydrogenManagerError {
             }
             Self::GuildIdMissing => write!(f, "guild id missing"),
             Self::GuildChannelNotFound => write!(f, "guild channel not found"),
+            Self::PlayerNotFound => write!(f, "player not found"),
         }
     }
 }
@@ -213,6 +215,19 @@ impl HydrogenManager {
         let players = self.player.read().await;
         let connection = players.get(&guild_id)?.connection.read().await;
         connection.channel_id.clone()
+    }
+
+    pub async fn skip(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
+        let players = self.player.read().await;
+
+        let player = players
+            .get(&guild_id)
+            .ok_or(HydrogenManagerError::PlayerNotFound)?;
+
+        player
+            .skip()
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
     }
 
     pub async fn update_voice_state(
