@@ -230,6 +230,19 @@ impl HydrogenManager {
             .map_err(|e| HydrogenManagerError::Player(e))
     }
 
+    pub async fn prev(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
+        let players = self.player.read().await;
+
+        let player = players
+            .get(&guild_id)
+            .ok_or(HydrogenManagerError::PlayerNotFound)?;
+
+        player
+            .prev()
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
+    }
+
     pub async fn update_voice_state(
         &self,
         old_voice_state: Option<VoiceState>,
