@@ -29,7 +29,8 @@ use tracing_subscriber::{
 use crate::{
     commands::join::JoinCommand,
     components::{
-        loop_switch::LoopComponent, pause::PauseComponent, skip::SkipComponent, stop::StopComponent,
+        loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent,
+        skip::SkipComponent, stop::StopComponent,
     },
 };
 
@@ -262,6 +263,7 @@ async fn main() {
             components.insert("loop".to_owned(), Box::new(LoopComponent));
             components.insert("pause".to_owned(), Box::new(PauseComponent));
             components.insert("skip".to_owned(), Box::new(SkipComponent));
+            components.insert("prev".to_owned(), Box::new(PrevComponent));
 
             Arc::new(components)
         },
