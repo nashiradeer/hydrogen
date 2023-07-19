@@ -33,7 +33,10 @@ use crate::{
         websocket::{LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackStartEvent},
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
     },
-    player::{HydrogenMusic, HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError, LoopType},
+    player::{
+        HydrogenMusic, HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError,
+        HydrogenSeekCommand, LoopType,
+    },
     HYDROGEN_EMPTY_CHAT_TIMEOUT,
 };
 
@@ -239,6 +242,23 @@ impl HydrogenManager {
 
         player
             .prev()
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
+    }
+
+    pub async fn seek(
+        &self,
+        guild_id: GuildId,
+        milliseconds: i32,
+    ) -> Result<Option<HydrogenSeekCommand>> {
+        let players = self.player.read().await;
+
+        let player = players
+            .get(&guild_id)
+            .ok_or(HydrogenManagerError::PlayerNotFound)?;
+
+        player
+            .seek(milliseconds)
             .await
             .map_err(|e| HydrogenManagerError::Player(e))
     }
