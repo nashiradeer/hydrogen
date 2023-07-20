@@ -7,7 +7,7 @@ use serenity::{
     },
     prelude::Context,
 };
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::{
     i18n::HydrogenI18n, HydrogenCommandListener, HydrogenContext, HYDROGEN_ERROR_COLOR,
@@ -65,18 +65,54 @@ impl SeekCommand {
         if components.len() == 0 {
             return Err("not detected any time syntax".to_owned());
         } else if components.len() == 1 {
-            let seconds = components[0] * 1000;
-            return Ok(seconds.into());
+            let seconds = i32::from(components[0])
+                .checked_mul(1000)
+                .ok_or("overflow detected".to_owned())?;
+            return Ok(seconds);
         } else if components.len() == 2 {
-            let mut seconds = components[1] * 1000;
-            seconds += components[0] * 60 * 1000;
-            return Ok(seconds.into());
+            let mut seconds = i32::from(components[1])
+                .checked_mul(1000)
+                .ok_or("overflow detected".to_owned())?;
+
+            seconds = seconds
+                .checked_add(
+                    i32::from(components[0])
+                        .checked_mul(60)
+                        .ok_or("overflow detected".to_owned())?
+                        .checked_mul(1000)
+                        .ok_or("overflow detected".to_owned())?,
+                )
+                .ok_or("overflow detected".to_owned())?;
+
+            return Ok(seconds);
         }
 
-        let mut seconds = components[2] * 1000;
-        seconds += components[1] * 60 * 1000;
-        seconds += components[0] * 60 * 60 * 1000;
-        Ok(seconds.into())
+        let mut seconds = i32::from(components[2])
+            .checked_mul(1000)
+            .ok_or("overflow detected".to_owned())?;
+
+        seconds = seconds
+            .checked_add(
+                i32::from(components[1])
+                    .checked_mul(60)
+                    .ok_or("overflow detected".to_owned())?
+                    .checked_mul(1000)
+                    .ok_or("overflow detected".to_owned())?,
+            )
+            .ok_or("overflow detected".to_owned())?;
+
+        seconds = seconds
+            .checked_add(
+                i32::from(components[0])
+                    .checked_mul(60)
+                    .ok_or("overflow detected".to_owned())?
+                    .checked_mul(60)
+                    .ok_or("overflow detected".to_owned())?
+                    .checked_mul(1000)
+                    .ok_or("overflow detected".to_owned())?,
+            )
+            .ok_or("overflow detected".to_owned())?;
+        Ok(seconds)
     }
 
     fn time_to_string(seconds: i32) -> String {
@@ -99,6 +135,13 @@ impl SeekCommand {
         );
     }
 
+    fn progress_bar(current: i32, total: i32) -> String {
+        let item_total = 30usize;
+        let item_count = (current as f32 / (total as f32 / item_total as f32)).round();
+        let bar = "▓".repeat(item_count as usize);
+        format!("╣{:░>width$.width$}╠", bar, width = item_total)
+    }
+
     async fn _execute(
         &self,
         hydrogen: HydrogenContext,
@@ -110,6 +153,17 @@ impl SeekCommand {
             .await
             .map_err(|e| format!("can't defer the response: {}", e))?;
 
+        let time = interaction
+            .data
+            .options
+            .get(0)
+            .ok_or("required 'time' parameter missing".to_owned())?
+            .value
+            .clone()
+            .ok_or("required 'time' parameter missing".to_owned())?
+            .as_str()
+            .ok_or("can't convert required 'time' to str".to_owned())?
+            .to_owned();
         let manager = hydrogen
             .manager
             .read()
@@ -163,47 +217,107 @@ impl SeekCommand {
 
         if let Some(my_channel_id) = manager.get_voice_channel_id(guild_id).await {
             if my_channel_id == voice_channel_id.into() {
-                let paused = !manager.get_paused(guild_id).await;
-
-                if let Err(e) = manager.set_paused(guild_id, paused).await {
-                    if let Err(e) = interaction
-                        .edit_original_interaction_response(&context.http, |response| {
-                            response.embed(|embed| {
-                                embed
-                                    .title(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "seek",
-                                        "embed_title",
-                                    ))
-                                    .description(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "seek",
-                                        "cant_pause",
-                                    ))
-                                    .color(HYDROGEN_ERROR_COLOR)
-                                    .footer(|footer| {
-                                        footer
-                                            .text(hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "embed",
-                                                "footer_text",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL)
-                                    })
+                let seek_time = match Self::parse_time(&time) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        if let Err(e) = interaction
+                            .edit_original_interaction_response(&context.http, |response| {
+                                response.embed(|embed| {
+                                    embed
+                                        .title(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "seek",
+                                            "embed_title",
+                                        ))
+                                        .description(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "seek",
+                                            "invalid_syntax",
+                                        ))
+                                        .color(HYDROGEN_ERROR_COLOR)
+                                        .footer(|footer| {
+                                            footer
+                                                .text(hydrogen.i18n.translate(
+                                                    &interaction.locale,
+                                                    "embed",
+                                                    "footer_text",
+                                                ))
+                                                .icon_url(HYDROGEN_LOGO_URL)
+                                        })
+                                })
                             })
-                        })
-                        .await
-                    {
-                        warn!("can't response to interaction: {:?}", e);
+                            .await
+                        {
+                            warn!("can't response to interaction: {:?}", e);
+                        }
+
+                        return Err(format!("can't parse time: {}", e));
                     }
+                };
 
-                    return Err(format!("can't resume/pause the player: {}", e));
-                }
+                debug!("parsed a seek time of {} milliseconds", seek_time);
 
-                let mut translation_key = "resumed";
+                let seek_result = match manager.seek(guild_id, seek_time).await {
+                    Ok(Some(v)) => v,
+                    Ok(None) => {
+                        if let Err(e) = interaction
+                            .edit_original_interaction_response(&context.http, |response| {
+                                response.embed(|embed| {
+                                    embed
+                                        .title(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "seek",
+                                            "embed_title",
+                                        ))
+                                        .description(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "seek",
+                                            "empty_queue",
+                                        ))
+                                        .color(HYDROGEN_ERROR_COLOR)
+                                        .footer(|footer| {
+                                            footer
+                                                .text(hydrogen.i18n.translate(
+                                                    &interaction.locale,
+                                                    "embed",
+                                                    "footer_text",
+                                                ))
+                                                .icon_url(HYDROGEN_LOGO_URL)
+                                        })
+                                })
+                            })
+                            .await
+                        {
+                            warn!("can't response to interaction: {:?}", e);
+                        }
 
-                if paused {
-                    translation_key = "paused";
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        return Err(format!("can't seek the player: {}", e));
+                    }
+                };
+
+                let current_time = Self::time_to_string(seek_result.position);
+                let total_time = Self::time_to_string(seek_result.total);
+                let progress_bar = Self::progress_bar(seek_result.position, seek_result.total);
+
+                let translation_message;
+                if let Some(uri) = seek_result.track.uri {
+                    translation_message = hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "seek", "success_uri")
+                        .replace("${uri}", &uri)
+                        .replace("${current}", &current_time)
+                        .replace("${total}", &total_time)
+                        .replace("${bar}", &progress_bar);
+                } else {
+                    translation_message = hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "seek", "success")
+                        .replace("${current}", &current_time)
+                        .replace("${total}", &total_time)
+                        .replace("${bar}", &progress_bar);
                 }
 
                 if let Err(e) = interaction
@@ -215,11 +329,7 @@ impl SeekCommand {
                                     "seek",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "seek",
-                                    translation_key,
-                                ))
+                                .description(translation_message)
                                 .color(HYDROGEN_PRIMARY_COLOR)
                                 .footer(|footer| {
                                     footer
