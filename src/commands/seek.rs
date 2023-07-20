@@ -7,7 +7,7 @@ use serenity::{
     },
     prelude::Context,
 };
-use tracing::{debug, warn};
+use tracing::warn;
 
 use crate::{
     i18n::HydrogenI18n, HydrogenCommandListener, HydrogenContext, HYDROGEN_ERROR_COLOR,
@@ -139,7 +139,7 @@ impl SeekCommand {
         let item_total = 30usize;
         let item_count = (current as f32 / (total as f32 / item_total as f32)).round();
         let bar = "▓".repeat(item_count as usize);
-        format!("╣{:░>width$.width$}╠", bar, width = item_total)
+        format!("╣{:░<width$.width$}╠", bar, width = item_total)
     }
 
     async fn _execute(
@@ -255,8 +255,6 @@ impl SeekCommand {
                     }
                 };
 
-                debug!("parsed a seek time of {} milliseconds", seek_time);
-
                 let seek_result = match manager.seek(guild_id, seek_time).await {
                     Ok(Some(v)) => v,
                     Ok(None) => {
@@ -298,8 +296,8 @@ impl SeekCommand {
                     }
                 };
 
-                let current_time = Self::time_to_string(seek_result.position);
-                let total_time = Self::time_to_string(seek_result.total);
+                let current_time = Self::time_to_string(seek_result.position / 1000);
+                let total_time = Self::time_to_string(seek_result.total / 1000);
                 let progress_bar = Self::progress_bar(seek_result.position, seek_result.total);
 
                 let translation_message;
@@ -307,6 +305,8 @@ impl SeekCommand {
                     translation_message = hydrogen
                         .i18n
                         .translate(&interaction.locale, "seek", "success_uri")
+                        .replace("${music}", &seek_result.track.title)
+                        .replace("${author}", &seek_result.track.author)
                         .replace("${uri}", &uri)
                         .replace("${current}", &current_time)
                         .replace("${total}", &total_time)
@@ -315,6 +315,8 @@ impl SeekCommand {
                     translation_message = hydrogen
                         .i18n
                         .translate(&interaction.locale, "seek", "success")
+                        .replace("${music}", &seek_result.track.title)
+                        .replace("${author}", &seek_result.track.author)
                         .replace("${current}", &current_time)
                         .replace("${total}", &total_time)
                         .replace("${bar}", &progress_bar);
