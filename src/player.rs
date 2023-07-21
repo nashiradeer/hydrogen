@@ -467,21 +467,13 @@ impl HydrogenPlayer {
 
     pub async fn update_connection(&self) -> Result<()> {
         let connection = self.connection.read().await;
-        if let Ok(info) = self.lavalink.get_player(self.guild_id.0).await {
-            if let Some(track) = info.track {
-                let mut player = LavalinkUpdatePlayer::new();
-                player
-                    .encoded_track(&track.encoded)
-                    .position(track.info.position)
-                    .voice_state(connection.clone().into())
-                    .paused(self.paused.load(Ordering::Relaxed));
+        let mut player = LavalinkUpdatePlayer::new();
+        player.voice_state(connection.clone().into());
 
-                self.lavalink
-                    .update_player(self.guild_id.0, false, &player)
-                    .await
-                    .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-            }
-        }
+        self.lavalink
+            .update_player(self.guild_id.0, true, &player)
+            .await
+            .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
 
         Ok(())
     }
