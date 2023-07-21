@@ -17,7 +17,7 @@ use crate::{
         rest::{LavalinkLoadResultType, LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState},
         Lavalink, LavalinkConnection, LavalinkError,
     },
-    HYDROGEN_QUEUE_LIMIT,
+    HYDROGEN_QUEUE_LIMIT, HYDROGEN_SEARCH_PREFIX,
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -310,7 +310,7 @@ impl HydrogenPlayer {
             if musics.tracks.len() == 0 {
                 musics = self
                     .lavalink
-                    .track_load(&format!("ytsearch:{}", music))
+                    .track_load(&format!("{}{}", HYDROGEN_SEARCH_PREFIX, music))
                     .await
                     .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
             }
