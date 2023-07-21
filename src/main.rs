@@ -27,7 +27,7 @@ use tracing_subscriber::{
 };
 
 use crate::{
-    commands::join::JoinCommand,
+    commands::{join::JoinCommand, seek::SeekCommand},
     components::{
         loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent,
         skip::SkipComponent, stop::StopComponent,
@@ -252,6 +252,7 @@ async fn main() {
 
             commands.insert("play".to_owned(), Box::new(PlayCommand));
             commands.insert("join".to_owned(), Box::new(JoinCommand));
+            commands.insert("seek".to_owned(), Box::new(SeekCommand));
 
             Arc::new(commands)
         },

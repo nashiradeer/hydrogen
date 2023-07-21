@@ -117,6 +117,12 @@ pub struct HydrogenPlayCommand {
     pub truncated: bool,
 }
 
+pub struct HydrogenSeekCommand {
+    pub position: i32,
+    pub total: i32,
+    pub track: HydrogenMusic,
+}
+
 #[derive(Clone)]
 pub struct HydrogenPlayer {
     pub connection: Arc<RwLock<HydrogenPlayerConnection>>,
@@ -393,6 +399,26 @@ impl HydrogenPlayer {
             playing,
             truncated,
         })
+    }
+
+    pub async fn seek(&self, milliseconds: i32) -> Result<Option<HydrogenSeekCommand>> {
+        let mut update_player = LavalinkUpdatePlayer::new();
+        update_player.position(milliseconds);
+        let player = self
+            .lavalink
+            .update_player(self.guild_id.0, false, &update_player)
+            .await
+            .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+        if let Some(track) = player.track {
+            if let Some(music) = self.now().await {
+                return Ok(Some(HydrogenSeekCommand {
+                    position: track.info.position,
+                    total: track.info.length,
+                    track: music,
+                }));
+            }
+        }
+        Ok(None)
     }
 
     async fn start_playing(&self) -> Result<bool> {
