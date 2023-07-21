@@ -37,7 +37,7 @@ use crate::{
         HydrogenMusic, HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError,
         HydrogenSeekCommand, LoopType,
     },
-    HYDROGEN_EMPTY_CHAT_TIMEOUT,
+    HYDROGEN_EMPTY_CHAT_TIMEOUT, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 #[derive(Debug)]
@@ -331,7 +331,7 @@ impl HydrogenManager {
                                 .i18n
                                 .translate(&player.guild_locale(), "playing", "timeout_trigger")
                                 .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
-                            0x5865f2,
+                            HYDROGEN_PRIMARY_COLOR,
                             HydrogenPlayerState::Thinking,
                             player.pause(),
                             player.loop_type().await,
@@ -491,7 +491,7 @@ impl HydrogenManager {
             self.update_play_message(
                 guild_id,
                 &translated_message,
-                0x5865f2,
+                HYDROGEN_PRIMARY_COLOR,
                 player_state,
                 player.pause(),
                 player.loop_type().await,
@@ -516,25 +516,41 @@ impl HydrogenManager {
 
         if let Some(player) = players.get(&guild_id) {
             if let Some(message) = messages.get(&guild_id) {
-                match player.text_channel_id().edit_message(self.http.clone(), message, |message|
-                    message
-                        .embed(|embed| {
-                            if let Some(author_obj) = author_obj.clone() {
-                                embed.set_author(author_obj);
-                            }
+                match player
+                    .text_channel_id()
+                    .edit_message(self.http.clone(), message, |message| {
+                        message
+                            .embed(|embed| {
+                                if let Some(author_obj) = author_obj.clone() {
+                                    embed.set_author(author_obj);
+                                }
 
-                            embed
-                                .title(self.i18n.translate(&player.guild_locale(), "playing", "title"))
-                                .description(description)
-                                .color(color)
-                                .footer(|footer|
-                                    footer
-                                        .text(self.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        })
-                        .set_components(Self::play_components(player_state.clone(), paused, loop_type.clone()))
-                ).await {
+                                embed
+                                    .title(self.i18n.translate(
+                                        &player.guild_locale(),
+                                        "playing",
+                                        "title",
+                                    ))
+                                    .description(description)
+                                    .color(color)
+                                    .footer(|footer| {
+                                        footer
+                                            .text(self.i18n.translate(
+                                                &player.guild_locale(),
+                                                "embed",
+                                                "footer_text",
+                                            ))
+                                            .icon_url(HYDROGEN_LOGO_URL)
+                                    })
+                            })
+                            .set_components(Self::play_components(
+                                player_state.clone(),
+                                paused,
+                                loop_type.clone(),
+                            ))
+                    })
+                    .await
+                {
                     Ok(_) => return,
                     Err(e) => {
                         warn!("can't edit player message: {}", e);
@@ -542,30 +558,42 @@ impl HydrogenManager {
                 }
             }
 
-            match player.text_channel_id().send_message(self.http.clone(), |message|
-                message
-                    .embed(|embed| {
-                        if let Some(author_obj) = author_obj {
-                            embed.set_author(author_obj);
-                        }
+            match player
+                .text_channel_id()
+                .send_message(self.http.clone(), |message| {
+                    message
+                        .embed(|embed| {
+                            if let Some(author_obj) = author_obj {
+                                embed.set_author(author_obj);
+                            }
 
-                        embed
-                            .title(self.i18n.translate(&player.guild_locale(), "playing", "title"))
-                            .description(description)
-                            .color(color)
-                            .footer(|footer|
-                                footer
-                                    .text(self.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
-                                    .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                            )
-                    })
-                    .set_components(Self::play_components(player_state, paused, loop_type))
-            ).await {
+                            embed
+                                .title(self.i18n.translate(
+                                    &player.guild_locale(),
+                                    "playing",
+                                    "title",
+                                ))
+                                .description(description)
+                                .color(color)
+                                .footer(|footer| {
+                                    footer
+                                        .text(self.i18n.translate(
+                                            &player.guild_locale(),
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                        .set_components(Self::play_components(player_state, paused, loop_type))
+                })
+                .await
+            {
                 Ok(v) => {
                     messages.insert(guild_id, v.id);
                     ()
-                },
-                Err(e) => warn!("can't send a new playing message: {}", e)
+                }
+                Err(e) => warn!("can't send a new playing message: {}", e),
             };
         }
     }
