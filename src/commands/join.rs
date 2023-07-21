@@ -106,33 +106,36 @@ impl JoinCommand {
             .guild(guild_id)
             .ok_or("guild isn't present in the cache".to_owned())?;
 
+        interaction
+            .defer_ephemeral(&context.http)
+            .await
+            .map_err(|e| format!("can't defer the response: {}", e))?;
+
         if manager.contains_player(guild_id).await {
             if let Err(e) = interaction
-                .create_interaction_response(&context.http, |response| {
-                    response.interaction_response_data(|data| {
-                        data.embed(|embed| {
-                            embed
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "join",
-                                    "embed_title",
-                                ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "join",
-                                    "player_exists",
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
+                .edit_original_interaction_response(&context.http, |response| {
+                    response.embed(|embed| {
+                        embed
+                            .title(hydrogen.i18n.translate(
+                                &interaction.locale,
+                                "join",
+                                "embed_title",
+                            ))
+                            .description(hydrogen.i18n.translate(
+                                &interaction.locale,
+                                "join",
+                                "player_exists",
+                            ))
+                            .color(HYDROGEN_ERROR_COLOR)
+                            .footer(|footer| {
+                                footer
+                                    .text(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL)
+                            })
                     })
                 })
                 .await
@@ -140,11 +143,6 @@ impl JoinCommand {
                 warn!("can't response to interaction: {:?}", e);
             }
         }
-
-        interaction
-            .defer_ephemeral(&context.http)
-            .await
-            .map_err(|e| format!("can't defer the response: {}", e))?;
 
         let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
             Ok(v) => v,
