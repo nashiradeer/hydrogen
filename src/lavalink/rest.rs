@@ -87,6 +87,12 @@ impl LavalinkUpdatePlayer {
 
         self
     }
+
+    pub fn paused(&mut self, paused: bool) -> &mut Self {
+        self.paused = Some(paused);
+
+        self
+    }
 }
 
 #[derive(Deserialize)]

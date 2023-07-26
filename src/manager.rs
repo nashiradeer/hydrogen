@@ -33,8 +33,11 @@ use crate::{
         websocket::{LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackStartEvent},
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
     },
-    player::{HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError},
-    HYDROGEN_EMPTY_CHAT_TIMEOUT,
+    player::{
+        HydrogenMusic, HydrogenPlayCommand, HydrogenPlayer, HydrogenPlayerError,
+        HydrogenSeekCommand, LoopType,
+    },
+    HYDROGEN_EMPTY_CHAT_TIMEOUT, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 #[derive(Debug)]
@@ -46,6 +49,7 @@ pub enum HydrogenManagerError {
     VoiceManagerNotConnected,
     GuildIdMissing,
     GuildChannelNotFound,
+    PlayerNotFound,
 }
 
 impl Display for HydrogenManagerError {
@@ -60,11 +64,19 @@ impl Display for HydrogenManagerError {
             }
             Self::GuildIdMissing => write!(f, "guild id missing"),
             Self::GuildChannelNotFound => write!(f, "guild channel not found"),
+            Self::PlayerNotFound => write!(f, "player not found"),
         }
     }
 }
 
 pub type Result<T> = result::Result<T, HydrogenManagerError>;
+
+#[derive(Clone, PartialEq, Eq)]
+enum HydrogenPlayerState {
+    Nothing,
+    Playing,
+    Thinking,
+}
 
 #[derive(Clone)]
 pub struct HydrogenManager {
@@ -208,6 +220,49 @@ impl HydrogenManager {
         connection.channel_id.clone()
     }
 
+    pub async fn skip(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
+        let players = self.player.read().await;
+
+        let player = players
+            .get(&guild_id)
+            .ok_or(HydrogenManagerError::PlayerNotFound)?;
+
+        player
+            .skip()
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
+    }
+
+    pub async fn prev(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
+        let players = self.player.read().await;
+
+        let player = players
+            .get(&guild_id)
+            .ok_or(HydrogenManagerError::PlayerNotFound)?;
+
+        player
+            .prev()
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
+    }
+
+    pub async fn seek(
+        &self,
+        guild_id: GuildId,
+        milliseconds: i32,
+    ) -> Result<Option<HydrogenSeekCommand>> {
+        let players = self.player.read().await;
+
+        let player = players
+            .get(&guild_id)
+            .ok_or(HydrogenManagerError::PlayerNotFound)?;
+
+        player
+            .seek(milliseconds)
+            .await
+            .map_err(|e| HydrogenManagerError::Player(e))
+    }
+
     pub async fn update_voice_state(
         &self,
         old_voice_state: Option<VoiceState>,
@@ -269,14 +324,17 @@ impl HydrogenManager {
                             Duration::from_secs(HYDROGEN_EMPTY_CHAT_TIMEOUT),
                         )
                         .await;
+
                         self.update_play_message(
                             guild_id,
                             &self
                                 .i18n
                                 .translate(&player.guild_locale(), "playing", "timeout_trigger")
                                 .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
-                            0x5865f2,
-                            true,
+                            HYDROGEN_PRIMARY_COLOR,
+                            HydrogenPlayerState::Thinking,
+                            player.pause(),
+                            player.loop_type().await,
                             None,
                         )
                         .await;
@@ -385,6 +443,8 @@ impl HydrogenManager {
 
     async fn update_now_playing(&self, guild_id: GuildId) {
         if let Some(player) = self.player.read().await.get(&guild_id.into()) {
+            let mut player_state = HydrogenPlayerState::Playing;
+
             let (translated_message, requester) = match player.now().await {
                 Some(v) => {
                     let message = match v.uri {
@@ -424,11 +484,17 @@ impl HydrogenManager {
                 }
             }
 
+            if requester.is_none() && player.queue().await.len() == 0 {
+                player_state = HydrogenPlayerState::Nothing;
+            }
+
             self.update_play_message(
                 guild_id,
                 &translated_message,
-                0x5865f2,
-                requester.is_none() && player.queue().await.len() == 0,
+                HYDROGEN_PRIMARY_COLOR,
+                player_state,
+                player.pause(),
+                player.loop_type().await,
                 author_obj,
             )
             .await;
@@ -440,7 +506,9 @@ impl HydrogenManager {
         guild_id: GuildId,
         description: &str,
         color: i32,
-        disable_buttons: bool,
+        player_state: HydrogenPlayerState,
+        paused: bool,
+        loop_type: LoopType,
         author_obj: Option<CreateEmbedAuthor>,
     ) {
         let players = self.player.read().await;
@@ -448,25 +516,41 @@ impl HydrogenManager {
 
         if let Some(player) = players.get(&guild_id) {
             if let Some(message) = messages.get(&guild_id) {
-                match player.text_channel_id().edit_message(self.http.clone(), message, |message|
-                    message
-                        .embed(|embed| {
-                            if let Some(author_obj) = author_obj.clone() {
-                                embed.set_author(author_obj);
-                            }
+                match player
+                    .text_channel_id()
+                    .edit_message(self.http.clone(), message, |message| {
+                        message
+                            .embed(|embed| {
+                                if let Some(author_obj) = author_obj.clone() {
+                                    embed.set_author(author_obj);
+                                }
 
-                            embed
-                                .title(self.i18n.translate(&player.guild_locale(), "playing", "title"))
-                                .description(description)
-                                .color(color)
-                                .footer(|footer|
-                                    footer
-                                        .text(self.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
-                                        .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                                )
-                        })
-                        .set_components(Self::play_components(disable_buttons))
-                ).await {
+                                embed
+                                    .title(self.i18n.translate(
+                                        &player.guild_locale(),
+                                        "playing",
+                                        "title",
+                                    ))
+                                    .description(description)
+                                    .color(color)
+                                    .footer(|footer| {
+                                        footer
+                                            .text(self.i18n.translate(
+                                                &player.guild_locale(),
+                                                "embed",
+                                                "footer_text",
+                                            ))
+                                            .icon_url(HYDROGEN_LOGO_URL)
+                                    })
+                            })
+                            .set_components(Self::play_components(
+                                player_state.clone(),
+                                paused,
+                                loop_type.clone(),
+                            ))
+                    })
+                    .await
+                {
                     Ok(_) => return,
                     Err(e) => {
                         warn!("can't edit player message: {}", e);
@@ -474,58 +558,132 @@ impl HydrogenManager {
                 }
             }
 
-            match player.text_channel_id().send_message(self.http.clone(), |message|
-                message
-                    .embed(|embed| {
-                        if let Some(author_obj) = author_obj {
-                            embed.set_author(author_obj);
-                        }
+            match player
+                .text_channel_id()
+                .send_message(self.http.clone(), |message| {
+                    message
+                        .embed(|embed| {
+                            if let Some(author_obj) = author_obj {
+                                embed.set_author(author_obj);
+                            }
 
-                        embed
-                            .title(self.i18n.translate(&player.guild_locale(), "playing", "title"))
-                            .description(description)
-                            .color(color)
-                            .footer(|footer|
-                                footer
-                                    .text(self.i18n.translate(&player.guild_locale(), "embed", "footer_text"))
-                                    .icon_url("https://gitlab.com/uploads/-/system/project/avatar/45361202/hydrogen_icon.png")
-                            )
-                    })
-                    .set_components(Self::play_components(disable_buttons))
-            ).await {
+                            embed
+                                .title(self.i18n.translate(
+                                    &player.guild_locale(),
+                                    "playing",
+                                    "title",
+                                ))
+                                .description(description)
+                                .color(color)
+                                .footer(|footer| {
+                                    footer
+                                        .text(self.i18n.translate(
+                                            &player.guild_locale(),
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                        .set_components(Self::play_components(player_state, paused, loop_type))
+                })
+                .await
+            {
                 Ok(v) => {
                     messages.insert(guild_id, v.id);
                     ()
-                },
-                Err(e) => warn!("can't send a new playing message: {}", e)
+                }
+                Err(e) => warn!("can't send a new playing message: {}", e),
             };
         }
     }
 
-    pub fn play_components(disable_all: bool) -> CreateComponents {
+    fn play_components(
+        state: HydrogenPlayerState,
+        paused: bool,
+        loop_queue: LoopType,
+    ) -> CreateComponents {
+        let mut prev_style = ButtonStyle::Primary;
+        let mut pause_style = ButtonStyle::Primary;
+        let mut skip_style = ButtonStyle::Primary;
+
+        let mut prev_disabled = false;
+        let mut pause_disabled = false;
+        let mut skip_disabled = false;
+        let mut loop_disabled = false;
+        let mut stop_disabled = false;
+        // QUEUE WILL REMAIN AS WIP UNTIL ALPHA 3.
+        let mut queue_disabled = true;
+
+        let mut pause_emoji = ReactionType::Unicode(String::from("⏸"));
+        let mut loop_emoji = ReactionType::Unicode(String::from("⬇️"));
+
+        match loop_queue {
+            LoopType::None => (),
+            LoopType::NoAutostart => {
+                loop_emoji = ReactionType::Unicode(String::from("⏺"));
+            }
+            LoopType::Music => {
+                loop_emoji = ReactionType::Unicode(String::from("🔂"));
+            }
+            LoopType::Queue => {
+                loop_emoji = ReactionType::Unicode(String::from("🔁"));
+            }
+            LoopType::Random => {
+                loop_emoji = ReactionType::Unicode(String::from("🔀"));
+            }
+        };
+
+        if paused {
+            pause_style = ButtonStyle::Success;
+            pause_emoji = ReactionType::Unicode(String::from("▶️"));
+        }
+
+        match state {
+            HydrogenPlayerState::Playing => (),
+            HydrogenPlayerState::Nothing => {
+                prev_disabled = true;
+                pause_disabled = true;
+                skip_disabled = true;
+                queue_disabled = true;
+
+                prev_style = ButtonStyle::Secondary;
+                pause_style = ButtonStyle::Secondary;
+                skip_style = ButtonStyle::Secondary;
+            }
+            HydrogenPlayerState::Thinking => {
+                prev_disabled = true;
+                pause_disabled = true;
+                skip_disabled = true;
+                loop_disabled = true;
+                stop_disabled = true;
+                queue_disabled = true;
+            }
+        }
+
         CreateComponents::default()
             .create_action_row(|action_row| {
                 action_row
                     .create_button(|button| {
                         button
                             .custom_id("prev")
-                            .disabled(disable_all || true)
+                            .disabled(prev_disabled)
                             .emoji('⏮')
-                            .style(ButtonStyle::Secondary)
+                            .style(prev_style)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("pause")
-                            .disabled(disable_all || true)
-                            .emoji('⏸')
-                            .style(ButtonStyle::Secondary)
+                            .disabled(pause_disabled)
+                            .emoji(pause_emoji)
+                            .style(pause_style)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("skip")
-                            .disabled(disable_all || true)
+                            .disabled(skip_disabled)
                             .emoji('⏭')
-                            .style(ButtonStyle::Secondary)
+                            .style(skip_style)
                     })
             })
             .create_action_row(|action_row| {
@@ -533,26 +691,72 @@ impl HydrogenManager {
                     .create_button(|button| {
                         button
                             .custom_id("loop")
-                            .disabled(disable_all || true)
-                            .emoji(ReactionType::Unicode("⤵️".to_owned()))
+                            .disabled(loop_disabled)
+                            .emoji(loop_emoji)
                             .style(ButtonStyle::Secondary)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("stop")
-                            .disabled(false)
+                            .disabled(stop_disabled)
                             .emoji('⏹')
-                            .style(ButtonStyle::Secondary)
+                            .style(ButtonStyle::Danger)
                     })
                     .create_button(|button| {
                         button
                             .custom_id("queue")
-                            .disabled(disable_all || true)
+                            .disabled(queue_disabled)
                             .emoji(ReactionType::Unicode("ℹ️".to_owned()))
                             .style(ButtonStyle::Secondary)
                     })
             })
             .to_owned()
+    }
+
+    pub async fn get_loop_type(&self, guild_id: GuildId) -> LoopType {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            return player.loop_type().await;
+        }
+
+        return LoopType::None;
+    }
+
+    pub async fn set_loop_type(&self, guild_id: GuildId, loop_type: LoopType) {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            player.set_loop_type(loop_type).await;
+        }
+
+        drop(players);
+        self.update_now_playing(guild_id).await;
+    }
+
+    pub async fn get_paused(&self, guild_id: GuildId) -> bool {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            return player.pause();
+        }
+
+        return false;
+    }
+
+    pub async fn set_paused(&self, guild_id: GuildId, paused: bool) -> Result<()> {
+        let players = self.player.read().await;
+
+        if let Some(player) = players.get(&guild_id) {
+            player
+                .set_pause(paused)
+                .await
+                .map_err(|e| HydrogenManagerError::Player(e))?;
+        }
+
+        drop(players);
+        self.update_now_playing(guild_id).await;
+        Ok(())
     }
 }
 

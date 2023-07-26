@@ -26,7 +26,13 @@ use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
 };
 
-use crate::{commands::join::JoinCommand, components::stop::StopComponent};
+use crate::{
+    commands::{join::JoinCommand, seek::SeekCommand},
+    components::{
+        loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent,
+        skip::SkipComponent, stop::StopComponent,
+    },
+};
 
 mod commands;
 mod components;
@@ -39,6 +45,7 @@ pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
 pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
 pub const HYDROGEN_EMPTY_CHAT_TIMEOUT: u64 = 10;
 pub const HYDROGEN_QUEUE_LIMIT: usize = 1000;
+pub const HYDROGEN_SEARCH_PREFIX: &str = "ytsearch:";
 pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 
 pub static HYDROGEN_LOGO_URL: &str = "https://gitlab.com/deersoftware/hydrogen/-/raw/main/icon.png";
@@ -246,6 +253,7 @@ async fn main() {
 
             commands.insert("play".to_owned(), Box::new(PlayCommand));
             commands.insert("join".to_owned(), Box::new(JoinCommand));
+            commands.insert("seek".to_owned(), Box::new(SeekCommand));
 
             Arc::new(commands)
         },
@@ -254,6 +262,10 @@ async fn main() {
                 HashMap::new();
 
             components.insert("stop".to_owned(), Box::new(StopComponent));
+            components.insert("loop".to_owned(), Box::new(LoopComponent));
+            components.insert("pause".to_owned(), Box::new(PauseComponent));
+            components.insert("skip".to_owned(), Box::new(SkipComponent));
+            components.insert("prev".to_owned(), Box::new(PrevComponent));
 
             Arc::new(components)
         },
