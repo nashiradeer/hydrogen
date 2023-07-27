@@ -1,12 +1,8 @@
 # DeerSoftware // Hydrogen
 
-An Open Source Discord bot designed to play music on voice calls with efficiency, speed and performance.
+An Open Source Discord bot designed to play music on voice calls with efficiency, speed, and performance.
 
-## Donating
-
-If this project has been of use to you and you want to help but don't know how to contribute to the project, please consider donating to Hydrogen's contributors:
-
-- Nashira Deer: <https://www.patreon.com/nashiradeer>
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H4NKWWN)
 
 ## Contributing
 
