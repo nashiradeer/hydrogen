@@ -71,7 +71,7 @@ tls             = "true" / "enabled" / "on"
 
 ## Credits
 
-Hydrogen is a project by DeerSoftware, created by Nashira Deer, based on Hellion by Nashira Deer, and licensed under the GNU General Public License v3.
+Hydrogen is a project by Nashira Deer, inspired by Hellion, and licensed under the GNU General Public License v3.
 
 Thanks to the following projects for making the development of Hydrogen possible:
 
