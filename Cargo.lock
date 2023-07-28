@@ -488,6 +488,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hydrogen-i18n"
+version = "1.0.0"
+dependencies = [
+ "serde_json",
+ "serenity",
+]
+
+[[package]]
 name = "hyper"
 version = "0.14.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"

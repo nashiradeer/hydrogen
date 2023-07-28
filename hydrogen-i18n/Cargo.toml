@@ -1,8 +1,24 @@
 [package]
 name = "hydrogen-i18n"
-version = "0.1.0"
+version = "1.0.0"
+authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 edition = "2021"
+description = "In-memory translation manager designed for use by Discord apps and bots that work with multiple users with different languages at the same time."
+readme = "README.md"
+license = "GPL-3.0-only"
+keywords = ["discord", "hydrogen", "i18n", "language", "l10n"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["std"]
+serenity = ["dep:serenity"]
+std = ["dep:serde_json"]
 
 [dependencies]
+serde_json = { version = "1.0.99", optional = true }
+
+[dependencies.serenity]
+package = "serenity"
+version = "0.11.6"
+optional = true
+default-features = false
+features = ["builder"]
