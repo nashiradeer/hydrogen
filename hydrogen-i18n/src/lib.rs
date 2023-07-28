@@ -37,6 +37,7 @@ use serenity::builder::{CreateApplicationCommand, CreateApplicationCommandOption
 /// An enum containing the different types of errors, from different sources, that can occur.
 #[derive(Debug)]
 pub enum Error {
+    #[cfg(feature = "std")]
     /// Error related to the deserialization of a JSON document through `serde_json`.
     Serde(serde_json::Error),
 
