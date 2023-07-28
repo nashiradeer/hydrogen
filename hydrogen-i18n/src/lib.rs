@@ -16,8 +16,6 @@ use std::{
 
 #[cfg(not(feature = "std"))]
 extern crate alloc;
-#[cfg(not(feature = "std"))]
-extern crate core;
 
 #[cfg(not(feature = "std"))]
 use alloc::{
@@ -28,35 +26,32 @@ use alloc::{
     string::String,
     sync::Arc,
 };
-#[cfg(not(feature = "std"))]
-use core::result;
 
 #[cfg(feature = "serenity")]
 use serenity::builder::{CreateApplicationCommand, CreateApplicationCommandOption};
 
+#[cfg(feature = "std")]
 /// An enum containing the different types of errors, from different sources, that can occur.
 #[derive(Debug)]
 pub enum Error {
-    #[cfg(feature = "std")]
     /// Error related to the deserialization of a JSON document through `serde_json`.
     Serde(serde_json::Error),
 
-    #[cfg(feature = "std")]
     /// Error related to reading a file or folder from the operating system.
     Io(io::Error),
 }
 
+#[cfg(feature = "std")]
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Serde(e) => e.fmt(f),
-
-            #[cfg(feature = "std")]
             Self::Io(e) => write!(f, "{}", e),
         }
     }
 }
 
+#[cfg(feature = "std")]
 /// Just a `Result` with the error type set to `hydrogen-i18n::Error`.
 pub type Result<T> = result::Result<T, Error>;
 
