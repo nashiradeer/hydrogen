@@ -18,14 +18,7 @@ use std::{
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
-use alloc::{
-    borrow::ToOwned,
-    collections::BTreeMap as Map,
-    fmt::{self, Display, Formatter},
-    format,
-    string::String,
-    sync::Arc,
-};
+use alloc::{borrow::ToOwned, collections::BTreeMap as Map, format, string::String, sync::Arc};
 
 #[cfg(feature = "serenity")]
 use serenity::builder::{CreateApplicationCommand, CreateApplicationCommandOption};
@@ -186,11 +179,11 @@ impl Translator {
 
     /// Sets the localized name of the application command for each of the languages that have a translation for the category-key combination.
     #[cfg(feature = "serenity")]
-    pub fn translate_command_name<'a>(
+    pub fn translate_command_name(
         &self,
         category: &str,
         name: &str,
-        application_command: &'a mut CreateApplicationCommand,
+        application_command: &mut CreateApplicationCommand,
     ) {
         for (locale, value) in self.get_all(category, name) {
             application_command.name_localized(locale, value);
@@ -199,11 +192,11 @@ impl Translator {
 
     /// Sets the localized description of the application command for each of the languages that have a translation for the category-key combination.
     #[cfg(feature = "serenity")]
-    pub fn translate_command_description<'a>(
+    pub fn translate_command_description(
         &self,
         category: &str,
         name: &str,
-        application_command: &'a mut CreateApplicationCommand,
+        application_command: &mut CreateApplicationCommand,
     ) {
         for (locale, value) in self.get_all(category, name) {
             application_command.description_localized(locale, value);
@@ -212,11 +205,11 @@ impl Translator {
 
     // Sets the localized name of the application command option for each of the languages that have a translation for the category-key combination.
     #[cfg(feature = "serenity")]
-    pub fn translate_option_name<'a>(
+    pub fn translate_option_name(
         &self,
         category: &str,
         name: &str,
-        application_command_option: &'a mut CreateApplicationCommandOption,
+        application_command_option: &mut CreateApplicationCommandOption,
     ) {
         for (locale, value) in self.get_all(category, name) {
             application_command_option.name_localized(locale, value);
@@ -225,11 +218,11 @@ impl Translator {
 
     /// Sets the localized description of the application command option for each of the languages that have a translation for the category-key combination.
     #[cfg(feature = "serenity")]
-    pub fn translate_option_description<'a>(
+    pub fn translate_option_description(
         &self,
         category: &str,
         name: &str,
-        application_command_option: &'a mut CreateApplicationCommandOption,
+        application_command_option: &mut CreateApplicationCommandOption,
     ) {
         for (locale, value) in self.get_all(category, name) {
             application_command_option.description_localized(locale, value);
