@@ -1,6 +1,6 @@
 [package]
 name = "hydrogen-i18n"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 edition = "2021"
 description = "In-memory translation manager designed for use by Discord apps and bots that work with multiple users with different languages at the same time."
