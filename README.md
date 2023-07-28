@@ -1,4 +1,4 @@
-# DeerSoftware // Hydrogen
+# Nashira Deer // Hydrogen
 
 An Open Source Discord bot designed to play music on voice calls with efficiency, speed, and performance.
 
@@ -20,7 +20,7 @@ If you want to contribute with the translations, you can do this through our [Cr
 
 ## Using Docker
 
-If you don't want to compile from source, you can use the official Docker image, this is the only alternative officially supported by DeerSoftware, you can access it at: <https://hub.docker.com/r/nashiradeer/hydrogen>
+If you don't want to compile from source, you can use the official Docker image, this is the only alternative officially supported by Nashira Deer, you can access it at: <https://hub.docker.com/r/nashiradeer/hydrogen>
 
 ## Building
 
