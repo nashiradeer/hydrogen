@@ -7,6 +7,7 @@ description = "In-memory translation manager designed for use by Discord apps an
 readme = "README.md"
 license = "GPL-3.0-only"
 keywords = ["discord", "hydrogen", "i18n", "language", "l10n"]
+categories = ["internationalization", "localization", "no-std"]
 
 [features]
 default = ["std"]
