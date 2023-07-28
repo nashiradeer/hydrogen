@@ -1,5 +1,11 @@
 # Hydrogen: I18n // Changelog
 
+## [1.0.1] - 2023-07-28
+
+### Fixes
+
+- `Result` and `Error` are only used with `std` feature, but are available without them.
+
 ## [1.0.0] - 2023-07-28
 
 ### Added
