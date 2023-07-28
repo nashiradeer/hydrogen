@@ -72,8 +72,8 @@ pub fn load_file<P>(path: P) -> Result<Language>
 where
     P: AsRef<Path>,
 {
-    let file = File::open(path).map_err(|e| Error::Io(e))?;
-    let data = serde_json::from_reader::<_, Language>(file).map_err(|e| Error::Serde(e))?;
+    let file = File::open(path).map_err(Error::Io)?;
+    let data = serde_json::from_reader::<_, Language>(file).map_err(Error::Serde)?;
     Ok(data)
 }
 
@@ -93,7 +93,7 @@ where
     P: AsRef<Path>,
 {
     let mut cache = Cache::new();
-    let dir = read_dir(path).map_err(|e| Error::Io(e))?;
+    let dir = read_dir(path).map_err(Error::Io)?;
 
     for entry in dir {
         if let Some((language, data)) = load_dir_entry(entry) {
