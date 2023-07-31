@@ -14,7 +14,7 @@ publish = false
 
 [workspace]
 resolver = "2"
-members = ["hydrogen-i18n"]
+members = ["hydrogen-i18n", "hydrolink"]
 
 [dependencies]
 async-trait = "0.1.68"
