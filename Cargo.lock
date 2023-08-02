@@ -561,15 +561,18 @@ dependencies = [
 
 [[package]]
 name = "hydrolink"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.21.2",
  "futures",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
 ]
 
 [[package]]

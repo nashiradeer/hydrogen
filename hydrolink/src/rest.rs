@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkErrorResponse {
+pub struct ErrorResponse {
     pub timestamp: i64,
     pub status: i32,
     pub error: String,
@@ -13,7 +13,7 @@ pub struct LavalinkErrorResponse {
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkVoiceState {
+pub struct VoiceState {
     pub token: String,
     pub endpoint: String,
     pub session_id: String,
@@ -24,7 +24,7 @@ pub struct LavalinkVoiceState {
     pub ping: i32,
 }
 
-impl LavalinkVoiceState {
+impl VoiceState {
     pub fn new(token: &str, endpoint: &str, session_id: &str) -> Self {
         Self {
             token: token.to_owned(),
@@ -38,7 +38,7 @@ impl LavalinkVoiceState {
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkUpdatePlayer {
+pub struct UpdatePlayer {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub encoded_track: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -52,10 +52,10 @@ pub struct LavalinkUpdatePlayer {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub paused: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub voice: Option<LavalinkVoiceState>,
+    pub voice: Option<VoiceState>,
 }
 
-impl LavalinkUpdatePlayer {
+impl UpdatePlayer {
     pub fn new() -> Self {
         Self {
             encoded_track: None,
@@ -76,7 +76,7 @@ impl LavalinkUpdatePlayer {
         self
     }
 
-    pub fn voice_state(&mut self, voice_state: LavalinkVoiceState) -> &mut Self {
+    pub fn voice_state(&mut self, voice_state: VoiceState) -> &mut Self {
         self.voice = Some(voice_state);
 
         self
@@ -97,25 +97,25 @@ impl LavalinkUpdatePlayer {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkPlayer {
+pub struct Player {
     pub guild_id: String,
-    pub track: Option<LavalinkTrack>,
+    pub track: Option<Track>,
     pub volume: i32,
     pub paused: bool,
-    pub voice: LavalinkVoiceState,
+    pub voice: VoiceState,
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkTrack {
+pub struct Track {
     pub encoded: String,
     pub track: String,
-    pub info: LavalinkTrackInfo,
+    pub info: TrackInfo,
 }
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkTrackInfo {
+pub struct TrackInfo {
     pub identifier: String,
     pub is_seekable: bool,
     pub author: String,
@@ -129,16 +129,16 @@ pub struct LavalinkTrackInfo {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkTrackLoading {
-    pub playlist_info: LavalinkPlaylistInfo,
-    pub tracks: Vec<LavalinkTrack>,
-    pub exception: Option<LavalinkException>,
-    pub load_type: LavalinkLoadResultType,
+pub struct TrackLoading {
+    pub playlist_info: PlaylistInfo,
+    pub tracks: Vec<Track>,
+    pub exception: Option<Exception>,
+    pub load_type: LoadResultType,
 }
 
 #[derive(Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum LavalinkLoadResultType {
+pub enum LoadResultType {
     TrackLoaded,
     PlaylistLoaded,
     SearchResult,
@@ -148,22 +148,22 @@ pub enum LavalinkLoadResultType {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkPlaylistInfo {
+pub struct PlaylistInfo {
     pub name: Option<String>,
     pub selected_track: Option<i32>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LavalinkException {
+pub struct Exception {
     pub message: Option<String>,
-    pub severity: LavalinkSeverity,
+    pub severity: Severity,
     pub cause: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum LavalinkSeverity {
+pub enum Severity {
     Common,
     Suspicious,
     Fault,
