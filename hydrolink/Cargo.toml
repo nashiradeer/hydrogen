@@ -13,6 +13,7 @@ categories = ["api-bindings", "asynchronous"]
 [features]
 default = []
 lavalink-v4 = []
+lavalink-trace = []
 rustls-webpki-roots = [
     "reqwest/rustls-tls-webpki-roots",
     "tokio-tungstenite/rustls-tls-webpki-roots",
