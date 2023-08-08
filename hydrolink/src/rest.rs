@@ -196,42 +196,64 @@ pub struct TrackInfo {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Response for a load track request.
 pub struct TrackLoading {
+    /// Additional info if the the load type is `LoadResultType::PlaylistLoaded`.
     pub playlist_info: PlaylistInfo,
+    /// All tracks which have been loaded. (Valid for `LoadResultType::TrackLoaded`, `LoadResultType::PlaylistLoaded`, and `LoadResultType::SearchResult`)
     pub tracks: Vec<Track>,
+    /// The Exception this load failed with. (Valid for `LoadResultType::LoadFailed`)
     pub exception: Option<Exception>,
+    /// The type of the result.
     pub load_type: LoadResultType,
 }
 
 #[derive(Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+/// The type of result that was loaded.
 pub enum LoadResultType {
+    /// A track has been loaded.
     TrackLoaded,
+    /// A playlist has been loaded.
     PlaylistLoaded,
+    /// A search result has been loaded.
     SearchResult,
+    /// There has been no matches to your identifier.
     NoMatches,
+    /// Loading has failed.
     LoadFailed,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Information about the playlist.
 pub struct PlaylistInfo {
+    /// The name of the loaded playlist.
     pub name: Option<String>,
+    /// The selected track in this playlist. (-1 if no track is selected)
     pub selected_track: Option<i32>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// An exception/error produced by the Lavalink server.
 pub struct Exception {
+    /// The message of the exception.
     pub message: Option<String>,
+    /// The severity of the exception.
     pub severity: Severity,
+    /// The cause of the exception.
     pub cause: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+/// The severity level of the exception.
 pub enum Severity {
+    /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
     Common,
+    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
     Suspicious,
+    /// If the probable cause is an issue with the library or when there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
     Fault,
 }
