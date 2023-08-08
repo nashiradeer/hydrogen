@@ -1,4 +1,5 @@
 use std::{
+    any::type_name,
     fmt::{self, Display, Formatter},
     result,
     sync::{Arc, Mutex, RwLock},
@@ -34,6 +35,7 @@ mod websocket;
 use internal::*;
 
 pub use rest::*;
+use tracing::{debug, error, info, warn};
 pub use websocket::*;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -259,15 +261,22 @@ impl Lavalink {
             .header("Authorization", config.password.clone())
             .header("User-Id", user_id)
             .header("Client-Name", client_name)
-            .uri(websocket_uri)
+            .uri(websocket_uri.clone())
             .body(())
             .map_err(Error::Http)?;
+
+        debug!(
+            "connecting to the Lavalink websocket in '{}'...",
+            websocket_uri
+        );
 
         let (sink, stream) = connect_async(request)
             .await
             .map_err(Error::WebSocket)?
             .0
             .split();
+
+        debug!("Lavalink websocket connected.");
 
         let lavalink = Self {
             session_id: Arc::new(RwLock::new(String::new())),
@@ -283,19 +292,31 @@ impl Lavalink {
 
         let lavalink_clone = lavalink.clone();
         spawn(async move {
+            debug!("starting the websocket message parser.");
             lavalink_clone
                 .websocket_message_parser(Some(sender), stream)
                 .await;
         });
 
+        debug!("waiting the session confirmation...");
         select! {
             _ = sleep(Duration::from_millis(config.connection_timeout)) => {
-                _ = lavalink.connection.lock().await.close().await;
+                warn!("session confirmation timeout, closing connection...");
+
+                if let Err(e) = lavalink.connection.lock().await.close().await {
+                    error!("websocket connection can't be closed: {}", e);
+                }
+
                 Err(Error::NotConnected)
             }
             msg = &mut receiver => {
-                if msg.is_err() {
-                    _ = lavalink.connection.lock().await.close().await;
+                if let Err(e) = msg {
+                    error!("session confirmation channel has been dropped: {}", e);
+
+                    if let Err(e) = lavalink.connection.lock().await.close().await {
+                        error!("websocket connection can't be closed: {}", e);
+                    }
+
                     return Err(Error::NotConnected);
                 }
 
@@ -332,6 +353,8 @@ impl Lavalink {
             no_replace.to_string()
         );
 
+        debug!("calling '{}'...", path);
+
         let response = self
             .http_client
             .patch(self.config.build_rest_uri(&path))
@@ -342,6 +365,8 @@ impl Lavalink {
             .bytes()
             .await
             .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
 
         parse_response(&response)
     }
@@ -354,6 +379,8 @@ impl Lavalink {
         #[cfg(feature = "lavalink-trace")]
         let path = format!("/loadtracks?identifier={}&trace=true", identifier,);
 
+        debug!("calling '{}'...", path);
+
         let response = self
             .http_client
             .get(self.config.build_rest_uri(&path))
@@ -363,6 +390,8 @@ impl Lavalink {
             .bytes()
             .await
             .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
 
         parse_response(&response)
     }
@@ -383,6 +412,8 @@ impl Lavalink {
             guild_id
         );
 
+        debug!("calling '{}'...", path);
+
         let response = self
             .http_client
             .get(self.config.build_rest_uri(&path))
@@ -392,6 +423,8 @@ impl Lavalink {
             .bytes()
             .await
             .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
 
         parse_response(&response)
     }
@@ -412,6 +445,8 @@ impl Lavalink {
             guild_id
         );
 
+        debug!("calling '{}'...", path);
+
         self.http_client
             .delete(self.config.build_rest_uri(&path))
             .send()
@@ -420,6 +455,8 @@ impl Lavalink {
             .bytes()
             .await
             .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
 
         Ok(())
     }
@@ -430,57 +467,110 @@ impl Lavalink {
         mut sender: Option<oneshot::Sender<()>>,
         mut stream: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     ) {
-        while let Some(Ok(message)) = stream.next().await {
-            if let Message::Text(message_str) = message {
-                if let Ok(op) = serde_json::from_str::<WebsocketMessage>(&message_str) {
-                    match op.op {
-                        OPType::Ready => {
-                            if let Ok(ready) = serde_json::from_str::<ReadyOP>(&message_str) {
-                                *self.session_id.write().unwrap() = ready.session_id.clone();
-                                *self.status.write().unwrap() = ConnectionStatus::Connected;
-
-                                if let Some(some_sender) = sender {
-                                    if some_sender.send(()).is_err() {
-                                        break;
-                                    }
-
-                                    sender = None;
-                                }
-
-                                self.handler.ready(self.clone(), ready.resumed).await;
-                            }
-                        }
-                        OPType::Event => {
-                            if let Ok(event) = serde_json::from_str::<EventOP>(&message_str) {
-                                match event.event_type {
-                                    EventType::TrackStart => {
-                                        if let Ok(track_start) =
-                                            serde_json::from_str::<TrackStartEvent>(&message_str)
-                                        {
-                                            self.handler
-                                                .track_start_event(self.clone(), track_start)
-                                                .await;
-                                        }
-                                    }
-                                    EventType::TrackEnd => {
-                                        if let Ok(track_end) =
-                                            serde_json::from_str::<TrackEndEvent>(&message_str)
-                                        {
-                                            self.handler
-                                                .track_end_event(self.clone(), track_end)
-                                                .await;
-                                        }
-                                    }
-                                    _ => (),
-                                }
-                            }
-                        }
-                        _ => (),
-                    }
+        while let Some(value) = stream.next().await {
+            let message = match value {
+                Ok(v) => {
+                    debug!("parsing the websocket message: {}", v);
+                    v
                 }
+                Err(e) => {
+                    error!("websocket generated an error: {}", e);
+                    break;
+                }
+            };
+
+            if let Message::Text(message_str) = message {
+                let op = match serde_json::from_str::<WebsocketMessage>(&message_str) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        warn!("can't parse the message: {}", e);
+                        continue;
+                    }
+                };
+
+                match op.op {
+                    OPType::Ready => {
+                        info!("op: ready");
+                        let ready = match serde_json::from_str::<ReadyOP>(&message_str) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                warn!("can't parse the ready message: {}", e);
+                                continue;
+                            }
+                        };
+
+                        *self.session_id.write().unwrap() = ready.session_id.clone();
+                        *self.status.write().unwrap() = ConnectionStatus::Connected;
+                        debug!("updated the Lavalink session id and status.");
+
+                        if let Some(some_sender) = sender {
+                            if some_sender.send(()).is_err() {
+                                error!("can't send the session confirmation...");
+                                break;
+                            }
+                            info!("session confirmation has been sent.");
+
+                            sender = None;
+                        }
+
+                        debug!("emitting 'ready' in the event handler...");
+                        self.handler.ready(self.clone(), ready.resumed).await;
+                    }
+                    OPType::Event => {
+                        info!("op: event");
+                        let event = match serde_json::from_str::<EventOP>(&message_str) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                warn!("can't parse the event message: {}", e);
+                                continue;
+                            }
+                        };
+
+                        match event.event_type {
+                            EventType::TrackStart => {
+                                info!("event: track start");
+                                let track_start =
+                                    match serde_json::from_str::<TrackStartEvent>(&message_str) {
+                                        Ok(v) => v,
+                                        Err(e) => {
+                                            warn!("can't parse the track start event: {}", e);
+                                            continue;
+                                        }
+                                    };
+
+                                debug!("emitting 'track_start_event' in the event handler...");
+                                self.handler
+                                    .track_start_event(self.clone(), track_start)
+                                    .await;
+                            }
+                            EventType::TrackEnd => {
+                                info!("event: track end");
+                                let track_end =
+                                    match serde_json::from_str::<TrackEndEvent>(&message_str) {
+                                        Ok(v) => v,
+                                        Err(e) => {
+                                            warn!("can't parse the track end event: {}", e);
+                                            continue;
+                                        }
+                                    };
+
+                                debug!("emitting 'track_end_event' in the event handler...");
+                                self.handler.track_end_event(self.clone(), track_end).await;
+                            }
+                            _ => (),
+                        }
+                    }
+                    _ => (),
+                }
+            } else {
+                warn!("the message isn't a text and will not be parsed.");
             }
         }
+
+        info!("websocket message parser finished.");
         *self.status.write().unwrap() = ConnectionStatus::Disconnected;
+
+        debug!("emitting 'disconnect' in the event handler...");
         self.handler.disconnect(self.clone()).await;
     }
 }
@@ -510,9 +600,15 @@ fn generate_key() -> String {
 /// Attempts to parse the byte array into the selected type, if this attempt fails, a new attempt will be made parsing the input into an `ErrorResponse` which will be returned as an `Error::RestError`, if this also fails the `Error::InvalidResponse` will be returned.
 fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {
     serde_json::from_slice::<T>(response).map_err(|e1| {
+        warn!("can't parse to '{}': {}", type_name::<T>(), e1);
+
         match serde_json::from_slice::<ErrorResponse>(response) {
             Ok(v) => Error::RestError(v),
-            Err(e2) => Error::InvalidResponse(e1, e2),
+            Err(e2) => {
+                error!("can't parse to ErrorResponse: {}", e2);
+
+                Error::InvalidResponse(e1, e2)
+            }
         }
     })
 }
