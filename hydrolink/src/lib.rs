@@ -218,7 +218,8 @@ pub struct Lavalink {
     /// Connection status of this Lavalink client.
     status: Arc<RwLock<ConnectionStatus>>,
     /// A write-only Websocket connection to the Lavalink server.
-    connection: Arc<Mutex<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
+    connection:
+        Arc<tokio::sync::Mutex<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
     /// Resume key that can be used to resume this connection.
     resume_key: Arc<Mutex<Option<String>>>,
     /// Event handler that will be used by the Websocket message parser.
@@ -270,7 +271,7 @@ impl Lavalink {
 
         let lavalink = Self {
             session_id: Arc::new(RwLock::new(String::new())),
-            connection: Arc::new(Mutex::new(sink)),
+            connection: Arc::new(tokio::sync::Mutex::new(sink)),
             config: Arc::new(config.clone()),
             resume_key: Arc::new(Mutex::new(None)),
             status: Arc::new(RwLock::new(ConnectionStatus::Connecting)),
@@ -289,14 +290,12 @@ impl Lavalink {
 
         select! {
             _ = sleep(Duration::from_millis(config.connection_timeout)) => {
-                let mut connection = lavalink.connection.lock().unwrap();
-                _ = connection.close().await;
+                _ = lavalink.connection.lock().await.close().await;
                 Err(Error::NotConnected)
             }
             msg = &mut receiver => {
                 if msg.is_err() {
-                    let mut connection = lavalink.connection.lock().unwrap();
-                    _ = connection.close().await;
+                    _ = lavalink.connection.lock().await.close().await;
                     return Err(Error::NotConnected);
                 }
 
