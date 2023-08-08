@@ -142,6 +142,12 @@ impl UpdatePlayer {
     }
 }
 
+impl Default for UpdatePlayer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 /// A Lavalink Player associated with a guild and a session.
