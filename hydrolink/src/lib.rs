@@ -15,11 +15,6 @@ use reqwest::{
     header::{HeaderMap, InvalidHeaderValue},
     Client,
 };
-
-mod rest;
-pub use rest::*;
-
-mod websocket;
 use serde::Deserialize;
 use tokio::{net::TcpStream, select, spawn, sync::oneshot, time::sleep};
 use tokio_tungstenite::{
@@ -31,10 +26,15 @@ use tokio_tungstenite::{
     },
     MaybeTlsStream, WebSocketStream,
 };
-pub use websocket::*;
 
 mod internal;
+mod rest;
+mod websocket;
+
 use internal::*;
+
+pub use rest::*;
+pub use websocket::*;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
