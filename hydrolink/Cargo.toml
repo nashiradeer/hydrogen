@@ -48,4 +48,4 @@ features = ["json"]
 package = "tokio"
 version = "1.29.1"
 default-features = false
-features = ["rt", "net", "time"]
+features = ["rt", "net", "time", "macros"]
