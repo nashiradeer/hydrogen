@@ -289,12 +289,14 @@ impl Lavalink {
 
         select! {
             _ = sleep(Duration::from_millis(config.connection_timeout)) => {
-                _ = lavalink.connection.lock().unwrap().close().await;
+                let mut connection = lavalink.connection.lock().unwrap();
+                _ = connection.close().await;
                 Err(Error::NotConnected)
             }
             msg = &mut receiver => {
-                if let Err(_) = msg {
-                    _ = lavalink.connection.lock().unwrap().close().await;
+                if msg.is_err() {
+                    let mut connection = lavalink.connection.lock().unwrap();
+                    _ = connection.close().await;
                     return Err(Error::NotConnected);
                 }
 
@@ -320,7 +322,7 @@ impl Lavalink {
             "/sessions/{}/players/{}?noReplace={}",
             self.session_id.read().unwrap().clone(),
             guild_id,
-            no_replace.to_string()
+            no_replace
         );
 
         #[cfg(feature = "lavalink-trace")]
@@ -439,7 +441,7 @@ impl Lavalink {
                                 *self.status.write().unwrap() = ConnectionStatus::Connected;
 
                                 if let Some(some_sender) = sender {
-                                    if let Err(_) = some_sender.send(()) {
+                                    if some_sender.send(()).is_err() {
                                         break;
                                     }
 
@@ -452,7 +454,7 @@ impl Lavalink {
                         OPType::Event => {
                             if let Ok(event) = serde_json::from_str::<EventOP>(&message_str) {
                                 match event.event_type {
-                                    EventType::TrackStartEvent => {
+                                    EventType::TrackStart => {
                                         if let Ok(track_start) =
                                             serde_json::from_str::<TrackStartEvent>(&message_str)
                                         {
@@ -461,7 +463,7 @@ impl Lavalink {
                                                 .await;
                                         }
                                     }
-                                    EventType::TrackEndEvent => {
+                                    EventType::TrackEnd => {
                                         if let Ok(track_end) =
                                             serde_json::from_str::<TrackEndEvent>(&message_str)
                                         {
@@ -503,13 +505,13 @@ impl PartialEq for Lavalink {
 /// Generates a new random key from 16 Base64 encoded bytes.
 fn generate_key() -> String {
     let r: [u8; 16] = rand::random();
-    BASE64_STANDARD.encode(&r)
+    BASE64_STANDARD.encode(r)
 }
 
 /// Attempts to parse the byte array into the selected type, if this attempt fails, a new attempt will be made parsing the input into an `ErrorResponse` which will be returned as an `Error::RestError`, if this also fails the `Error::InvalidResponse` will be returned.
 fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {
-    serde_json::from_slice::<T>(&response).map_err(|e1| {
-        match serde_json::from_slice::<ErrorResponse>(&response) {
+    serde_json::from_slice::<T>(response).map_err(|e1| {
+        match serde_json::from_slice::<ErrorResponse>(response) {
             Ok(v) => Error::RestError(v),
             Err(e2) => Error::InvalidResponse(e1, e2),
         }

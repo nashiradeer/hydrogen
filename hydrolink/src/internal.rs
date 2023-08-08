@@ -24,18 +24,22 @@ pub struct WebsocketMessage {
 
 /// Types of events that can be emitted by the Lavalink server.
 #[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
 pub enum EventType {
     /// Emitted when a track starts playing.
-    TrackStartEvent,
+    #[serde(rename = "TrackStartEvent")]
+    TrackStart,
     /// Emitted when a track ends.
-    TrackEndEvent,
+    #[serde(rename = "TrackEndEvent")]
+    TrackEnd,
     /// Emitted when a track throws an exception.
-    TrackExceptionEvent,
+    #[serde(rename = "TrackExceptionEvent")]
+    TrackException,
     /// Emitted when a track gets stuck while playing.
-    TrackStuckEvent,
+    #[serde(rename = "TrackStuckEvent")]
+    TrackStuck,
     /// Emitted when the websocket connection to Discord voice servers is closed.
-    WebSocketClosedEvent,
+    #[serde(rename = "WebSocketClosedEvent")]
+    WebSocketClosed,
 }
 
 /// Object used internally by the WebSocket message parser to detect the type of event in the case of `event` operation.
