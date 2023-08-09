@@ -45,7 +45,7 @@ pub enum EventType {
 /// Object used internally by the WebSocket message parser to detect the type of event in the case of `event` operation.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EventOP {
+pub struct Event {
     #[serde(rename = "type")]
     /// The type of event.
     pub event_type: EventType,

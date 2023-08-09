@@ -491,7 +491,7 @@ impl Lavalink {
                 match op.op {
                     OPType::Ready => {
                         info!("op: ready");
-                        let ready = match serde_json::from_str::<ReadyOP>(&message_str) {
+                        let ready = match serde_json::from_str::<Ready>(&message_str) {
                             Ok(v) => v,
                             Err(e) => {
                                 warn!("can't parse the ready message: {}", e);
@@ -518,7 +518,7 @@ impl Lavalink {
                     }
                     OPType::Event => {
                         info!("op: event");
-                        let event = match serde_json::from_str::<EventOP>(&message_str) {
+                        let event = match serde_json::from_str::<Event>(&message_str) {
                             Ok(v) => v,
                             Err(e) => {
                                 warn!("can't parse the event message: {}", e);
