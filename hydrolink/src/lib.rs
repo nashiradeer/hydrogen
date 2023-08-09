@@ -27,6 +27,7 @@ use tokio_tungstenite::{
     },
     MaybeTlsStream, WebSocketStream,
 };
+use tracing::{debug, error, info, warn};
 
 mod internal;
 mod rest;
@@ -35,7 +36,6 @@ mod websocket;
 use internal::*;
 
 pub use rest::*;
-use tracing::{debug, error, info, warn};
 pub use websocket::*;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
