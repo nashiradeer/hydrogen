@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
+/// Response sent by Lavalink when the connection is established.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// Response sent by Lavalink when the connection is established.
 pub struct ReadyOP {
     /// If a session was resumed.
     pub resumed: bool,
@@ -10,9 +10,9 @@ pub struct ReadyOP {
     pub session_id: String,
 }
 
+/// Information about the track that was started.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// Information about the track that was started.
 pub struct TrackStartEvent {
     /// The guild id.
     pub guild_id: String,
@@ -20,9 +20,9 @@ pub struct TrackStartEvent {
     pub encoded_track: String,
 }
 
+/// Information about the track that was finished.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// Information about the track that was finished.
 pub struct TrackEndEvent {
     /// The guild id.
     pub guild_id: String,
@@ -32,9 +32,9 @@ pub struct TrackEndEvent {
     pub reason: TrackEndReason,
 }
 
+/// The reason why a track was finished.
 #[derive(Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-/// The reason why a track was finished.
 pub enum TrackEndReason {
     /// The track finished playing. (May start next? Yes)
     Finished,

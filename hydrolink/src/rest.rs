@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+/// Error response returned by Lavalink Server REST API.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-/// Error response returned by Lavalink Server REST API.
 pub struct ErrorResponse {
     /// The timestamp of the error in milliseconds since the epoch.
     pub timestamp: u64,
@@ -18,9 +18,9 @@ pub struct ErrorResponse {
     pub path: String,
 }
 
+/// Discord client/bot voice state, this will be used by the Lavalink server to connect to the voice chat.
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-/// Discord client/bot voice state, this will be used by the Lavalink server to connect to the voice chat.
 pub struct VoiceState {
     /// The Discord voice token to authenticate with.
     pub token: String,
@@ -29,11 +29,11 @@ pub struct VoiceState {
     /// The Discord voice session id to authenticate with.
     pub session_id: String,
 
-    #[serde(skip_serializing)]
     /// Whether the player is connected. Response only.
-    pub connected: bool,
     #[serde(skip_serializing)]
+    pub connected: bool,
     /// Roundtrip latency in milliseconds to the voice gateway (-1 if not connected). Response only.
+    #[serde(skip_serializing)]
     pub ping: i32,
 }
 
@@ -50,30 +50,36 @@ impl VoiceState {
     }
 }
 
+/// Request used by the `update_player` function to update the player on the Lavalink server.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-/// Request used by the `update_player` function to update the player on the Lavalink server.
 pub struct UpdatePlayer {
-    #[serde(skip_serializing_if = "Option::is_none")]
     /// The encoded track base64 to play. `Option::None` stops the current track.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub encoded_track: Option<Option<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+
     /// The track identifier to play.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub identifier: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+
     /// The track position in milliseconds.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub position: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+
     /// The track end time in milliseconds (must be > 0).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end_time: Option<Option<u32>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+
     /// The player volume from 0 to 1000.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub volume: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+
     /// Whether the player is paused.
-    pub paused: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub paused: Option<bool>,
+
     /// Information required for connecting to Discord.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub voice: Option<VoiceState>,
 }
 
@@ -148,9 +154,9 @@ impl Default for UpdatePlayer {
     }
 }
 
+/// A Lavalink Player associated with a guild and a session.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// A Lavalink Player associated with a guild and a session.
 pub struct Player {
     /// The guild id of the player.
     pub guild_id: String,
@@ -164,9 +170,9 @@ pub struct Player {
     pub voice: VoiceState,
 }
 
+/// A single audio track.
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// A single audio track.
 pub struct Track {
     /// The base64 encoded track data.
     pub encoded: String,
@@ -176,9 +182,9 @@ pub struct Track {
     pub info: TrackInfo,
 }
 
+/// Information about an audio track.
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// Information about an audio track.
 pub struct TrackInfo {
     /// The track identifier.
     pub identifier: String,
@@ -200,9 +206,9 @@ pub struct TrackInfo {
     pub source_name: String,
 }
 
+/// Response for a load track request.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// Response for a load track request.
 pub struct TrackLoading {
     /// Additional info if the the load type is `LoadResultType::PlaylistLoaded`.
     pub playlist_info: PlaylistInfo,
@@ -214,9 +220,9 @@ pub struct TrackLoading {
     pub load_type: LoadResultType,
 }
 
+/// The type of result that was loaded.
 #[derive(Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-/// The type of result that was loaded.
 pub enum LoadResultType {
     /// A track has been loaded.
     TrackLoaded,
@@ -230,9 +236,9 @@ pub enum LoadResultType {
     LoadFailed,
 }
 
+/// Information about the playlist.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// Information about the playlist.
 pub struct PlaylistInfo {
     /// The name of the loaded playlist.
     pub name: Option<String>,
@@ -240,9 +246,9 @@ pub struct PlaylistInfo {
     pub selected_track: Option<i32>,
 }
 
+/// An exception/error produced by the Lavalink server.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-/// An exception/error produced by the Lavalink server.
 pub struct Exception {
     /// The message of the exception.
     pub message: Option<String>,
@@ -252,9 +258,9 @@ pub struct Exception {
     pub cause: String,
 }
 
+/// The severity level of the exception.
 #[derive(Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-/// The severity level of the exception.
 pub enum Severity {
     /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
     Common,
