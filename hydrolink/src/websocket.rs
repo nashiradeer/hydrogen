@@ -15,7 +15,7 @@ pub struct Ready {
 /// Response sent every x seconds by Lavalink about the player state of a guild.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PlayerUpdateOP {
+pub struct PlayerUpdate {
     /// The guild id of the player.
     pub guild_id: String,
     /// The player state.
