@@ -36,62 +36,6 @@ pub struct PlayerState {
     pub ping: i16,
 }
 
-/// Lavalink server statistics.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Stats {
-    /// The amount of players connected to the node.
-    pub players: u64,
-    /// The amount of players playing a track.
-    pub playing_players: u64,
-    /// The uptime of the node in milliseconds.
-    pub uptime: u64,
-    /// The memory stats of the node.
-    pub memory: Memory,
-    /// The cpu stats of the node.
-    pub cpu: CPU,
-    /// The frame stats of the node. `Option::None` if the node has no players or when retrieved via `Lavalink::get_stats()`.
-    pub frame_stats: Option<FrameStats>,
-}
-
-/// Statistics related to Lavalink server RAM memory usage.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Memory {
-    /// The amount of free memory in bytes.
-    pub free: i32,
-    /// The amount of used memory in bytes.
-    pub used: i32,
-    /// The amount of allocated memory in bytes.
-    pub allocated: i32,
-    /// The amount of reservable memory in bytes.
-    pub reservable: i32,
-}
-
-/// Statistics related to Lavalink server CPU usage.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CPU {
-    /// The amount of cores the node has.
-    pub cores: i32,
-    /// The system load of the node.
-    pub system_load: f32,
-    /// The load of Lavalink on the node.
-    pub lavalink_load: f32,
-}
-
-/// Statistics related to the connections between Lavalink server and Discord.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FrameStats {
-    /// The amount of frames sent to Discord.
-    pub sent: i32,
-    /// The amount of frames that were nulled.
-    pub nulled: i32,
-    /// The amount of frames that were deficit.
-    pub deficit: i32,
-}
-
 /// Information about the track that was started.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

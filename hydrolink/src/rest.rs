@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::Exception;
+
 /// Error response returned by Lavalink Server REST API.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -244,28 +246,4 @@ pub struct PlaylistInfo {
     pub name: Option<String>,
     /// The selected track in this playlist. (-1 if no track is selected)
     pub selected_track: Option<i32>,
-}
-
-/// An exception/error produced by the Lavalink server.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Exception {
-    /// The message of the exception.
-    pub message: Option<String>,
-    /// The severity of the exception.
-    pub severity: Severity,
-    /// The cause of the exception.
-    pub cause: String,
-}
-
-/// The severity level of the exception.
-#[derive(Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum Severity {
-    /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
-    Common,
-    /// The cause might not be exactly known, but is possibly caused by outside factors. For example when an outside service responds in a format that we do not expect.
-    Suspicious,
-    /// If the probable cause is an issue with the library or when there is no way to tell what the cause might be. This is the default level and other levels are used in cases where the thrower has more in-depth knowledge about the error.
-    Fault,
 }
