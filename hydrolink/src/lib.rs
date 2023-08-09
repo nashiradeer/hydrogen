@@ -49,10 +49,20 @@ pub trait Handler {
     async fn ready(&self, _lavalink: Lavalink, _resumed: bool) {}
     /// Triggered when the Websocket disconnects from the Lavalink server, this event actually triggers as soon as the message parser loop is finished.
     async fn disconnect(&self, _lavalink: Lavalink) {}
+    /// Triggered every x seconds with the current state of the player.
+    async fn player_update(&self, _lavalink: Lavalink, _player_update: PlayerUpdate) {}
+    /// Triggered every minute with stats from the Lavalink server.
+    async fn stats(&self, _lavalink: Lavalink, _stats: Stats) {}
     /// Event triggered when a new track is started.
     async fn track_start_event(&self, _lavalink: Lavalink, _message: TrackStartEvent) {}
     /// Event triggered when a track ends.
     async fn track_end_event(&self, _lavalink: Lavalink, _message: TrackEndEvent) {}
+    /// Event triggered when an exception/error occurs while playing a track.
+    async fn track_exception_event(&self, _lavalink: Lavalink, _message: TrackExceptionEvent) {}
+    /// Triggered when track is stuck.
+    async fn track_stuck_event(&self, _lavalink: Lavalink, _message: TrackStuckEvent) {}
+    /// Triggered when the connection between the Lavalink server and Discord is closed, either for normal or abnormal reasons.
+    async fn websocket_closed_event(&self, _lavalink: Lavalink, _message: WebSocketClosedEvent) {}
 }
 
 /// Enum that groups all the errors that can occur.
