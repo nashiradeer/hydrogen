@@ -528,6 +528,35 @@ impl Lavalink {
                         debug!("emitting 'ready' in the event handler...");
                         self.handler.ready(self.clone(), ready.resumed).await;
                     }
+                    OPType::PlayerUpdate => {
+                        info!("op: player update");
+                        let player_update = match serde_json::from_str::<PlayerUpdate>(&message_str)
+                        {
+                            Ok(v) => v,
+                            Err(e) => {
+                                warn!("can't parse the playerUpdate message: {}", e);
+                                continue;
+                            }
+                        };
+
+                        debug!("emitting 'player_update' in the event handler...");
+                        self.handler
+                            .player_update(self.clone(), player_update)
+                            .await;
+                    }
+                    OPType::Stats => {
+                        info!("op: stats");
+                        let stats = match serde_json::from_str::<Stats>(&message_str) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                warn!("can't parse the stats message: {}", e);
+                                continue;
+                            }
+                        };
+
+                        debug!("emitting 'stats' in the event handler...");
+                        self.handler.stats(self.clone(), stats).await;
+                    }
                     OPType::Event => {
                         info!("op: event");
                         let event = match serde_json::from_str::<Event>(&message_str) {
@@ -569,10 +598,60 @@ impl Lavalink {
                                 debug!("emitting 'track_end_event' in the event handler...");
                                 self.handler.track_end_event(self.clone(), track_end).await;
                             }
-                            _ => (),
+                            EventType::TrackException => {
+                                info!("event: track exception");
+                                let track_exception =
+                                    match serde_json::from_str::<TrackExceptionEvent>(&message_str)
+                                    {
+                                        Ok(v) => v,
+                                        Err(e) => {
+                                            warn!("can't parse the track exception event: {}", e);
+                                            continue;
+                                        }
+                                    };
+
+                                debug!("emitting 'track_exception_event' in the event handler...");
+                                self.handler
+                                    .track_exception_event(self.clone(), track_exception)
+                                    .await;
+                            }
+                            EventType::TrackStuck => {
+                                info!("event: track stuck");
+                                let track_stuck =
+                                    match serde_json::from_str::<TrackStuckEvent>(&message_str) {
+                                        Ok(v) => v,
+                                        Err(e) => {
+                                            warn!("can't parse the track stuck event: {}", e);
+                                            continue;
+                                        }
+                                    };
+
+                                debug!("emitting 'track_stuck_event' in the event handler...");
+                                self.handler
+                                    .track_stuck_event(self.clone(), track_stuck)
+                                    .await;
+                            }
+                            EventType::WebSocketClosed => {
+                                info!("event: websocket closed");
+                                let websocket_closed = match serde_json::from_str::<
+                                    WebSocketClosedEvent,
+                                >(
+                                    &message_str
+                                ) {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        warn!("can't parse the websocket closed event: {}", e);
+                                        continue;
+                                    }
+                                };
+
+                                debug!("emitting 'websocket_closed_event' in the event handler...");
+                                self.handler
+                                    .websocket_closed_event(self.clone(), websocket_closed)
+                                    .await;
+                            }
                         }
                     }
-                    _ => (),
                 }
             } else {
                 warn!("the message isn't a text and will not be parsed.");
