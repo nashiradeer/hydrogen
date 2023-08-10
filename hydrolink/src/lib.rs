@@ -25,6 +25,7 @@ use tokio_tungstenite::{
 use tracing::{debug, error, info, warn};
 
 mod common;
+mod filters;
 mod internal;
 mod parser;
 mod rest;
@@ -33,6 +34,7 @@ mod websocket;
 use parser::*;
 
 pub use common::*;
+pub use filters::*;
 pub use rest::*;
 pub use websocket::*;
 
