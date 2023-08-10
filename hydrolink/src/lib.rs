@@ -462,16 +462,24 @@ impl Lavalink {
 
         debug!("calling '{}'...", path);
 
-        self.http_client
+        let response = self
+            .http_client
             .delete(self.config.build_rest_uri(&path))
             .send()
-            .await
-            .map_err(Error::Reqwest)?
-            .bytes()
             .await
             .map_err(Error::Reqwest)?;
 
         info!("parsing the response from '{}'...", path);
+
+        if !response.status().is_success() {
+            warn!("response haven't a success status code.");
+
+            return Err(
+                serde_json::from_slice(&response.bytes().await.map_err(Error::Reqwest)?)
+                    .map(|v| Error::RestError(v, None))
+                    .map_err(|e| Error::InvalidResponse(None, e))?,
+            );
+        }
 
         Ok(())
     }
