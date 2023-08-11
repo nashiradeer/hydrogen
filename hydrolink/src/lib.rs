@@ -102,7 +102,7 @@ impl Display for Error {
 pub type Result<T> = result::Result<T, Error>;
 
 /// Configuration used by the Lavalink client to connect to the server.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct LavalinkConfig {
     /// Lavalink server IP address.
     pub host: String,
