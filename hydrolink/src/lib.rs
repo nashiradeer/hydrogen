@@ -186,17 +186,6 @@ impl LavalinkConfig {
     }
 }
 
-/// Websocket connection status, this enum actually represents the usability and availability status of the session ID.
-#[derive(Clone, PartialEq, Eq)]
-pub enum ConnectionStatus {
-    /// It means that the Websocket message parser has come to an end because the connection through the Websocket has been closed and the session ID cannot be used anymore.
-    Disconnected,
-    /// It means that the Websocket message parser is working but it is waiting for the Lavalink server to send the session ID.
-    Connecting,
-    /// It means that the Websocket message parser is working and the session ID is usable for REST calls.
-    Connected,
-}
-
 /// Lavalink client used to send calls and receive messages from the Lavalink server.
 #[derive(Clone)]
 pub struct Lavalink {
@@ -205,9 +194,7 @@ pub struct Lavalink {
     /// Configuration used by this client to connect to the Lavalink server.
     config: Arc<LavalinkConfig>,
     /// Session ID of this connection, if the Websocket message parser received one.
-    session_id: Arc<RwLock<String>>,
-    /// Connection status of this Lavalink client.
-    status: Arc<RwLock<ConnectionStatus>>,
+    session_id: Arc<RwLock<Option<String>>>,
     /// A write-only Websocket connection to the Lavalink server.
     connection:
         Arc<tokio::sync::Mutex<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
@@ -267,27 +254,28 @@ impl Lavalink {
 
         debug!("Lavalink websocket connected.");
 
+        let connection = Arc::new(tokio::sync::Mutex::new(sink));
+
         let lavalink = Self {
-            session_id: Arc::new(RwLock::new(String::new())),
-            connection: Arc::new(tokio::sync::Mutex::new(sink)),
-            config: Arc::new(config.clone()),
-            resume_key: Arc::new(Mutex::new(None)),
-            status: Arc::new(RwLock::new(ConnectionStatus::Connecting)),
+            config: Arc::new(config),
             handler: Arc::new(Box::new(handler)),
+            resume_key: Arc::new(Mutex::new(None)),
+            session_id: Arc::new(RwLock::new(None)),
+            connection,
             http_client,
         };
 
         let (sender, mut receiver) = oneshot::channel();
 
-        let lavalink_clone = lavalink.clone();
+        let websocket_lavalink = lavalink.clone();
         spawn(async move {
             debug!("starting the websocket message parser.");
-            websocket_message_parser(lavalink_clone, Some(sender), stream).await;
+            websocket_message_parser(websocket_lavalink, Some(sender), stream).await;
         });
 
         debug!("waiting the session confirmation...");
         select! {
-            _ = sleep(Duration::from_millis(config.connection_timeout)) => {
+            _ = sleep(Duration::from_millis(lavalink.config.connection_timeout)) => {
                 warn!("session confirmation timeout, closing connection...");
 
                 if let Err(e) = lavalink.connection.lock().await.close().await {
@@ -296,25 +284,29 @@ impl Lavalink {
 
                 Err(Error::NotConnected)
             }
-            msg = &mut receiver => {
-                if let Err(e) = msg {
+            msg = &mut receiver => match msg {
+                Ok(_) => Ok(lavalink),
+                Err(e) => {
                     error!("session confirmation channel has been dropped: {}", e);
 
                     if let Err(e) = lavalink.connection.lock().await.close().await {
                         error!("websocket connection can't be closed: {}", e);
                     }
 
-                    return Err(Error::NotConnected);
+                    Err(Error::NotConnected)
                 }
-
-                Ok(lavalink)
             }
         }
     }
 
-    /// Gets the status of the Websocket connection.
-    pub fn connection_status(&self) -> ConnectionStatus {
-        self.status.read().unwrap().clone()
+    /// Check if the Websocket is connected.
+    pub fn is_connected(&self) -> bool {
+        self.session_id.read().unwrap().is_some()
+    }
+
+    /// Check if the connection is resumable.
+    pub fn is_resumable(&self) -> bool {
+        self.resume_key.lock().unwrap().is_some()
     }
 
     /// Updates or creates the player for this guild if it doesn't already exist.
@@ -327,7 +319,11 @@ impl Lavalink {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
             "/sessions/{}/players/{}?noReplace={}",
-            self.session_id.read().unwrap().clone(),
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
             guild_id,
             no_replace
         );
@@ -335,7 +331,11 @@ impl Lavalink {
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
             "/sessions/{}/players/{}?noReplace={}&trace=true",
-            self.session_id.read().unwrap().clone(),
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
             guild_id,
             no_replace.to_string()
         );
@@ -388,7 +388,11 @@ impl Lavalink {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
             "/sessions/{}/players/{}",
-            self.session_id.read().unwrap().clone(),
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
             guild_id
         );
 
@@ -421,14 +425,22 @@ impl Lavalink {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
             "/sessions/{}/players/{}",
-            self.session_id.read().unwrap().clone(),
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
             guild_id
         );
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
             "/sessions/{}/players/{}?trace=true",
-            self.session_id.read().unwrap().clone(),
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
             guild_id
         );
 

@@ -8,8 +8,8 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     internal::{Event, EventType, OPType, WebsocketMessage},
-    ConnectionStatus, Error, ErrorResponse, Lavalink, PlayerUpdate, Ready, Result, Stats,
-    TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, WebSocketClosedEvent,
+    Error, ErrorResponse, Lavalink, PlayerUpdate, Ready, Result, Stats, TrackEndEvent,
+    TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, WebSocketClosedEvent,
 };
 
 /// Parses messages coming from Websocket, triggering the handler as they are received.
@@ -50,8 +50,7 @@ pub async fn websocket_message_parser(
                         }
                     };
 
-                    *lavalink.session_id.write().unwrap() = ready.session_id.clone();
-                    *lavalink.status.write().unwrap() = ConnectionStatus::Connected;
+                    *lavalink.session_id.write().unwrap() = Some(ready.session_id.clone());
                     debug!("updated the Lavalink session id and status.");
 
                     if let Some(some_sender) = sender {
@@ -204,7 +203,7 @@ pub async fn websocket_message_parser(
     }
 
     info!("websocket message parser finished.");
-    *lavalink.status.write().unwrap() = ConnectionStatus::Disconnected;
+    *lavalink.session_id.write().unwrap() = None;
 
     debug!("emitting 'disconnect' in the event handler...");
     lavalink.handler.disconnect(lavalink.clone()).await;
