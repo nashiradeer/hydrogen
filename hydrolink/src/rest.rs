@@ -89,6 +89,21 @@ pub struct UpdatePlayer {
     pub voice: Option<VoiceState>,
 }
 
+impl Default for UpdatePlayer {
+    fn default() -> Self {
+        Self {
+            encoded_track: None,
+            identifier: None,
+            position: None,
+            end_time: None,
+            volume: None,
+            paused: None,
+            filters: None,
+            voice: None,
+        }
+    }
+}
+
 /// A Lavalink Player associated with a guild and a session.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
