@@ -69,7 +69,7 @@ pub struct Exception {
 }
 
 /// The severity level of the exception.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Severity {
     /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
