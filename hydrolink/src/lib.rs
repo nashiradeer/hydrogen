@@ -131,30 +131,6 @@ impl LavalinkConfig {
         }
     }
 
-    /// Enables the use of TLS connections.
-    pub fn enable_tls(&mut self) -> &mut Self {
-        self.tls = true;
-        self
-    }
-
-    /// Sets the maximum wait time for receiving the session ID.
-    pub fn set_connection_timeout(&mut self, timeout: u64) -> &mut Self {
-        self.connection_timeout = timeout;
-        self
-    }
-
-    /// Sets the time between tries to resume the connection.
-    pub fn set_resume_tries(&mut self, tries: u8) -> &mut Self {
-        self.resume_tries = tries;
-        self
-    }
-
-    /// Sets the cooldown time between tries.
-    pub fn set_resume_cooldown(&mut self, cooldown: u64) -> &mut Self {
-        self.resume_cooldown = cooldown;
-        self
-    }
-
     #[cfg(not(feature = "lavalink-v4"))]
     // Builds a URI that can be used to access the Lavalink server's Websocket using the parameters in this configuration.
     pub fn build_websocket_uri(&self) -> String {
