@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Audio filters natively supported by Lavalink.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Filters {
     /// Lets you adjust the player volume from 0.0 to 5.0 where 1.0 is 100%. Values >1.0 may cause clipping.
@@ -75,7 +75,7 @@ pub struct Equalizer {
 }
 
 /// Uses equalization to eliminate part of a band, usually targeting vocals.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Karaoke {
     /// The level (0 to 1.0 where 0.0 is no effect and 1.0 is full effect).
@@ -96,7 +96,7 @@ pub struct Karaoke {
 }
 
 /// Changes the speed, pitch, and rate. All default to 1.0.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Timescale {
     /// The playback speed 0.0 ≤ x.
@@ -115,7 +115,7 @@ pub struct Timescale {
 /// Uses amplification to create a shuddering effect, where the volume quickly oscillates.
 ///
 /// https://en.wikipedia.org/wiki/File:Fuse_Electronics_Tremolo_MK-III_Quick_Demo.ogv
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tremolo {
     /// The frequency 0.0 < x.
@@ -128,7 +128,7 @@ pub struct Tremolo {
 }
 
 // Similar to `Tremolo`. While `Tremolo` oscillates the volume, `Vibrato` oscillates the pitch.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Vibrato {
     /// The frequency 0.0 < x ≤ 14.0.
@@ -141,7 +141,7 @@ pub struct Vibrato {
 }
 
 /// Rotates the sound around the stereo channels/user headphones aka Audio Panning. It can produce an effect similar to https://youtu.be/QB9EB8mTKcc (without the reverb).
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Rotation {
     /// The frequency of the audio rotating around the listener in Hz. 0.2 is similar to the example video.
@@ -150,7 +150,7 @@ pub struct Rotation {
 }
 
 /// Distortion effect. It can generate some pretty unique audio effects.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Distortion {
     /// The sin offset.
@@ -187,7 +187,7 @@ pub struct Distortion {
 }
 
 /// Mixes both channels (left and right), with a configurable factor on how much each channel affects the other. With the defaults, both channels are kept independent of each other. Setting all factors to 0.5 means both channels get the same audio.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelMix {
     /// The left to left channel mix factor. (0.0 ≤ x ≤ 1.0)
@@ -208,7 +208,7 @@ pub struct ChannelMix {
 }
 
 /// Higher frequencies get suppressed, while lower frequencies pass through this filter, thus the name low pass. Any smoothing values equal to, or less than 1.0 will disable the filter.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LowPass {
     /// The smoothing factor. (1.0 < x)
