@@ -3,7 +3,7 @@ use serde::Deserialize;
 use crate::Exception;
 
 /// Response sent by Lavalink when the connection is established.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ready {
     /// If a session was resumed.
@@ -13,7 +13,7 @@ pub struct Ready {
 }
 
 /// Response sent every x seconds by Lavalink about the player state of a guild.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerUpdate {
     /// The guild id of the player.
@@ -23,7 +23,7 @@ pub struct PlayerUpdate {
 }
 
 /// Player state in the Lavalink server.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerState {
     /// Unix timestamp in milliseconds.
@@ -37,7 +37,7 @@ pub struct PlayerState {
 }
 
 /// Information about the track that was started.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackStartEvent {
     /// The guild id.
@@ -47,7 +47,7 @@ pub struct TrackStartEvent {
 }
 
 /// Information about the track that was finished.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackEndEvent {
     /// The guild id.
@@ -59,7 +59,7 @@ pub struct TrackEndEvent {
 }
 
 /// The reason why a track was finished.
-#[derive(Deserialize, PartialEq, Eq)]
+#[derive(Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TrackEndReason {
     /// The track finished playing. (May start next? Yes)
@@ -75,7 +75,7 @@ pub enum TrackEndReason {
 }
 
 /// Emitted when an exception/error occurs while playing a track.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackExceptionEvent {
     /// The guild id.
@@ -87,7 +87,7 @@ pub struct TrackExceptionEvent {
 }
 
 /// Emitted when a song is stuck.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackStuckEvent {
     /// The guild id.
@@ -101,7 +101,7 @@ pub struct TrackStuckEvent {
 /// Emitted as soon as any connection between the Lavalink server and Discord is closed, which can be normal or abnormal.
 ///
 /// 4xxx codes are generally bad according to the Discord documentation.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WebSocketClosedEvent {
     /// The guild id.

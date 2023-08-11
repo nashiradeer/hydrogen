@@ -53,7 +53,7 @@ impl VoiceState {
 }
 
 /// Request used by the `update_player` function to update the player on the Lavalink server.
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePlayer {
     /// The encoded track base64 to play. `Option::None` stops the current track.
@@ -105,7 +105,7 @@ impl Default for UpdatePlayer {
 }
 
 /// A Lavalink Player associated with a guild and a session.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Player {
     /// The guild id of the player.
@@ -159,7 +159,7 @@ pub struct TrackInfo {
 }
 
 /// Response for a load track request.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackLoading {
     /// Additional info if the the load type is `LoadResultType::PlaylistLoaded`.
@@ -173,7 +173,7 @@ pub struct TrackLoading {
 }
 
 /// The type of result that was loaded.
-#[derive(Deserialize, PartialEq, Eq)]
+#[derive(Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LoadResultType {
     /// A track has been loaded.
@@ -189,7 +189,7 @@ pub enum LoadResultType {
 }
 
 /// Information about the playlist.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistInfo {
     /// The name of the loaded playlist.

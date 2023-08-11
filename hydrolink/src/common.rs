@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 /// Lavalink server statistics.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Stats {
     /// The amount of players connected to the node.
@@ -19,7 +19,7 @@ pub struct Stats {
 }
 
 /// Statistics related to Lavalink server RAM memory usage.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Memory {
     /// The amount of free memory in bytes.
@@ -33,7 +33,7 @@ pub struct Memory {
 }
 
 /// Statistics related to Lavalink server CPU usage.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CPU {
     /// The amount of cores the node has.
@@ -45,7 +45,7 @@ pub struct CPU {
 }
 
 /// Statistics related to the connections between Lavalink server and Discord.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FrameStats {
     /// The amount of frames sent to Discord.
@@ -57,7 +57,7 @@ pub struct FrameStats {
 }
 
 /// An exception/error produced by the Lavalink server.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Exception {
     /// The message of the exception.
@@ -69,7 +69,7 @@ pub struct Exception {
 }
 
 /// The severity level of the exception.
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Severity {
     /// The cause is known and expected, indicates that there is nothing wrong with the library itself.
