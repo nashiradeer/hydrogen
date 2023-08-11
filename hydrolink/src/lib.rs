@@ -457,22 +457,6 @@ impl Lavalink {
     }
 }
 
-impl PartialEq for Lavalink {
-    fn eq(&self, other: &Self) -> bool {
-        let self_session_id = self.session_id.read().unwrap().clone();
-        let self_connection_status = self.status.read().unwrap().clone();
-        let self_resume_key = self.resume_key.lock().unwrap().clone();
-        let other_session_id = other.session_id.read().unwrap().clone();
-        let other_connection_status = other.status.read().unwrap().clone();
-        let other_resume_key = other.resume_key.lock().unwrap().clone();
-
-        self_session_id == other_session_id
-            && self_connection_status == other_connection_status
-            && self_resume_key == other_resume_key
-            && self.config == other.config
-    }
-}
-
 /// Generates a new random key from 16 Base64 encoded bytes.
 fn generate_key() -> String {
     let r: [u8; 16] = rand::random();
