@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Exception, Filters};
 
 /// Error response returned by Lavalink Server REST API.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ErrorResponse {
     /// The timestamp of the error in milliseconds since the epoch.
