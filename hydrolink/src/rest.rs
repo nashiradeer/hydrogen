@@ -53,7 +53,7 @@ impl VoiceState {
 }
 
 /// Request used by the `update_player` function to update the player on the Lavalink server.
-#[derive(Clone, Serialize)]
+#[derive(Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePlayer {
     /// The encoded track base64 to play. `Option::None` stops the current track.
@@ -87,21 +87,6 @@ pub struct UpdatePlayer {
     /// Information required for connecting to Discord.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub voice: Option<VoiceState>,
-}
-
-impl Default for UpdatePlayer {
-    fn default() -> Self {
-        Self {
-            encoded_track: None,
-            identifier: None,
-            position: None,
-            end_time: None,
-            volume: None,
-            paused: None,
-            filters: None,
-            voice: None,
-        }
-    }
 }
 
 /// A Lavalink Player associated with a guild and a session.
