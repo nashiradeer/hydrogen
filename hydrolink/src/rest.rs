@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Exception;
+use crate::{Exception, Filters};
 
 /// Error response returned by Lavalink Server REST API.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -53,7 +53,7 @@ impl VoiceState {
 }
 
 /// Request used by the `update_player` function to update the player on the Lavalink server.
-#[derive(Clone, Serialize)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePlayer {
     /// The encoded track base64 to play. `Option::None` stops the current track.
@@ -80,6 +80,10 @@ pub struct UpdatePlayer {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub paused: Option<bool>,
 
+    /// The new filters to apply. This will override all previously applied filters.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filters: Option<Filters>,
+
     /// Information required for connecting to Discord.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub voice: Option<VoiceState>,
@@ -99,6 +103,8 @@ pub struct Player {
     pub paused: bool,
     /// The voice state of the player.
     pub voice: VoiceState,
+    ///	The filters used by the player.
+    pub filters: Filters,
 }
 
 /// A single audio track.
