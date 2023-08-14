@@ -423,6 +423,45 @@ impl Lavalink {
         parse_response(&response)
     }
 
+    /// Returns all players in this session.
+    pub async fn get_players(&self) -> Result<Vec<Player>> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!(
+            "/sessions/{}/players",
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
+        );
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!(
+            "/sessions/{}/players?trace=true",
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
+        );
+
+        debug!("calling '{}'...", path);
+
+        let response = self
+            .http_client
+            .get(self.config.build_rest_uri(&path))
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .bytes()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
+
+        parse_response(&response)
+    }
+
     /// Destroys the player for this guild in this session.
     pub async fn destroy_player(&self, guild_id: u64) -> Result<()> {
         #[cfg(not(feature = "lavalink-trace"))]
