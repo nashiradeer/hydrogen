@@ -324,6 +324,11 @@ impl Lavalink {
         self.resume_key.lock().unwrap().is_some()
     }
 
+    /// Gets a clone of the configuration used in this `Lavalink`.
+    pub fn config(&self) -> LavalinkConfig {
+        self.config.as_ref().clone()
+    }
+
     /// Updates or creates the player for this guild if it doesn't already exist.
     pub async fn update_player(
         &self,
