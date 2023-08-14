@@ -204,6 +204,7 @@ pub async fn websocket_message_parser(
 
     info!("websocket message parser finished.");
     *lavalink.session_id.write().unwrap() = None;
+    *lavalink.connection.lock().await = None;
 
     debug!("emitting 'disconnect' in the event handler...");
     lavalink.handler.disconnect(lavalink.clone()).await;

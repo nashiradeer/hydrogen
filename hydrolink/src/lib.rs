@@ -7,6 +7,7 @@ use std::{
 
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine};
+use const_format::concatcp;
 use futures::{stream::SplitSink, SinkExt, StreamExt};
 use reqwest::{
     header::{HeaderMap, InvalidHeaderValue},
@@ -39,6 +40,8 @@ pub use rest::*;
 pub use websocket::*;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const CLIENT_NAME: &str = concatcp!("hydrolink/", VERSION);
 
 /// Event handler used by the Websocket message parser.
 #[async_trait]
@@ -199,23 +202,24 @@ pub struct Lavalink {
     /// Session ID of this connection, if the Websocket message parser received one.
     session_id: Arc<RwLock<Option<String>>>,
     /// A write-only Websocket connection to the Lavalink server.
-    connection:
-        Arc<tokio::sync::Mutex<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
+    connection: Arc<
+        tokio::sync::Mutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
+    >,
     /// Resume key that can be used to resume this connection.
     resume_key: Arc<Mutex<Option<String>>>,
     /// Event handler that will be used by the Websocket message parser.
     handler: Arc<Box<dyn Handler + Sync + Send>>,
+    /// User ID used to connect to Websocket.
+    user_id: u64,
 }
 
 impl Lavalink {
-    /// Initializes the connection to the Lavalink server and this struct.
-    pub async fn connect<H: Handler + Sync + Send + 'static>(
+    /// Create a new instance of this struct without connecting.
+    pub fn new<H: Handler + Sync + Send + 'static>(
         config: LavalinkConfig,
         user_id: u64,
         handler: H,
     ) -> Result<Self> {
-        let client_name = format!("hydrolink/{}", VERSION);
-
         let http_client = Client::builder()
             .default_headers({
                 let mut headers = HeaderMap::new();
@@ -225,11 +229,28 @@ impl Lavalink {
                 );
                 headers
             })
-            .user_agent(client_name.clone())
+            .user_agent(CLIENT_NAME)
             .build()
             .map_err(Error::Reqwest)?;
 
-        let websocket_uri = config.build_websocket_uri();
+        Ok(Self {
+            config: Arc::new(config),
+            handler: Arc::new(Box::new(handler)),
+            resume_key: Arc::new(Mutex::new(None)),
+            session_id: Arc::new(RwLock::new(None)),
+            connection: Arc::new(tokio::sync::Mutex::new(None)),
+            http_client,
+            user_id,
+        })
+    }
+
+    /// Initializes the connection to the Lavalink server.
+    pub async fn connect(&self) -> Result<()> {
+        if self.session_id.read().unwrap().is_some() {
+            return Err(Error::AlreadyConnected);
+        }
+
+        let websocket_uri = self.config.build_websocket_uri();
 
         let request = Request::builder()
             .header("Host", websocket_uri.clone())
@@ -237,9 +258,9 @@ impl Lavalink {
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Version", "13")
             .header("Sec-WebSocket-Key", generate_key())
-            .header("Authorization", config.password.clone())
-            .header("User-Id", user_id)
-            .header("Client-Name", client_name)
+            .header("Authorization", self.config.password.clone())
+            .header("User-Id", self.user_id)
+            .header("Client-Name", CLIENT_NAME)
             .uri(websocket_uri.clone())
             .body(())
             .map_err(Error::Http)?;
@@ -257,20 +278,11 @@ impl Lavalink {
 
         debug!("Lavalink websocket connected.");
 
-        let connection = Arc::new(tokio::sync::Mutex::new(sink));
-
-        let lavalink = Self {
-            config: Arc::new(config),
-            handler: Arc::new(Box::new(handler)),
-            resume_key: Arc::new(Mutex::new(None)),
-            session_id: Arc::new(RwLock::new(None)),
-            connection,
-            http_client,
-        };
+        *self.connection.lock().await = Some(sink);
 
         let (sender, mut receiver) = oneshot::channel();
 
-        let websocket_lavalink = lavalink.clone();
+        let websocket_lavalink = self.clone();
         spawn(async move {
             debug!("starting the websocket message parser.");
             websocket_message_parser(websocket_lavalink, Some(sender), stream).await;
@@ -278,21 +290,21 @@ impl Lavalink {
 
         debug!("waiting the session confirmation...");
         select! {
-            _ = sleep(Duration::from_millis(lavalink.config.connection_timeout)) => {
+            _ = sleep(Duration::from_millis(self.config.connection_timeout)) => {
                 warn!("session confirmation timeout, closing connection...");
 
-                if let Err(e) = lavalink.connection.lock().await.close().await {
+                if let Err(e) = self.connection.lock().await.as_mut().unwrap().close().await {
                     error!("websocket connection can't be closed: {}", e);
                 }
 
                 Err(Error::NotConnected)
             }
             msg = &mut receiver => match msg {
-                Ok(_) => Ok(lavalink),
+                Ok(_) => Ok(()),
                 Err(e) => {
                     error!("session confirmation channel has been dropped: {}", e);
 
-                    if let Err(e) = lavalink.connection.lock().await.close().await {
+                    if let Err(e) = self.connection.lock().await.as_mut().unwrap().close().await {
                         error!("websocket connection can't be closed: {}", e);
                     }
 
