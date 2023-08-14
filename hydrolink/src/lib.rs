@@ -375,27 +375,7 @@ impl Lavalink {
 
     /// This function is used to resolve audio tracks for use with the `update_player` function.
     pub async fn track_load(&self, identifier: &str) -> Result<TrackLoading> {
-        #[cfg(not(feature = "lavalink-trace"))]
-        let path = format!("/loadtracks?identifier={}", identifier,);
-
-        #[cfg(feature = "lavalink-trace")]
-        let path = format!("/loadtracks?identifier={}&trace=true", identifier,);
-
-        debug!("calling '{}'...", path);
-
-        let response = self
-            .http_client
-            .get(self.config.build_rest_uri(&path))
-            .send()
-            .await
-            .map_err(Error::Reqwest)?
-            .bytes()
-            .await
-            .map_err(Error::Reqwest)?;
-
-        info!("parsing the response from '{}'...", path);
-
-        parse_response(&response)
+        track_load(self.config.as_ref().clone(), identifier).await
     }
 
     /// Returns the player for this guild in this session.
@@ -525,6 +505,43 @@ impl Lavalink {
 
         Ok(())
     }
+}
+
+/// This function is used to resolve audio tracks for use with the `update_player` function.
+pub async fn track_load(config: LavalinkConfig, identifier: &str) -> Result<TrackLoading> {
+    #[cfg(not(feature = "lavalink-trace"))]
+    let path = format!("/loadtracks?identifier={}", identifier,);
+
+    #[cfg(feature = "lavalink-trace")]
+    let path = format!("/loadtracks?identifier={}&trace=true", identifier,);
+
+    debug!("calling '{}'...", path);
+
+    let http_client = Client::builder()
+        .default_headers({
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                "Authorization",
+                config.password.parse().map_err(Error::InvalidHeaderValue)?,
+            );
+            headers
+        })
+        .user_agent(CLIENT_NAME)
+        .build()
+        .map_err(Error::Reqwest)?;
+
+    let response = http_client
+        .get(config.build_rest_uri(&path))
+        .send()
+        .await
+        .map_err(Error::Reqwest)?
+        .bytes()
+        .await
+        .map_err(Error::Reqwest)?;
+
+    info!("parsing the response from '{}'...", path);
+
+    parse_response(&response)
 }
 
 /// Generates a new random key from 16 Base64 encoded bytes.
