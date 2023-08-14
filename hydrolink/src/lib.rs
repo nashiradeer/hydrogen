@@ -402,7 +402,11 @@ impl Lavalink {
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
             "/sessions/{}/players/{}?trace=true",
-            self.session_id.read().unwrap().clone(),
+            self.session_id
+                .read()
+                .unwrap()
+                .clone()
+                .ok_or(Error::NotConnected)?,
             guild_id
         );
 
