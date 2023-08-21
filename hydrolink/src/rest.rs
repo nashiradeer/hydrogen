@@ -184,7 +184,7 @@ pub struct PlaylistInfo {
 }
 
 /// Request and response used by the `update_session` function.
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSession {
     /// The resuming key to be able to resume this session later.

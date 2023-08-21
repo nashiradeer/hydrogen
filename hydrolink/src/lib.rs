@@ -538,6 +538,7 @@ impl Lavalink {
         let response = self
             .http_client
             .patch(self.config.build_rest_uri(&path))
+            .json(&update_session)
             .send()
             .await
             .map_err(Error::Reqwest)?
