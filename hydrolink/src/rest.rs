@@ -182,3 +182,16 @@ pub struct PlaylistInfo {
     /// The selected track in this playlist. (-1 if no track is selected)
     pub selected_track: Option<i32>,
 }
+
+/// Request and response used by the `update_session` function.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSession {
+    /// The resuming key to be able to resume this session later.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resuming_key: Option<Option<String>>,
+
+    ///	The timeout in seconds (default is 60s).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<u32>,
+}
