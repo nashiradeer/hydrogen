@@ -549,6 +549,11 @@ impl Lavalink {
 
         parse_response(&response)
     }
+
+    /// Decode a Base64 track to a `Track` struct.
+    pub async fn track_decode(&self, base64: &str) -> Result<Track> {
+        track_decode(self.config.as_ref().clone(), base64).await
+    }
 }
 
 /// This function is used to resolve audio tracks for use with the `update_player` function.
@@ -558,6 +563,43 @@ pub async fn track_load(config: LavalinkConfig, identifier: &str) -> Result<Trac
 
     #[cfg(feature = "lavalink-trace")]
     let path = format!("/loadtracks?identifier={}&trace=true", identifier,);
+
+    debug!("calling '{}'...", path);
+
+    let http_client = Client::builder()
+        .default_headers({
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                "Authorization",
+                config.password.parse().map_err(Error::InvalidHeaderValue)?,
+            );
+            headers
+        })
+        .user_agent(CLIENT_NAME)
+        .build()
+        .map_err(Error::Reqwest)?;
+
+    let response = http_client
+        .get(config.build_rest_uri(&path))
+        .send()
+        .await
+        .map_err(Error::Reqwest)?
+        .bytes()
+        .await
+        .map_err(Error::Reqwest)?;
+
+    info!("parsing the response from '{}'...", path);
+
+    parse_response(&response)
+}
+
+/// Decode a Base64 track to a `Track` struct.
+pub async fn track_decode(config: LavalinkConfig, base64: &str) -> Result<Track> {
+    #[cfg(not(feature = "lavalink-trace"))]
+    let path = format!("/v3/decodetrack?encodedTrack={}", base64,);
+
+    #[cfg(feature = "lavalink-trace")]
+    let path = format!("/v3/decodetrack?encodedTrack={}&trace=true", base64,);
 
     debug!("calling '{}'...", path);
 
