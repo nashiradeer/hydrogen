@@ -2,12 +2,17 @@
     "cSpell.words": [
         "concatcp",
         "cooldown",
+        "decodetrack",
         "hydrolink",
         "lavalink",
+        "loadtracks",
         "oneshot",
         "reqwest",
         "rustls",
+        "scsearch",
         "seekable",
-        "tungstenite"
+        "tungstenite",
+        "ytmsearch",
+        "ytsearch"
     ]
 }
