@@ -41,7 +41,7 @@ pub use websocket::*;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const CLIENT_NAME: &str = concatcp!("hydrolink/", VERSION);
+const CLIENT_NAME: &str = concat!("hydrolink/", env!("CARGO_PKG_VERSION"));
 
 /// Event handler used by the Websocket message parser.
 #[async_trait]
