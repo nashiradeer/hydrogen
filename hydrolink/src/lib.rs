@@ -187,8 +187,6 @@ impl Lavalink {
             self.rest_url, identifier
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
             .http_client
             .get(&path)
@@ -199,7 +197,7 @@ impl Lavalink {
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [GET]: {}", path);
 
         parse_response(&response)
     }
@@ -215,8 +213,6 @@ impl Lavalink {
             self.rest_url, track
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
             .http_client
             .get(&path)
@@ -227,7 +223,7 @@ impl Lavalink {
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [GET]: {}", path);
 
         parse_response(&response)
     }
