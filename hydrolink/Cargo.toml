@@ -31,7 +31,6 @@ native-tls-vendored = [
 [dependencies]
 async-trait = "0.1.72"
 base64 = "0.21.2"
-const_format = "0.2.31"
 futures = "0.3.28"
 tokio-tungstenite = "0.20.0"
 serde = { version = "1.0.179", features = ["derive"] }
