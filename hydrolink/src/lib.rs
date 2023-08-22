@@ -10,7 +10,7 @@ use base64::{prelude::BASE64_STANDARD, Engine};
 use const_format::concatcp;
 use futures::{stream::SplitSink, SinkExt, StreamExt};
 use reqwest::{
-    header::{HeaderMap, InvalidHeaderValue},
+    header::{HeaderMap, HeaderName, InvalidHeaderValue, AUTHORIZATION},
     Client,
 };
 use tokio::{net::TcpStream, select, spawn, sync::oneshot, time::sleep};
@@ -107,94 +107,135 @@ impl Display for Error {
 /// Just a `Result` with the error type set to `hydrolink::Error`.
 pub type Result<T> = result::Result<T, Error>;
 
-/// Configuration used by the Lavalink client to connect to the server.
+/// REST client used to access Lavalink API calls that are not dependent on a session or WebSocket connection.
 #[derive(Clone)]
-pub struct LavalinkConfig {
-    /// Lavalink server IP address.
-    pub host: String,
-    /// Lavalink server password.
-    pub password: String,
-    /// Enables the use of client-server TLS connections.
-    pub tls: bool,
-    /// Sets the maximum wait time for receiving the session ID.
-    pub connection_timeout: u64,
-    /// Sets the time between tries to resume the connection.
-    pub resume_tries: u8,
-    /// Sets the cooldown time between tries.
-    pub resume_cooldown: u64,
+pub struct Lavalink {
+    /// URL to be used as a base by the REST client.
+    rest_url: Arc<String>,
+    /// URL that will be used to start a new session with Lavalink.
+    websocket_url: Arc<String>,
+    /// Reqwest HTTP client already configured with Lavalink password.
+    http_client: Client,
+    /// Is true if this REST client was created with encrypted URLs.
+    tls: bool,
 }
 
-impl LavalinkConfig {
-    /// Initializes a new configuration with the required parameters.
-    pub fn new(host: &str, password: &str) -> Self {
-        Self {
-            host: host.to_owned(),
-            password: password.to_owned(),
+impl Lavalink {
+    /// Initialize a new REST client using unencrypted URLs (such as http and ws) with Lavalink.
+    pub fn new(host: &str, password: &str) -> Result<Self> {
+        let rest_url = format!("http://{}/v3", host);
+        let websocket_url = format!("ws://{}/v3/websocket", host);
+
+        let mut header_map = HeaderMap::new();
+        header_map.insert(
+            AUTHORIZATION,
+            password.parse().map_err(Error::InvalidHeaderValue)?,
+        );
+
+        let http_client = Client::builder()
+            .default_headers(header_map)
+            .user_agent(CLIENT_NAME)
+            .build()
+            .map_err(Error::Reqwest)?;
+
+        Ok(Self {
+            rest_url: Arc::new(rest_url),
+            websocket_url: Arc::new(websocket_url),
             tls: false,
-            connection_timeout: 5000,
-            resume_tries: 3,
-            resume_cooldown: 2000,
-        }
+            http_client,
+        })
     }
 
-    #[cfg(not(feature = "lavalink-v4"))]
-    // Builds a URI that can be used to access the Lavalink server's Websocket using the parameters in this configuration.
-    pub fn build_websocket_uri(&self) -> String {
-        format!(
-            "{}://{}/v3/websocket",
-            match self.tls {
-                true => "wss",
-                false => "ws",
-            },
-            self.host
-        )
+    /// Initialize a new REST client using encrypted URLs (such as https and wss) with Lavalink.
+    pub fn new_tls(host: &str, password: &str) -> Result<Self> {
+        let rest_url = format!("https://{}/v3", host);
+        let websocket_url = format!("wss://{}/v3/websocket", host);
+
+        let mut header_map = HeaderMap::new();
+        header_map.insert(
+            AUTHORIZATION,
+            password.parse().map_err(Error::InvalidHeaderValue)?,
+        );
+
+        let http_client = Client::builder()
+            .default_headers(header_map)
+            .user_agent(CLIENT_NAME)
+            .build()
+            .map_err(Error::Reqwest)?;
+
+        Ok(Self {
+            rest_url: Arc::new(rest_url),
+            websocket_url: Arc::new(websocket_url),
+            tls: true,
+            http_client,
+        })
     }
 
-    #[cfg(feature = "lavalink-v4")]
-    // Builds a URI that can be used to access the Lavalink server's Websocket using the parameters in this configuration.
-    pub fn build_websocket_uri(&self) -> String {
-        format!(
-            "{}://{}/v4/websocket",
-            match self.tls {
-                true => "wss",
-                false => "ws",
-            },
-            self.host
-        )
+    /// Checks if this REST client is using encrypted URLs.
+    pub fn tls(&self) -> bool {
+        self.tls
     }
 
-    #[cfg(not(feature = "lavalink-v4"))]
-    /// Builds a URI that can be used to make REST calls to the Lavalink server.
-    pub fn build_rest_uri(&self, api_call: &str) -> String {
-        format!(
-            "{}://{}/v3{}",
-            match self.tls {
-                true => "https",
-                false => "http",
-            },
-            self.host,
-            api_call,
-        )
+    /// Resolves an identifier into a Track, or the search if there is a prefix in the identifier, such as `ytsearch:`, `ytmsearch:` or `scsearch:`.
+    pub async fn track_load(&self, identifier: &str) -> Result<TrackLoading> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/loadtracks?identifier={}", self.rest_url, identifier);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!(
+            "{}/loadtracks?identifier={}&trace=true",
+            self.rest_url, identifier
+        );
+
+        debug!("calling '{}'...", path);
+
+        let response = self
+            .http_client
+            .get(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .bytes()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
+
+        parse_response(&response)
     }
 
-    #[cfg(feature = "lavalink-v4")]
-    /// Builds a URI that can be used to make REST calls to the Lavalink server.
-    pub fn build_rest_uri(&self, api_call: &str) -> String {
-        format!(
-            "{}://{}/v4{}",
-            match self.tls {
-                true => "https",
-                false => "http",
-            },
-            self.host,
-            api_call,
-        )
+    /// Decode a Base64 (encoded track) into a `Track`.
+    pub async fn track_decode(&self, track: &str) -> Result<Track> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/v3/decodetrack?encodedTrack={}", self.rest_url, track);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!(
+            "{}/v3/decodetrack?encodedTrack={}&trace=true",
+            self.rest_url, track
+        );
+
+        debug!("calling '{}'...", path);
+
+        let response = self
+            .http_client
+            .get(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .bytes()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        info!("parsing the response from '{}'...", path);
+
+        parse_response(&response)
     }
 }
 
 /// Lavalink client used to send calls and receive messages from the Lavalink server.
 #[derive(Clone)]
-pub struct Lavalink {
+pub struct Session {
     /// HTTP client with headers (authorization and user agent) predefined and ready to use.
     http_client: Client,
     /// Configuration used by this client to connect to the Lavalink server.
@@ -213,7 +254,7 @@ pub struct Lavalink {
     user_id: u64,
 }
 
-impl Lavalink {
+impl Session {
     /// Create a new instance of this struct without connecting.
     pub fn new<H: Handler + Sync + Send + 'static>(
         config: LavalinkConfig,
@@ -555,80 +596,6 @@ impl Lavalink {
     pub async fn track_decode(&self, base64: &str) -> Result<Track> {
         track_decode(self.config.as_ref().clone(), base64).await
     }
-}
-
-/// This function is used to resolve audio tracks for use with the `update_player` function.
-pub async fn track_load(config: LavalinkConfig, identifier: &str) -> Result<TrackLoading> {
-    #[cfg(not(feature = "lavalink-trace"))]
-    let path = format!("/loadtracks?identifier={}", identifier,);
-
-    #[cfg(feature = "lavalink-trace")]
-    let path = format!("/loadtracks?identifier={}&trace=true", identifier,);
-
-    debug!("calling '{}'...", path);
-
-    let http_client = Client::builder()
-        .default_headers({
-            let mut headers = HeaderMap::new();
-            headers.insert(
-                "Authorization",
-                config.password.parse().map_err(Error::InvalidHeaderValue)?,
-            );
-            headers
-        })
-        .user_agent(CLIENT_NAME)
-        .build()
-        .map_err(Error::Reqwest)?;
-
-    let response = http_client
-        .get(config.build_rest_uri(&path))
-        .send()
-        .await
-        .map_err(Error::Reqwest)?
-        .bytes()
-        .await
-        .map_err(Error::Reqwest)?;
-
-    info!("parsing the response from '{}'...", path);
-
-    parse_response(&response)
-}
-
-/// Decode a Base64 track to a `Track` struct.
-pub async fn track_decode(config: LavalinkConfig, base64: &str) -> Result<Track> {
-    #[cfg(not(feature = "lavalink-trace"))]
-    let path = format!("/v3/decodetrack?encodedTrack={}", base64,);
-
-    #[cfg(feature = "lavalink-trace")]
-    let path = format!("/v3/decodetrack?encodedTrack={}&trace=true", base64,);
-
-    debug!("calling '{}'...", path);
-
-    let http_client = Client::builder()
-        .default_headers({
-            let mut headers = HeaderMap::new();
-            headers.insert(
-                "Authorization",
-                config.password.parse().map_err(Error::InvalidHeaderValue)?,
-            );
-            headers
-        })
-        .user_agent(CLIENT_NAME)
-        .build()
-        .map_err(Error::Reqwest)?;
-
-    let response = http_client
-        .get(config.build_rest_uri(&path))
-        .send()
-        .await
-        .map_err(Error::Reqwest)?
-        .bytes()
-        .await
-        .map_err(Error::Reqwest)?;
-
-    info!("parsing the response from '{}'...", path);
-
-    parse_response(&response)
 }
 
 /// Generates a new random key from 16 Base64 encoded bytes.
