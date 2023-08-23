@@ -195,3 +195,80 @@ pub struct UpdateSession {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u32>,
 }
+
+/// Lavalink server information.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Info {
+    /// The version of this Lavalink server.
+    pub version: Version,
+
+    /// The millisecond unix timestamp when this Lavalink jar was built.
+    pub build_time: u64,
+
+    /// The git information of this Lavalink server.
+    pub git: Git,
+
+    /// The JVM version this Lavalink server runs on.
+    pub jvm: String,
+
+    /// The Lavaplayer version being used by this server.
+    pub lavaplayer: String,
+
+    /// The enabled source managers for this server.
+    pub source_managers: Vec<String>,
+
+    /// The enabled filters for this server.
+    pub filters: Vec<String>,
+
+    /// The enabled plugins for this server.
+    pub plugins: Vec<Plugin>,
+}
+
+/// Parsed Semantic Versioning 2.0.0. See https://semver.org/ for more info.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Version {
+    /// The full version string of this Lavalink server.
+    pub semver: String,
+
+    /// The major version of this Lavalink server.
+    pub major: u8,
+
+    /// The minor version of this Lavalink server.
+    pub minor: u8,
+
+    /// The patch version of this Lavalink server.
+    pub patch: u8,
+
+    /// The pre-release version according to semver as a `.` separated list of identifiers.
+    pub pre_release: Option<String>,
+
+    /// The build metadata according to semver as a `.` separated list of identifiers
+    pub build: Option<String>,
+}
+
+/// Information about the branch and commit used to build the Lavalink server.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Git {
+    /// The branch this Lavalink server was built.
+    pub branch: String,
+
+    /// The commit this Lavalink server was built.
+    pub commit: String,
+
+    /// The millisecond unix timestamp for when the commit was created.
+    pub commit_time: u64,
+}
+
+/// Plugin used by Lavalink to extend its functions.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Plugin {
+    /// The name of the plugin.
+    pub name: String,
+
+    /// The version of the plugin.
+    pub version: String,
+}
