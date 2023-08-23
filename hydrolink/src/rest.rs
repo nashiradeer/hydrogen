@@ -272,3 +272,105 @@ pub struct Plugin {
     /// The version of the plugin.
     pub version: String,
 }
+
+/// Response sent by Lavalink server about Route Planner status.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoutePlannerStatus {
+    /// The name of the RoutePlanner implementation being used by this server.
+    pub class: Option<RoutePlannerType>,
+
+    /// The status details of the RoutePlanner.
+    pub details: Option<Details>,
+}
+
+/// The type/strategy used by the Lavalink server's Route Planner.
+#[derive(Clone, Deserialize, PartialEq, Eq)]
+pub enum RoutePlannerType {
+    /// IP address used is switched on ban. Recommended for IPv4 blocks or IPv6 blocks smaller than a /64.
+    #[serde(rename = "RotatingIpRoutePlanner")]
+    Rotating,
+
+    /// IP address used is switched on clock update. Use with at least 1 /64 IPv6 block.
+    #[serde(rename = "NanoIpRoutePlanner")]
+    Nano,
+
+    /// IP address used is switched on clock update, rotates to a different /64 block on ban. Use with at least 2x /64 IPv6 blocks.
+    #[serde(rename = "RotatingNanoIpRoutePlanner")]
+    RotatingNano,
+
+    /// IP address used is selected at random per request. Recommended for larger IP blocks.
+    #[serde(rename = "BalancingIpRoutePlanner")]
+    Balancing,
+}
+
+/// Details about the Route Planner used by the Lavalink server.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Details {
+    /// The ip block being used.
+    pub ip_block: IPBlock,
+
+    /// The failing addresses.
+    pub failing_addresses: Vec<FailingAddress>,
+
+    /// The number of rotations. (Only in `Rotating` type)
+    pub rotate_index: String,
+
+    /// The current offset in the block. (Only in `Rotating` type)
+    pub ip_index: String,
+
+    /// The current address being used. (Only in `Rotating` type)
+    pub current_address: String,
+
+    /// The current offset in the ip block. (Only in `Nano` and `RotatingNano` types)
+    pub current_address_index: String,
+
+    /// The information in which /64 block ips are chosen. This number increases on each ban. (Only in `RotatingNano`)
+    pub block_index: String,
+}
+
+/// IP block information.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IPBlock {
+    /// The type of the IP block.
+    #[serde(rename = "type")]
+    pub ip_type: IPBlockType,
+
+    /// The size of the IP block.
+    pub size: String,
+}
+
+/// IP block type/version.
+#[derive(Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "PascalCase")]
+pub enum IPBlockType {
+    /// The IPv4 block type.
+    Inet4Address,
+
+    /// The IPv6 block type
+    Inet6Address,
+}
+
+/// Information about a failed IP address and when it happened.
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FailingAddress {
+    /// The failing address.
+    pub failing_address: String,
+
+    /// The timestamp when the address failed.
+    pub failing_timestamp: u64,
+
+    /// The timestamp when the address failed as a pretty string.
+    pub failing_time: String,
+}
+
+/// Request to unmark an IP address failed.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoutePlannerFailedAddress {
+    /// The address to unmark as failed. This address must be in the same ip block.
+    pub address: String,
+}
