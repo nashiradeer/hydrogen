@@ -4,6 +4,7 @@
         "cooldown",
         "decodetrack",
         "hydrolink",
+        "Inet",
         "lavalink",
         "lavaplayer",
         "loadtracks",
@@ -13,6 +14,7 @@
         "scsearch",
         "seekable",
         "tungstenite",
+        "unmark",
         "ytmsearch",
         "ytsearch"
     ]
