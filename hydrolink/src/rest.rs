@@ -344,13 +344,14 @@ pub struct IPBlock {
 
 /// IP block type/version.
 #[derive(Clone, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "PascalCase")]
 pub enum IPBlockType {
     /// The IPv4 block type.
-    Inet4Address,
+    #[serde(rename = "Inet4Address")]
+    Inet4,
 
     /// The IPv6 block type
-    Inet6Address,
+    #[serde(rename = "Inet6Address")]
+    Inet6,
 }
 
 /// Information about a failed IP address and when it happened.
