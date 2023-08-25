@@ -205,11 +205,11 @@ impl Lavalink {
     /// Decode a Base64 (encoded track) into a `Track`.
     pub async fn track_decode(&self, track: &str) -> Result<Track> {
         #[cfg(not(feature = "lavalink-trace"))]
-        let path = format!("{}/v3/decodetrack?encodedTrack={}", self.rest_url, track);
+        let path = format!("{}/decodetrack?encodedTrack={}", self.rest_url, track);
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "{}/v3/decodetrack?encodedTrack={}&trace=true",
+            "{}/decodetrack?encodedTrack={}&trace=true",
             self.rest_url, track
         );
 
