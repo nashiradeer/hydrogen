@@ -7,13 +7,12 @@ use std::{
 
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine};
-use const_format::concatcp;
 use futures::{stream::SplitSink, SinkExt, StreamExt};
 use reqwest::{
-    header::{HeaderMap, HeaderName, InvalidHeaderValue, AUTHORIZATION},
+    header::{HeaderMap, InvalidHeaderValue, AUTHORIZATION},
     Client,
 };
-use tokio::{net::TcpStream, select, spawn, sync::oneshot, time::sleep};
+use tokio::{net::TcpStream, select, spawn, sync::oneshot, sync::Mutex as AsyncMutex, time::sleep};
 use tokio_tungstenite::{
     connect_async,
     tungstenite::{
@@ -23,7 +22,7 @@ use tokio_tungstenite::{
     },
     MaybeTlsStream, WebSocketStream,
 };
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 mod common;
 mod filters;
@@ -47,23 +46,23 @@ const CLIENT_NAME: &str = concat!("hydrolink/", env!("CARGO_PKG_VERSION"));
 #[async_trait]
 pub trait Handler {
     /// Triggered when the Websocket connection is established and a session ID for the REST client is received.
-    async fn ready(&self, _lavalink: Lavalink, _resumed: bool) {}
+    async fn ready(&self, _lavalink: Session, _resumed: bool) {}
     /// Triggered when the Websocket disconnects from the Lavalink server, this event actually triggers as soon as the message parser loop is finished.
-    async fn disconnect(&self, _lavalink: Lavalink) {}
+    async fn disconnect(&self, _lavalink: Session) {}
     /// Triggered every x seconds with the current state of the player.
-    async fn player_update(&self, _lavalink: Lavalink, _player_update: PlayerUpdate) {}
+    async fn player_update(&self, _lavalink: Session, _player_update: PlayerUpdate) {}
     /// Triggered every minute with stats from the Lavalink server.
-    async fn stats(&self, _lavalink: Lavalink, _stats: Stats) {}
+    async fn stats(&self, _lavalink: Session, _stats: Stats) {}
     /// Event triggered when a new track is started.
-    async fn track_start_event(&self, _lavalink: Lavalink, _message: TrackStartEvent) {}
+    async fn track_start_event(&self, _lavalink: Session, _message: TrackStartEvent) {}
     /// Event triggered when a track ends.
-    async fn track_end_event(&self, _lavalink: Lavalink, _message: TrackEndEvent) {}
+    async fn track_end_event(&self, _lavalink: Session, _message: TrackEndEvent) {}
     /// Event triggered when an exception/error occurs while playing a track.
-    async fn track_exception_event(&self, _lavalink: Lavalink, _message: TrackExceptionEvent) {}
+    async fn track_exception_event(&self, _lavalink: Session, _message: TrackExceptionEvent) {}
     /// Triggered when track is stuck.
-    async fn track_stuck_event(&self, _lavalink: Lavalink, _message: TrackStuckEvent) {}
+    async fn track_stuck_event(&self, _lavalink: Session, _message: TrackStuckEvent) {}
     /// Triggered when the connection between the Lavalink server and Discord is closed, either for normal or abnormal reasons.
-    async fn websocket_closed_event(&self, _lavalink: Lavalink, _message: WebSocketClosedEvent) {}
+    async fn websocket_closed_event(&self, _lavalink: Session, _message: WebSocketClosedEvent) {}
 }
 
 /// Enum that groups all the errors that can occur.
@@ -114,6 +113,8 @@ pub struct Lavalink {
     rest_url: Arc<String>,
     /// URL that will be used to start a new session with Lavalink.
     websocket_url: Arc<String>,
+    /// Password used to login to the Lavalink server.
+    password: Arc<String>,
     /// Reqwest HTTP client already configured with Lavalink password.
     http_client: Client,
     /// Is true if this REST client was created with encrypted URLs.
@@ -123,7 +124,7 @@ pub struct Lavalink {
 impl Lavalink {
     /// Initialize a new REST client using unencrypted URLs (such as http and ws) with Lavalink.
     pub fn new(host: &str, password: &str) -> Result<Self> {
-        let rest_url = format!("http://{}/v3", host);
+        let rest_url = format!("http://{}", host);
         let websocket_url = format!("ws://{}/v3/websocket", host);
 
         let mut header_map = HeaderMap::new();
@@ -141,6 +142,7 @@ impl Lavalink {
         Ok(Self {
             rest_url: Arc::new(rest_url),
             websocket_url: Arc::new(websocket_url),
+            password: Arc::new(password.to_owned()),
             tls: false,
             http_client,
         })
@@ -148,7 +150,7 @@ impl Lavalink {
 
     /// Initialize a new REST client using encrypted URLs (such as https and wss) with Lavalink.
     pub fn new_tls(host: &str, password: &str) -> Result<Self> {
-        let rest_url = format!("https://{}/v3", host);
+        let rest_url = format!("https://{}", host);
         let websocket_url = format!("wss://{}/v3/websocket", host);
 
         let mut header_map = HeaderMap::new();
@@ -166,6 +168,7 @@ impl Lavalink {
         Ok(Self {
             rest_url: Arc::new(rest_url),
             websocket_url: Arc::new(websocket_url),
+            password: Arc::new(password.to_owned()),
             tls: true,
             http_client,
         })
@@ -176,14 +179,25 @@ impl Lavalink {
         self.tls
     }
 
+    /// Initializes a `Session` and connects it to the Lavalink server.
+    pub async fn connect<H: Handler + Sync + Send + 'static>(
+        &self,
+        user_id: u64,
+        handler: H,
+    ) -> Result<Session> {
+        let session = Session::new(self.clone(), user_id, handler);
+        session.connect().await?;
+        Ok(session)
+    }
+
     /// Resolves an identifier into a Track, or the search if there is a prefix in the identifier, such as `ytsearch:`, `ytmsearch:` or `scsearch:`.
     pub async fn track_load(&self, identifier: &str) -> Result<TrackLoading> {
         #[cfg(not(feature = "lavalink-trace"))]
-        let path = format!("{}/loadtracks?identifier={}", self.rest_url, identifier);
+        let path = format!("{}/v3/loadtracks?identifier={}", self.rest_url, identifier);
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "{}/loadtracks?identifier={}&trace=true",
+            "{}/v3/loadtracks?identifier={}&trace=true",
             self.rest_url, identifier
         );
 
@@ -205,11 +219,11 @@ impl Lavalink {
     /// Decode a Base64 (encoded track) into a `Track`.
     pub async fn track_decode(&self, track: &str) -> Result<Track> {
         #[cfg(not(feature = "lavalink-trace"))]
-        let path = format!("{}/decodetrack?encodedTrack={}", self.rest_url, track);
+        let path = format!("{}/v3/decodetrack?encodedTrack={}", self.rest_url, track);
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "{}/decodetrack?encodedTrack={}&trace=true",
+            "{}/v3/decodetrack?encodedTrack={}&trace=true",
             self.rest_url, track
         );
 
@@ -227,21 +241,165 @@ impl Lavalink {
 
         parse_response(&response)
     }
+
+    /// Get information from the Lavalink server.
+    pub async fn info(&self) -> Result<Info> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/v3/info", self.rest_url);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!("{}/v3/info?trace=true", self.rest_url,);
+
+        let response = self
+            .http_client
+            .get(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .bytes()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        debug!("REST [GET]: {}", path);
+
+        parse_response(&response)
+    }
+
+    /// Get statistics from Lavalink server using REST API.
+    pub async fn stats(&self) -> Result<Stats> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/v3/stats", self.rest_url);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!("{}/v3/stats?trace=true", self.rest_url,);
+
+        let response = self
+            .http_client
+            .get(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .bytes()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        debug!("REST [GET]: {}", path);
+
+        parse_response(&response)
+    }
+
+    /// Gets the version of the Lavalink server.
+    pub async fn version(&self) -> Result<String> {
+        let path = format!("{}/version", self.rest_url,);
+
+        let response = self
+            .http_client
+            .get(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .text()
+            .await
+            .map_err(Error::Reqwest);
+
+        debug!("REST [GET]: {}", path);
+
+        response
+    }
+
+    /// Get the current status from the Route Planner.
+    pub async fn routeplanner_status(&self) -> Result<RoutePlannerStatus> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/v3/routeplanner/status", self.rest_url);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!("{}/v3/routeplanner/status?trace=true", self.rest_url,);
+
+        let response = self
+            .http_client
+            .get(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?
+            .bytes()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        debug!("REST [GET]: {}", path);
+
+        parse_response(&response)
+    }
+
+    /// Unmark an IP address as failed in the Route Planner.
+    pub async fn routeplanner_unmark(&self, address: &str) -> Result<()> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/v3/routeplanner/free/address", self.rest_url);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!("{}/v3/routeplanner/free/address?trace=true", self.rest_url);
+
+        let response = self
+            .http_client
+            .post(&path)
+            .json(&RoutePlannerFailedAddress {
+                address: address.to_owned(),
+            })
+            .send()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        debug!("REST [POST]: {}", path);
+
+        if !response.status().is_success() {
+            return Err(
+                serde_json::from_slice(&response.bytes().await.map_err(Error::Reqwest)?)
+                    .map(|v| Error::RestError(v, None))
+                    .map_err(|e| Error::InvalidResponse(None, e))?,
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Unmark all IP addresses as failed in the Route Planner.
+    pub async fn routeplanner_unmark_all(&self) -> Result<()> {
+        #[cfg(not(feature = "lavalink-trace"))]
+        let path = format!("{}/v3/routeplanner/free/all", self.rest_url);
+
+        #[cfg(feature = "lavalink-trace")]
+        let path = format!("{}/v3/routeplanner/free/all?trace=true", self.rest_url);
+
+        let response = self
+            .http_client
+            .post(&path)
+            .send()
+            .await
+            .map_err(Error::Reqwest)?;
+
+        debug!("REST [POST]: {}", path);
+
+        if !response.status().is_success() {
+            return Err(
+                serde_json::from_slice(&response.bytes().await.map_err(Error::Reqwest)?)
+                    .map(|v| Error::RestError(v, None))
+                    .map_err(|e| Error::InvalidResponse(None, e))?,
+            );
+        }
+
+        Ok(())
+    }
 }
 
 /// Lavalink client used to send calls and receive messages from the Lavalink server.
 #[derive(Clone)]
 pub struct Session {
-    /// HTTP client with headers (authorization and user agent) predefined and ready to use.
-    http_client: Client,
-    /// Configuration used by this client to connect to the Lavalink server.
-    config: Arc<LavalinkConfig>,
+    /// Lavalink API REST client used by this session.
+    rest: Lavalink,
     /// Session ID of this connection, if the Websocket message parser received one.
     session_id: Arc<RwLock<Option<String>>>,
     /// A write-only Websocket connection to the Lavalink server.
-    connection: Arc<
-        tokio::sync::Mutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
-    >,
+    connection:
+        Arc<AsyncMutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>>,
     /// Resume key that can be used to resume this connection.
     resume_key: Arc<Mutex<Option<String>>>,
     /// Event handler that will be used by the Websocket message parser.
@@ -252,33 +410,20 @@ pub struct Session {
 
 impl Session {
     /// Create a new instance of this struct without connecting.
+    #[inline]
     pub fn new<H: Handler + Sync + Send + 'static>(
-        config: LavalinkConfig,
+        rest: Lavalink,
         user_id: u64,
         handler: H,
-    ) -> Result<Self> {
-        let http_client = Client::builder()
-            .default_headers({
-                let mut headers = HeaderMap::new();
-                headers.insert(
-                    "Authorization",
-                    config.password.parse().map_err(Error::InvalidHeaderValue)?,
-                );
-                headers
-            })
-            .user_agent(CLIENT_NAME)
-            .build()
-            .map_err(Error::Reqwest)?;
-
-        Ok(Self {
-            config: Arc::new(config),
+    ) -> Self {
+        Self {
             handler: Arc::new(Box::new(handler)),
             resume_key: Arc::new(Mutex::new(None)),
             session_id: Arc::new(RwLock::new(None)),
-            connection: Arc::new(tokio::sync::Mutex::new(None)),
-            http_client,
+            connection: Arc::new(AsyncMutex::new(None)),
+            rest,
             user_id,
-        })
+        }
     }
 
     /// Initializes the connection to the Lavalink server.
@@ -287,25 +432,18 @@ impl Session {
             return Err(Error::AlreadyConnected);
         }
 
-        let websocket_uri = self.config.build_websocket_uri();
-
         let request = Request::builder()
-            .header("Host", websocket_uri.clone())
+            .header("Host", self.rest.websocket_url.as_ref().clone())
             .header("Connection", "Upgrade")
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Version", "13")
             .header("Sec-WebSocket-Key", generate_key())
-            .header("Authorization", self.config.password.clone())
+            .header("Authorization", self.rest.password.as_ref().clone())
             .header("User-Id", self.user_id)
             .header("Client-Name", CLIENT_NAME)
-            .uri(websocket_uri.clone())
+            .uri(self.rest.websocket_url.as_ref().clone())
             .body(())
             .map_err(Error::Http)?;
-
-        debug!(
-            "connecting to the Lavalink websocket in '{}'...",
-            websocket_uri
-        );
 
         let (sink, stream) = connect_async(request)
             .await
@@ -313,7 +451,10 @@ impl Session {
             .0
             .split();
 
-        debug!("Lavalink websocket connected.");
+        debug!(
+            "WEBSOCKET [HANDSHAKE]: {}",
+            self.rest.websocket_url.as_ref()
+        );
 
         *self.connection.lock().await = Some(sink);
 
@@ -321,17 +462,15 @@ impl Session {
 
         let websocket_lavalink = self.clone();
         spawn(async move {
-            debug!("starting the websocket message parser.");
             websocket_message_parser(websocket_lavalink, Some(sender), stream).await;
         });
 
-        debug!("waiting the session confirmation...");
         select! {
-            _ = sleep(Duration::from_millis(self.config.connection_timeout)) => {
-                warn!("session confirmation timeout, closing connection...");
+            _ = sleep(Duration::from_millis(5_000)) => {
+                warn!("WEBSOCKET [TIMEOUT]: {}", self.rest.websocket_url.as_ref());
 
                 if let Err(e) = self.connection.lock().await.as_mut().unwrap().close().await {
-                    error!("websocket connection can't be closed: {}", e);
+                    error!("WEBSOCKET [ERROR]: {}", e);
                 }
 
                 Err(Error::NotConnected)
@@ -339,10 +478,10 @@ impl Session {
             msg = &mut receiver => match msg {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    error!("session confirmation channel has been dropped: {}", e);
+                    warn!("WEBSOCKET [DROP]: {}", e);
 
                     if let Err(e) = self.connection.lock().await.as_mut().unwrap().close().await {
-                        error!("websocket connection can't be closed: {}", e);
+                        error!("WEBSOCKET [ERROR]: {}", e);
                     }
 
                     Err(Error::NotConnected)
@@ -351,19 +490,76 @@ impl Session {
         }
     }
 
+    pub async fn disconnect(&self) -> Result<()> {}
+
+    pub fn set_resume_key(&self, resume_key: &str) {}
+
+    pub async fn configure_resume(&self) -> Result<String> {}
+
     /// Check if the Websocket is connected.
+    #[inline]
     pub fn is_connected(&self) -> bool {
         self.session_id.read().unwrap().is_some()
     }
 
     /// Check if the connection is resumable.
+    #[inline]
     pub fn is_resumable(&self) -> bool {
         self.resume_key.lock().unwrap().is_some()
     }
 
-    /// Gets a clone of the configuration used in this `Lavalink`.
-    pub fn config(&self) -> LavalinkConfig {
-        self.config.as_ref().clone()
+    /// Gets a clone of the REST Client used in this `Session`.
+    #[inline]
+    pub fn rest(&self) -> Lavalink {
+        self.rest.clone()
+    }
+
+    /// Resolves an identifier into a Track, or the search if there is a prefix in the identifier, such as `ytsearch:`, `ytmsearch:` or `scsearch:`.
+    #[inline]
+    pub async fn track_load(&self, identifier: &str) -> Result<TrackLoading> {
+        self.rest.track_load(identifier).await
+    }
+
+    /// Decode a Base64 (encoded track) into a `Track`.
+    #[inline]
+    pub async fn track_decode(&self, track: &str) -> Result<Track> {
+        self.rest.track_decode(track).await
+    }
+
+    /// Get information from the Lavalink server.
+    #[inline]
+    pub async fn info(&self) -> Result<Info> {
+        self.rest.info().await
+    }
+
+    /// Get statistics from Lavalink server using REST API.
+    #[inline]
+    pub async fn stats(&self) -> Result<Stats> {
+        self.rest.stats().await
+    }
+
+    /// Gets the version of the Lavalink server.
+    #[inline]
+    pub async fn version(&self) -> Result<String> {
+        self.rest.version().await
+    }
+
+    /// Get the current status from the Route Planner.
+    #[inline]
+    pub async fn routeplanner_status(&self) -> Result<RoutePlannerStatus> {
+        self.rest.routeplanner_status().await
+    }
+
+    /// Unmark an IP address as failed in the Route Planner.
+    #[inline]
+    pub async fn routeplanner_unmark(&self, address: &str) -> Result<()> {
+        self.rest.routeplanner_unmark(address).await
+    }
+
+    /// Unmark all IP addresses as failed in the Route Planner.
+    #[inline]
+    pub async fn routeplanner_unmark_all(&self) -> Result<()> {
+        self.rest.routeplanner_unmark_all().await
     }
 
     /// Updates or creates the player for this guild if it doesn't already exist.
@@ -375,7 +571,8 @@ impl Session {
     ) -> Result<Player> {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
-            "/sessions/{}/players/{}?noReplace={}",
+            "{}/v3/sessions/{}/players/{}?noReplace={}",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -387,21 +584,21 @@ impl Session {
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "/sessions/{}/players/{}?noReplace={}&trace=true",
+            "{}/v3/sessions/{}/players/{}?noReplace={}&trace=true",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
                 .clone()
                 .ok_or(Error::NotConnected)?,
             guild_id,
-            no_replace.to_string()
+            no_replace
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
+            .rest
             .http_client
-            .patch(self.config.build_rest_uri(&path))
+            .patch(&path)
             .json(&player)
             .send()
             .await
@@ -410,21 +607,17 @@ impl Session {
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [PATCH]: {}", path);
 
         parse_response(&response)
-    }
-
-    /// This function is used to resolve audio tracks for use with the `update_player` function.
-    pub async fn track_load(&self, identifier: &str) -> Result<TrackLoading> {
-        track_load(self.config.as_ref().clone(), identifier).await
     }
 
     /// Returns the player for this guild in this session.
     pub async fn get_player(&self, guild_id: u64) -> Result<Player> {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
-            "/sessions/{}/players/{}",
+            "{}/v3/sessions/{}/players/{}",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -435,7 +628,8 @@ impl Session {
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "/sessions/{}/players/{}?trace=true",
+            "{}/v3/sessions/{}/players/{}?trace=true",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -444,11 +638,10 @@ impl Session {
             guild_id
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
+            .rest
             .http_client
-            .get(self.config.build_rest_uri(&path))
+            .get(&path)
             .send()
             .await
             .map_err(Error::Reqwest)?
@@ -456,7 +649,7 @@ impl Session {
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [GET]: {}", path);
 
         parse_response(&response)
     }
@@ -465,7 +658,8 @@ impl Session {
     pub async fn get_players(&self) -> Result<Vec<Player>> {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
-            "/sessions/{}/players",
+            "{}/v3/sessions/{}/players",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -475,7 +669,8 @@ impl Session {
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "/sessions/{}/players?trace=true",
+            "{}/v3/sessions/{}/players?trace=true",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -483,11 +678,10 @@ impl Session {
                 .ok_or(Error::NotConnected)?,
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
+            .rest
             .http_client
-            .get(self.config.build_rest_uri(&path))
+            .get(&path)
             .send()
             .await
             .map_err(Error::Reqwest)?
@@ -495,7 +689,7 @@ impl Session {
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [GET]: {}", path);
 
         parse_response(&response)
     }
@@ -504,7 +698,8 @@ impl Session {
     pub async fn destroy_player(&self, guild_id: u64) -> Result<()> {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
-            "/sessions/{}/players/{}",
+            "{}/v3/sessions/{}/players/{}",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -515,7 +710,8 @@ impl Session {
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "/sessions/{}/players/{}?trace=true",
+            "{}/v3/sessions/{}/players/{}?trace=true",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -524,20 +720,17 @@ impl Session {
             guild_id
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
+            .rest
             .http_client
-            .delete(self.config.build_rest_uri(&path))
+            .delete(&path)
             .send()
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [DELETE]: {}", path);
 
         if !response.status().is_success() {
-            warn!("response haven't a success status code.");
-
             return Err(
                 serde_json::from_slice(&response.bytes().await.map_err(Error::Reqwest)?)
                     .map(|v| Error::RestError(v, None))
@@ -552,7 +745,8 @@ impl Session {
     pub async fn update_session(&self, update_session: UpdateSession) -> Result<UpdateSession> {
         #[cfg(not(feature = "lavalink-trace"))]
         let path = format!(
-            "/v3/sessions/{}",
+            "{}/v3/sessions/{}",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -562,7 +756,8 @@ impl Session {
 
         #[cfg(feature = "lavalink-trace")]
         let path = format!(
-            "/v3/sessions/{}?trace=true",
+            "{}/v3/sessions/{}?trace=true",
+            self.rest.rest_url.as_ref().clone(),
             self.session_id
                 .read()
                 .unwrap()
@@ -570,11 +765,10 @@ impl Session {
                 .ok_or(Error::NotConnected)?,
         );
 
-        debug!("calling '{}'...", path);
-
         let response = self
+            .rest
             .http_client
-            .patch(self.config.build_rest_uri(&path))
+            .patch(&path)
             .json(&update_session)
             .send()
             .await
@@ -583,14 +777,9 @@ impl Session {
             .await
             .map_err(Error::Reqwest)?;
 
-        info!("parsing the response from '{}'...", path);
+        debug!("REST [PATCH]: {}", path);
 
         parse_response(&response)
-    }
-
-    /// Decode a Base64 track to a `Track` struct.
-    pub async fn track_decode(&self, base64: &str) -> Result<Track> {
-        track_decode(self.config.as_ref().clone(), base64).await
     }
 }
 
