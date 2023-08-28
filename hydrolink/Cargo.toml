@@ -3,7 +3,7 @@ name = "hydrolink"
 version = "1.0.0"
 edition = "2021"
 authors = ["Nashira Deer <nashiradeer@gmail.com>"]
-description = "An implementation of a Lavalink client used in production by Hydrogen."
+description = "An implementation of a Lavalink client made with tokio independent of the Discord library, used in production by Hydrogen."
 repository = "https://github.com/nashiradeer/hydrogen"
 readme = "README.md"
 license = "GPL-3.0-only"
@@ -12,7 +12,6 @@ categories = ["api-bindings", "asynchronous"]
 
 [features]
 default = []
-lavalink-v4 = []
 lavalink-trace = []
 rustls-webpki-roots = [
     "reqwest/rustls-tls-webpki-roots",
