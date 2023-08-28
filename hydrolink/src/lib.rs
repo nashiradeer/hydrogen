@@ -426,24 +426,45 @@ impl Session {
         }
     }
 
+    /// Generates a new Request considering or not the resume_key.
+    fn generate_websocket_request(&self, resume_key: Option<String>) -> Result<Request<()>> {
+        Ok(match resume_key {
+            Some(v) => Request::builder()
+                .header("Host", self.rest.websocket_url.as_ref().clone())
+                .header("Connection", "Upgrade")
+                .header("Upgrade", "websocket")
+                .header("Sec-WebSocket-Version", "13")
+                .header("Sec-WebSocket-Key", generate_key())
+                .header("Authorization", self.rest.password.as_ref().clone())
+                .header("User-Id", self.user_id)
+                .header("Client-Name", CLIENT_NAME)
+                .header("Resume-Key", v)
+                .uri(self.rest.websocket_url.as_ref().clone())
+                .body(())
+                .map_err(Error::Http)?,
+
+            None => Request::builder()
+                .header("Host", self.rest.websocket_url.as_ref().clone())
+                .header("Connection", "Upgrade")
+                .header("Upgrade", "websocket")
+                .header("Sec-WebSocket-Version", "13")
+                .header("Sec-WebSocket-Key", generate_key())
+                .header("Authorization", self.rest.password.as_ref().clone())
+                .header("User-Id", self.user_id)
+                .header("Client-Name", CLIENT_NAME)
+                .uri(self.rest.websocket_url.as_ref().clone())
+                .body(())
+                .map_err(Error::Http)?,
+        })
+    }
+
     /// Initializes the connection to the Lavalink server.
     pub async fn connect(&self) -> Result<()> {
         if self.session_id.read().unwrap().is_some() {
             return Err(Error::AlreadyConnected);
         }
 
-        let request = Request::builder()
-            .header("Host", self.rest.websocket_url.as_ref().clone())
-            .header("Connection", "Upgrade")
-            .header("Upgrade", "websocket")
-            .header("Sec-WebSocket-Version", "13")
-            .header("Sec-WebSocket-Key", generate_key())
-            .header("Authorization", self.rest.password.as_ref().clone())
-            .header("User-Id", self.user_id)
-            .header("Client-Name", CLIENT_NAME)
-            .uri(self.rest.websocket_url.as_ref().clone())
-            .body(())
-            .map_err(Error::Http)?;
+        let request = self.generate_websocket_request(self.resume_key.lock().unwrap().clone())?;
 
         let (sink, stream) = connect_async(request)
             .await
@@ -490,11 +511,34 @@ impl Session {
         }
     }
 
-    pub async fn disconnect(&self) -> Result<()> {}
+    /// Disconnects from the Lavalink server.
+    pub async fn disconnect(&self) -> Result<()> {
+        self.connection
+            .lock()
+            .await
+            .as_mut()
+            .ok_or(Error::NotConnected)?
+            .close()
+            .await
+            .map_err(Error::WebSocket)
+    }
 
-    pub fn set_resume_key(&self, resume_key: &str) {}
+    /// Sets the resume key to be used on the next connection attempt.
+    pub fn set_resume_key(&self, resume_key: Option<String>) {
+        *self.resume_key.lock().unwrap() = resume_key;
+    }
 
-    pub async fn configure_resume(&self) -> Result<String> {}
+    /// Generate and set a new resume key on the Lavalink server.
+    pub async fn configure_resume(&self, timeout: Option<u32>) -> Result<String> {
+        let key = generate_key();
+        self.update_session(UpdateSession {
+            resuming_key: Some(Some(key.clone())),
+            timeout,
+        })
+        .await?;
+        self.set_resume_key(Some(key.clone()));
+        Ok(key)
+    }
 
     /// Check if the Websocket is connected.
     #[inline]
