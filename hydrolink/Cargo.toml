@@ -6,7 +6,7 @@ authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 description = "An implementation of a Lavalink client made with tokio independent of the Discord library, used in production by Hydrogen."
 repository = "https://github.com/nashiradeer/hydrogen"
 readme = "README.md"
-license = "GPL-3.0-only"
+license = "MIT"
 keywords = ["discord", "hydrogen", "lavalink", "lavalink-client"]
 categories = ["api-bindings", "asynchronous"]
 
