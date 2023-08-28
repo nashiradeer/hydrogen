@@ -103,7 +103,7 @@ pub struct Player {
     pub paused: bool,
     /// The voice state of the player.
     pub voice: VoiceState,
-    ///	The filters used by the player.
+    /// The filters used by the player.
     pub filters: Filters,
 }
 
@@ -191,7 +191,7 @@ pub struct UpdateSession {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resuming_key: Option<Option<String>>,
 
-    ///	The timeout in seconds (default is 60s).
+    /// The timeout in seconds (default is 60s).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u32>,
 }

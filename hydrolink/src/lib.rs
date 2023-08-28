@@ -390,6 +390,10 @@ impl Lavalink {
     }
 }
 
+/// Possibly a connection to WebSocket (outbound only).
+type WebSocketConnection =
+    Arc<AsyncMutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>>;
+
 /// Lavalink client used to send calls and receive messages from the Lavalink server.
 #[derive(Clone)]
 pub struct Session {
@@ -397,9 +401,8 @@ pub struct Session {
     rest: Lavalink,
     /// Session ID of this connection, if the Websocket message parser received one.
     session_id: Arc<RwLock<Option<String>>>,
-    /// A write-only Websocket connection to the Lavalink server.
-    connection:
-        Arc<AsyncMutex<Option<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>>,
+    /// A outbound-only Websocket connection to the Lavalink server.
+    connection: WebSocketConnection,
     /// Resume key that can be used to resume this connection.
     resume_key: Arc<Mutex<Option<String>>>,
     /// Event handler that will be used by the Websocket message parser.
