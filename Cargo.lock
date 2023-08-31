@@ -560,6 +560,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "hydrogen-player"
+version = "1.0.0"
+
+[[package]]
 name = "hydrolink"
 version = "1.0.0"
 dependencies = [

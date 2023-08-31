@@ -1,8 +1,11 @@
 [package]
 name = "hydrogen-player"
-version = "0.1.0"
+version = "1.0.0"
+authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+description = "Initialize and manage music playback in Discord voice chats."
+repository = "https://github.com/nashiradeer/hydrogen"
+readme = "README.md"
+license = "GPL-3.0-only"
+keywords = ["discord", "hydrogen", "player", "music", "song"]
+categories = ["data-structures", "multimedia::audio"]
