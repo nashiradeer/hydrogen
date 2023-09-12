@@ -1,12 +1,9 @@
 [package]
 name = "hydrogen"
 version = "0.0.1-alpha.3"
-authors = [
-    "DeerSoftware <contact@deersoftware.dev>",
-    "Nashira Deer <nashiradeer@deersoftware.dev>",
-]
+authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 edition = "2021"
-description = "Hydrogen is a Discord bot made to entertain your server members."
+description = "An Open Source Discord bot designed to play music on voice calls with efficiency, speed and performance."
 readme = "README.md"
 license = "GPL-3.0-only"
 keywords = ["discord", "lavalink", "music"]
