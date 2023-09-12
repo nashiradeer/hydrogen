@@ -12,6 +12,10 @@ license = "GPL-3.0-only"
 keywords = ["discord", "lavalink", "music"]
 publish = false
 
+[workspace]
+resolver = "2"
+members = ["hydrogen-i18n", "hydrolink", "hydrogen-player"]
+
 [dependencies]
 async-trait = "0.1.68"
 base64 = "0.21.2"

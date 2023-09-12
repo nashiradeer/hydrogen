@@ -1,10 +1,23 @@
 {
     "cSpell.words": [
+        "Autoplay",
+        "concatcp",
+        "cooldown",
+        "decodetrack",
+        "hydrolink",
+        "Inet",
         "lavalink",
+        "lavaplayer",
+        "loadtracks",
         "oneshot",
         "reqwest",
+        "routeplanner",
         "rustls",
+        "scsearch",
         "seekable",
-        "tungstenite"
+        "tungstenite",
+        "unmark",
+        "ytmsearch",
+        "ytsearch"
     ]
 }

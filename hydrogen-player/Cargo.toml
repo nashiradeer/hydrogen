@@ -1,0 +1,63 @@
+[package]
+name = "hydrogen-player"
+version = "1.0.0"
+authors = ["Nashira Deer <nashiradeer@gmail.com>"]
+edition = "2021"
+description = "Initialize and manage music playback in Discord voice chats."
+repository = "https://github.com/nashiradeer/hydrogen"
+readme = "README.md"
+license = "GPL-3.0-only"
+keywords = ["discord", "hydrogen", "player", "music", "song"]
+categories = ["data-structures", "multimedia::audio"]
+
+[features]
+default = ["lavalink"]
+lavalink = ["dep:hydrolink"]
+serenity-rustls-webpki = [
+    "songbird/serenity-rustls",
+    "hydrolink?/rustls-webpki-roots",
+]
+serenity-rustls-native = [
+    "songbird/serenity-rustls",
+    "hydrolink?/rustls-native-roots",
+]
+serenity-native = ["songbird/serenity-native", "hydrolink?/native-tls"]
+serenity-native-vendored = [
+    "songbird/serenity-native",
+    "hydrolink?/native-tls-vendored",
+]
+twilight-rustls-webpki = [
+    "songbird/twilight-rustls",
+    "hydrolink?/rustls-webpki-roots",
+]
+twilight-rustls-native = [
+    "songbird/twilight-rustls",
+    "hydrolink?/rustls-native-roots",
+]
+twilight-native = ["songbird/twilight-native", "hydrolink?/native-tls"]
+twilight-native-vendored = [
+    "songbird/twilight-native",
+    "hydrolink?/native-tls-vendored",
+]
+
+[dependencies]
+async-trait = "0.1.73"
+rand = "0.8.5"
+
+[dependencies.hydrolink]
+package = "hydrolink"
+version = "1.0.0"
+default-features = false
+optional = true
+
+[dependencies.songbird]
+package = "songbird"
+version = "0.3.2"
+default-features = false
+features = ["gateway"]
+
+[dependencies.tokio]
+package = "tokio"
+version = "1.29.1"
+default-features = false
+features = []

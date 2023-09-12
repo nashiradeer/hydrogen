@@ -1,480 +1,269 @@
-use std::{
-    fmt::Display,
-    result,
-    sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
-        Arc,
-    },
-};
+async fn update_now_playing(&self, guild_id: GuildId) {
+    if let Some(player) = self.player.read().await.get(&guild_id.into()) {
+        let mut player_state = HydrogenPlayerState::Playing;
 
-use rand::Rng;
-use serenity::model::prelude::{ChannelId, GuildId, UserId};
-use songbird::{error::JoinError, ConnectionInfo, Songbird};
-use tokio::sync::RwLock;
+        let (translated_message, requester) = match player.now().await {
+            Some(v) => {
+                let message = match v.uri {
+                    Some(v) => self
+                        .i18n
+                        .translate(&player.guild_locale(), "playing", "description_uri")
+                        .replace("${uri}", &v),
+                    None => self
+                        .i18n
+                        .translate(&player.guild_locale(), "playing", "description"),
+                }
+                .replace("${music}", &v.title)
+                .replace("${author}", &v.author);
 
-use crate::{
-    lavalink::{
-        rest::{LavalinkLoadResultType, LavalinkTrack, LavalinkUpdatePlayer, LavalinkVoiceState},
-        Lavalink, LavalinkConnection, LavalinkError,
-    },
-    HYDROGEN_QUEUE_LIMIT, HYDROGEN_SEARCH_PREFIX,
-};
+                (message, Some(v.requester_id))
+            }
+            None => (
+                self.i18n
+                    .translate(&player.guild_locale(), "playing", "empty"),
+                None,
+            ),
+        };
 
-#[derive(Clone, PartialEq, Eq)]
-pub enum LoopType {
-    None,
-    NoAutostart,
-    Music,
-    Queue,
-    Random,
-}
+        let mut author_obj = None;
+        if let Some(author) = requester {
+            if let Ok(author_user) = author.to_user(self).await {
+                let mut inner_author_obj = CreateEmbedAuthor::default();
 
-#[derive(Clone)]
-pub struct HydrogenMusic {
-    pub encoded_track: String,
-    pub length: i32,
-    pub author: String,
-    pub title: String,
-    pub uri: Option<String>,
-    pub requester_id: UserId,
-}
+                inner_author_obj.name(author_user.name.clone());
 
-impl HydrogenMusic {
-    pub fn from(value: LavalinkTrack, requester_id: UserId) -> Self {
-        HydrogenMusic {
-            encoded_track: value.encoded,
-            length: value.info.length,
-            author: value.info.author,
-            title: value.info.title,
-            uri: value.info.uri,
-            requester_id,
+                if let Some(avatar_url) = author_user.avatar_url() {
+                    inner_author_obj.icon_url(avatar_url);
+                }
+
+                author_obj = Some(inner_author_obj.to_owned());
+            }
         }
-    }
-}
 
-#[derive(Debug)]
-pub enum HydrogenPlayerError {
-    Lavalink(LavalinkError),
-    Join(JoinError),
-}
-
-impl Display for HydrogenPlayerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Lavalink(e) => e.fmt(f),
-            Self::Join(e) => e.fmt(f),
+        if requester.is_none() && player.queue().await.len() == 0 {
+            player_state = HydrogenPlayerState::Nothing;
         }
-    }
-}
 
-pub type Result<T> = result::Result<T, HydrogenPlayerError>;
-
-#[derive(Clone)]
-pub struct HydrogenPlayerConnection {
-    pub session_id: String,
-    pub token: String,
-    pub endpoint: String,
-    pub channel_id: Option<songbird::id::ChannelId>,
-}
-
-impl HydrogenPlayerConnection {
-    pub fn new(
-        session_id: &str,
-        token: &str,
-        endpoint: &str,
-        channel_id: Option<songbird::id::ChannelId>,
-    ) -> Self {
-        Self {
-            session_id: session_id.to_owned(),
-            token: token.to_owned(),
-            endpoint: endpoint.to_owned(),
-            channel_id,
-        }
-    }
-}
-
-impl Into<LavalinkVoiceState> for HydrogenPlayerConnection {
-    fn into(self) -> LavalinkVoiceState {
-        LavalinkVoiceState::new(&self.token, &self.endpoint, &self.session_id)
-    }
-}
-
-impl From<ConnectionInfo> for HydrogenPlayerConnection {
-    fn from(value: ConnectionInfo) -> Self {
-        Self::new(
-            &value.session_id,
-            &value.token,
-            &value.endpoint,
-            value.channel_id,
-        )
-    }
-}
-
-pub struct HydrogenPlayCommand {
-    pub track: Option<HydrogenMusic>,
-    pub count: usize,
-    pub playing: bool,
-    pub truncated: bool,
-}
-
-pub struct HydrogenSeekCommand {
-    pub position: i32,
-    pub total: i32,
-    pub track: HydrogenMusic,
-}
-
-#[derive(Clone)]
-pub struct HydrogenPlayer {
-    pub connection: Arc<RwLock<HydrogenPlayerConnection>>,
-    destroyed: Arc<AtomicBool>,
-    guild_id: GuildId,
-    guild_locale: String,
-    index: Arc<AtomicUsize>,
-    lavalink: Lavalink,
-    queue: Arc<RwLock<Vec<HydrogenMusic>>>,
-    queue_loop: Arc<RwLock<LoopType>>,
-    text_channel_id: ChannelId,
-    voice_manager: Arc<Songbird>,
-    paused: Arc<AtomicBool>,
-}
-
-impl HydrogenPlayer {
-    pub fn new(
-        lavalink: Lavalink,
-        guild_id: GuildId,
-        voice_manager: Arc<Songbird>,
-        connection: HydrogenPlayerConnection,
-        text_channel_id: ChannelId,
-        guild_locale: &str,
-    ) -> Self {
-        Self {
-            connection: Arc::new(RwLock::new(connection)),
-            destroyed: Arc::new(AtomicBool::new(false)),
-            index: Arc::new(AtomicUsize::new(0)),
-            paused: Arc::new(AtomicBool::new(false)),
-            queue: Arc::new(RwLock::new(Vec::new())),
-            queue_loop: Arc::new(RwLock::new(LoopType::None)),
-            guild_locale: guild_locale.to_owned(),
+        self.update_play_message(
             guild_id,
-            lavalink,
-            text_channel_id,
-            voice_manager,
-        }
+            &translated_message,
+            HYDROGEN_PRIMARY_COLOR,
+            player_state,
+            player.pause(),
+            player.loop_type().await,
+            author_obj,
+        )
+        .await;
     }
+}
 
-    pub async fn loop_type(&self) -> LoopType {
-        self.queue_loop.read().await.clone()
-    }
+async fn update_play_message(
+    &self,
+    guild_id: GuildId,
+    description: &str,
+    color: i32,
+    player_state: HydrogenPlayerState,
+    paused: bool,
+    loop_type: LoopType,
+    author_obj: Option<CreateEmbedAuthor>,
+) {
+    let players = self.player.read().await;
+    let mut messages = self.message.write().await;
 
-    pub async fn set_loop_type(&self, loop_type: LoopType) {
-        *self.queue_loop.write().await = loop_type;
-    }
+    if let Some(player) = players.get(&guild_id) {
+        if let Some(message) = messages.get(&guild_id) {
+            match player
+                .text_channel_id()
+                .edit_message(self.http.clone(), message, |message| {
+                    message
+                        .embed(|embed| {
+                            if let Some(author_obj) = author_obj.clone() {
+                                embed.set_author(author_obj);
+                            }
 
-    pub fn pause(&self) -> bool {
-        self.paused.load(Ordering::Relaxed)
-    }
-
-    pub async fn set_pause(&self, paused: bool) -> Result<()> {
-        let mut player = LavalinkUpdatePlayer::new();
-
-        player.paused(paused);
-
-        let lavalink_player = self.lavalink.get_player(self.guild_id.0).await.ok();
-        let has_player = lavalink_player.is_some();
-
-        if let Some(lavalink_player) = lavalink_player {
-            if lavalink_player.track.is_none() && !paused {
-                let connection = self.connection.read().await;
-                if let Some(music) = self
-                    .queue
-                    .read()
-                    .await
-                    .get(self.index.load(Ordering::Relaxed))
-                {
-                    player
-                        .encoded_track(&music.encoded_track)
-                        .voice_state(connection.clone().into());
+                            embed
+                                .title(self.i18n.translate(
+                                    &player.guild_locale(),
+                                    "playing",
+                                    "title",
+                                ))
+                                .description(description)
+                                .color(color)
+                                .footer(|footer| {
+                                    footer
+                                        .text(self.i18n.translate(
+                                            &player.guild_locale(),
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL)
+                                })
+                        })
+                        .set_components(Self::play_components(
+                            player_state.clone(),
+                            paused,
+                            loop_type.clone(),
+                        ))
+                })
+                .await
+            {
+                Ok(_) => return,
+                Err(e) => {
+                    warn!("can't edit player message: {}", e);
                 }
             }
         }
 
-        if has_player {
-            self.lavalink
-                .update_player(self.guild_id.0, true, &player)
-                .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-        }
-
-        self.paused.store(paused, Ordering::Relaxed);
-
-        if !has_player && !paused {
-            self.start_playing().await?;
-        }
-
-        Ok(())
-    }
-
-    pub fn lavalink(&self) -> Lavalink {
-        self.lavalink.clone()
-    }
-
-    pub fn text_channel_id(&self) -> ChannelId {
-        self.text_channel_id
-    }
-
-    pub fn guild_locale(&self) -> String {
-        self.guild_locale.clone()
-    }
-
-    pub async fn now(&self) -> Option<HydrogenMusic> {
-        self.queue
-            .read()
-            .await
-            .get(self.index.load(Ordering::Relaxed))
-            .cloned()
-    }
-
-    pub async fn queue(&self) -> Vec<HydrogenMusic> {
-        self.queue.read().await.clone()
-    }
-
-    pub async fn skip(&self) -> Result<Option<HydrogenMusic>> {
-        let queue = self.queue.read().await;
-        let mut index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
-        if index >= queue.len() {
-            self.index.store(0, Ordering::Relaxed);
-            index = 0;
-        }
-        self.start_playing().await?;
-        Ok(queue.get(index).cloned())
-    }
-
-    pub async fn prev(&self) -> Result<Option<HydrogenMusic>> {
-        let queue = self.queue.read().await;
-        let mut index = self.index.load(Ordering::Relaxed);
-        if index == 0 {
-            index = queue.len() - 1;
-        } else {
-            index -= 1;
-        }
-        self.index.store(index, Ordering::Relaxed);
-        self.start_playing().await?;
-        Ok(queue.get(index).cloned())
-    }
-
-    pub async fn next(&self) -> Result<()> {
-        let queue_loop = self.queue_loop.read().await;
-        let queue = self.queue.read().await;
-
-        if queue_loop.ne(&LoopType::NoAutostart) {
-            if queue_loop.ne(&LoopType::Music) {
-                if queue_loop.ne(&LoopType::Random) {
-                    let index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
-                    if index >= queue.len() {
-                        if queue_loop.eq(&LoopType::Queue) {
-                            self.index.store(0, Ordering::Relaxed);
-                            self.start_playing().await?;
-                        } else {
-                            self.index.store(queue.len() - 1, Ordering::Relaxed);
-                            self.paused.store(true, Ordering::Relaxed);
+        match player
+            .text_channel_id()
+            .send_message(self.http.clone(), |message| {
+                message
+                    .embed(|embed| {
+                        if let Some(author_obj) = author_obj {
+                            embed.set_author(author_obj);
                         }
-                    } else {
-                        self.start_playing().await?;
-                    }
-                } else {
-                    let random_index = rand::thread_rng().gen_range(0..queue.len());
-                    self.index.store(random_index, Ordering::Relaxed);
-                    self.start_playing().await?;
-                }
-            } else {
-                self.start_playing().await?;
-            }
-        } else {
-            let index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
-            if index >= queue.len() {
-                self.index.store(queue.len() - 1, Ordering::Relaxed);
-            }
-            self.paused.store(true, Ordering::Relaxed);
-        }
-        Ok(())
-    }
 
-    pub async fn play(&self, music: &str, requester_id: UserId) -> Result<HydrogenPlayCommand> {
-        let musics = {
-            let mut musics = self
-                .lavalink
-                .track_load(music)
-                .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-
-            if musics.tracks.len() == 0 {
-                musics = self
-                    .lavalink
-                    .track_load(&format!("{}{}", HYDROGEN_SEARCH_PREFIX, music))
-                    .await
-                    .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-            }
-
-            musics
-        };
-
-        let mut truncated = false;
-        let starting_index = self.queue.read().await.len();
-        if musics.load_type == LavalinkLoadResultType::SearchResult {
-            if let Some(music) = musics.tracks.get(0) {
-                let queue_length = self.queue.read().await.len();
-                if queue_length < HYDROGEN_QUEUE_LIMIT {
-                    self.queue
-                        .write()
-                        .await
-                        .push(HydrogenMusic::from(music.clone(), requester_id));
-                } else {
-                    truncated = true;
-                }
-            } else {
-                return Ok(HydrogenPlayCommand {
-                    track: None,
-                    count: 0,
-                    playing: false,
-                    truncated: false,
-                });
-            }
-        } else {
-            for music in musics.tracks.iter() {
-                let queue_length = self.queue.read().await.len();
-                if queue_length < HYDROGEN_QUEUE_LIMIT {
-                    self.queue
-                        .write()
-                        .await
-                        .push(HydrogenMusic::from(music.clone(), requester_id));
-                } else {
-                    truncated = true;
-                    break;
-                }
-            }
-        }
-
-        let mut playing = false;
-
-        let lavalink_not_playing = match self.lavalink.get_player(self.guild_id.0).await {
-            Ok(v) => v.track.is_none(),
-            Err(e) => {
-                if let LavalinkError::RestError(er) = e {
-                    if er.status != 404 {
-                        return Err(HydrogenPlayerError::Lavalink(LavalinkError::RestError(er)));
-                    }
-                } else {
-                    return Err(HydrogenPlayerError::Lavalink(e));
-                }
-
-                true
-            }
-        };
-
-        let mut this_play_track = self.queue.read().await.get(starting_index).cloned();
-
-        if lavalink_not_playing {
-            let mut index = starting_index
-                + musics
-                    .playlist_info
-                    .selected_track
-                    .unwrap_or(0)
-                    .try_into()
-                    .unwrap_or(0);
-
-            if index >= self.queue.read().await.len() {
-                index = starting_index;
-            }
-
-            self.index.store(index, Ordering::Relaxed);
-            playing = self.start_playing().await?;
-            if playing {
-                this_play_track = self.queue.read().await.get(index).cloned();
-            }
-        }
-
-        Ok(HydrogenPlayCommand {
-            track: this_play_track,
-            count: self.queue.read().await.len() - starting_index,
-            playing,
-            truncated,
-        })
-    }
-
-    pub async fn seek(&self, milliseconds: i32) -> Result<Option<HydrogenSeekCommand>> {
-        let mut update_player = LavalinkUpdatePlayer::new();
-        update_player.position(milliseconds);
-        let player = self
-            .lavalink
-            .update_player(self.guild_id.0, false, &update_player)
+                        embed
+                            .title(
+                                self.i18n
+                                    .translate(&player.guild_locale(), "playing", "title"),
+                            )
+                            .description(description)
+                            .color(color)
+                            .footer(|footer| {
+                                footer
+                                    .text(self.i18n.translate(
+                                        &player.guild_locale(),
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL)
+                            })
+                    })
+                    .set_components(Self::play_components(player_state, paused, loop_type))
+            })
             .await
-            .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-        if let Some(track) = player.track {
-            if let Some(music) = self.now().await {
-                return Ok(Some(HydrogenSeekCommand {
-                    position: track.info.position,
-                    total: track.info.length,
-                    track: music,
-                }));
-            }
-        }
-        Ok(None)
-    }
-
-    async fn start_playing(&self) -> Result<bool> {
-        let connection = self.connection.read().await;
-        if let Some(music) = self
-            .queue
-            .read()
-            .await
-            .get(self.index.load(Ordering::Relaxed))
         {
-            let mut player = LavalinkUpdatePlayer::new();
-            player
-                .encoded_track(&music.encoded_track)
-                .voice_state(connection.clone().into())
-                .paused(self.paused.load(Ordering::Relaxed));
-
-            self.lavalink
-                .update_player(self.guild_id.0, false, &player)
-                .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-
-            return Ok(true);
-        }
-
-        Ok(false)
-    }
-
-    pub async fn destroy(&self) -> Result<()> {
-        if !self.destroyed.load(Ordering::Acquire) {
-            self.voice_manager
-                .leave(self.guild_id)
-                .await
-                .map_err(|e| HydrogenPlayerError::Join(e))?;
-
-            if self.lavalink.connected().await == LavalinkConnection::Connected {
-                self.lavalink
-                    .destroy_player(self.guild_id.0)
-                    .await
-                    .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            Ok(v) => {
+                messages.insert(guild_id, v.id);
+                ()
             }
+            Err(e) => warn!("can't send a new playing message: {}", e),
+        };
+    }
+}
+
+fn play_components(
+    state: HydrogenPlayerState,
+    paused: bool,
+    loop_queue: LoopType,
+) -> CreateComponents {
+    let mut prev_style = ButtonStyle::Primary;
+    let mut pause_style = ButtonStyle::Primary;
+    let mut skip_style = ButtonStyle::Primary;
+
+    let mut prev_disabled = false;
+    let mut pause_disabled = false;
+    let mut skip_disabled = false;
+    let mut loop_disabled = false;
+    let mut stop_disabled = false;
+    // QUEUE WILL REMAIN AS WIP UNTIL ALPHA 3.
+    let mut queue_disabled = true;
+
+    let mut pause_emoji = ReactionType::Unicode(String::from("⏸"));
+    let mut loop_emoji = ReactionType::Unicode(String::from("⬇️"));
+
+    match loop_queue {
+        LoopType::None => (),
+        LoopType::NoAutostart => {
+            loop_emoji = ReactionType::Unicode(String::from("⏺"));
         }
-        self.destroyed.store(true, Ordering::Release);
+        LoopType::Music => {
+            loop_emoji = ReactionType::Unicode(String::from("🔂"));
+        }
+        LoopType::Queue => {
+            loop_emoji = ReactionType::Unicode(String::from("🔁"));
+        }
+        LoopType::Random => {
+            loop_emoji = ReactionType::Unicode(String::from("🔀"));
+        }
+    };
 
-        Ok(())
+    if paused {
+        pause_style = ButtonStyle::Success;
+        pause_emoji = ReactionType::Unicode(String::from("▶️"));
     }
 
-    pub async fn update_connection(&self) -> Result<()> {
-        let connection = self.connection.read().await;
-        let mut player = LavalinkUpdatePlayer::new();
-        player.voice_state(connection.clone().into());
+    match state {
+        HydrogenPlayerState::Playing => (),
+        HydrogenPlayerState::Nothing => {
+            prev_disabled = true;
+            pause_disabled = true;
+            skip_disabled = true;
+            queue_disabled = true;
 
-        self.lavalink
-            .update_player(self.guild_id.0, true, &player)
-            .await
-            .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-
-        Ok(())
+            prev_style = ButtonStyle::Secondary;
+            pause_style = ButtonStyle::Secondary;
+            skip_style = ButtonStyle::Secondary;
+        }
+        HydrogenPlayerState::Thinking => {
+            prev_disabled = true;
+            pause_disabled = true;
+            skip_disabled = true;
+            loop_disabled = true;
+            stop_disabled = true;
+            queue_disabled = true;
+        }
     }
+
+    CreateComponents::default()
+        .create_action_row(|action_row| {
+            action_row
+                .create_button(|button| {
+                    button
+                        .custom_id("prev")
+                        .disabled(prev_disabled)
+                        .emoji('⏮')
+                        .style(prev_style)
+                })
+                .create_button(|button| {
+                    button
+                        .custom_id("pause")
+                        .disabled(pause_disabled)
+                        .emoji(pause_emoji)
+                        .style(pause_style)
+                })
+                .create_button(|button| {
+                    button
+                        .custom_id("skip")
+                        .disabled(skip_disabled)
+                        .emoji('⏭')
+                        .style(skip_style)
+                })
+        })
+        .create_action_row(|action_row| {
+            action_row
+                .create_button(|button| {
+                    button
+                        .custom_id("loop")
+                        .disabled(loop_disabled)
+                        .emoji(loop_emoji)
+                        .style(ButtonStyle::Secondary)
+                })
+                .create_button(|button| {
+                    button
+                        .custom_id("stop")
+                        .disabled(stop_disabled)
+                        .emoji('⏹')
+                        .style(ButtonStyle::Danger)
+                })
+                .create_button(|button| {
+                    button
+                        .custom_id("queue")
+                        .disabled(queue_disabled)
+                        .emoji(ReactionType::Unicode("ℹ️".to_owned()))
+                        .style(ButtonStyle::Secondary)
+                })
+        })
+        .to_owned()
 }

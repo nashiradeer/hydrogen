@@ -1,0 +1,50 @@
+[package]
+name = "hydrolink"
+version = "1.0.0"
+edition = "2021"
+authors = ["Nashira Deer <nashiradeer@gmail.com>"]
+description = "An implementation of a Lavalink client made with tokio independent of the Discord library, used in production by Hydrogen."
+repository = "https://github.com/nashiradeer/hydrogen"
+readme = "README.md"
+license = "MIT"
+keywords = ["discord", "hydrogen", "lavalink", "lavalink-client"]
+categories = ["api-bindings", "asynchronous"]
+
+[features]
+default = []
+lavalink-trace = []
+rustls-webpki-roots = [
+    "reqwest/rustls-tls-webpki-roots",
+    "tokio-tungstenite/rustls-tls-webpki-roots",
+]
+rustls-native-roots = [
+    "reqwest/rustls-tls-native-roots",
+    "tokio-tungstenite/rustls-tls-native-roots",
+]
+native-tls = ["reqwest/native-tls", "tokio-tungstenite/native-tls"]
+native-tls-vendored = [
+    "reqwest/native-tls-vendored",
+    "tokio-tungstenite/native-tls-vendored",
+]
+
+[dependencies]
+async-trait = "0.1.72"
+base64 = "0.21.2"
+futures = "0.3.28"
+tokio-tungstenite = "0.20.0"
+serde = { version = "1.0.179", features = ["derive"] }
+serde_json = "1.0.104"
+rand = "0.8.5"
+tracing = "0.1.37"
+
+[dependencies.reqwest]
+package = "reqwest"
+version = "0.11.18"
+default-features = false
+features = ["json"]
+
+[dependencies.tokio]
+package = "tokio"
+version = "1.29.1"
+default-features = false
+features = ["rt", "net", "time", "macros"]
