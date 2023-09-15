@@ -31,44 +31,70 @@ pub trait Backend {
     /// The reason the voice chat connection is not initiated by [`crate::PlayerManager`] is because different backends may use different things from [`songbird`], such as [`songbird::driver::Driver`] which is not required by all backends but may be required by some.
     async fn join(&self, guild_id: GuildId) -> Result<()>;
 
+    /// The opposite of [`Backend::join()`], this method must destroy the player, freeing all resources related to it.
     async fn leave(&self, guild_id: GuildId) -> Result<()>;
 
+    /// Gets the pause state of the player from a given guild.
     async fn pause(&self, guild_id: GuildId) -> Result<bool>;
 
+    /// Gets the repeat music state of the player from a given guild.
     async fn repeat_music(&self, guild_id: GuildId) -> Result<bool>;
 
+    /// Gets the random next state of the player from a given guild.
     async fn random_next(&self, guild_id: GuildId) -> Result<bool>;
 
+    /// Gets the cyclic queue of the player from a given guild.
     async fn cyclic_queue(&self, guild_id: GuildId) -> Result<bool>;
 
+    /// Gets the autoplay state of the player from a given guild.
     async fn autoplay(&self, guild_id: GuildId) -> Result<bool>;
 
+    /// Sets the pause state of the player from a given guild.
     async fn set_pause(&self, guild_id: GuildId, pause: bool) -> Result<()>;
 
+    /// Sets the repeat music state of the player from a given guild.
     async fn set_repeat_music(&self, guild_id: GuildId, repeat_music: bool) -> Result<()>;
 
+    /// Sets the random next state of the player from a given guild.
     async fn set_random_next(&self, guild_id: GuildId, random_next: bool) -> Result<()>;
 
+    /// Sets the cyclic queue state of the player from a given guild.
     async fn set_cyclic_queue(&self, guild_id: GuildId, cyclic_queue: bool) -> Result<()>;
 
+    /// Sets the autoplay state of the player from a given guild.
     async fn set_autoplay(&self, guild_id: GuildId, autoplay: bool) -> Result<()>;
 
+    /// Fetches and adds the song to the queue, which can also be a playlist.
     async fn queue_add(&self, guild_id: GuildId, song: &str) -> Result<QueueAddResult>;
 
+    /// Gets a part of the queue.
     async fn queue(&self, guild_id: GuildId, offset: usize, size: usize) -> Result<Vec<Track>>;
 
+    /// Removes a song from the queue.
     async fn queue_remove(&self, guild_id: GuildId, index: usize) -> Result<bool>;
 
+    /// Gets the currently playing song.
     async fn now(&self, guild_id: GuildId) -> Result<Option<Track>>;
 
+    /// Starts playing a song from the queue, replacing it if there is one currently playing.
+    ///
+    /// This method should not resume the song, this is a function of [`Backend::set_pause`].
     async fn play(&self, guild_id: GuildId, index: usize) -> Result<Track>;
 
+    /// Skips to the next song in the queue, returning to the beginning of the queue if it is already at the end.
+    ///
+    /// This method should ignore reproduction rules such as random next and cyclic queue.
     async fn skip(&self, guild_id: GuildId) -> Result<Option<Track>>;
 
+    /// Skips to the previous song in the queue, returning to the end of the queue if it is already at the beginning.
+    ///
+    /// This method should ignore reproduction rules such as random next and cyclic queue.
     async fn prev(&self, guild_id: GuildId) -> Result<Option<Track>>;
 
+    /// Sets the music playback time.
     async fn seek(&self, guild_id: GuildId, seconds: i64) -> Result<SeekResult>;
 
+    /// Updates the voice state, necessary if the backend uses a third party to establish the voice call such as [`lavalink`].
     async fn voice_state(
         &self,
         guild_id: GuildId,
@@ -77,10 +103,13 @@ pub trait Backend {
         old: Option<VoiceState>,
     ) -> Result<()>;
 
+    /// Updates the voice server, necessary if the backend uses a third party to establish the voice call such as [`lavalink`].
     async fn voice_server(&self, guild_id: GuildId, token: &str, endpoint: &str) -> Result<()>;
 }
 
+/// Allows initialization or fetch of a [`Track`], used by some utilities such as [`Queue`] to provide standard backend APIs completely ready to use.
 pub trait ToTrack {
+    /// Initializes or fetches a new [`Track`] with this track's data.
     fn track(&self) -> Track;
 }
 
@@ -292,6 +321,7 @@ impl<T: ToTrack> Queue<T> {
             .collect()
     }
 
+    /// Shuffles the queue, changing the tracks position.
     pub fn shuffle(&self) -> Option<T> {
         // A WriteGuard to the index, the index need be updated with the new position.
         let mut index = self.index.write().unwrap();
