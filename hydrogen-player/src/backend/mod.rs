@@ -108,9 +108,10 @@ pub trait Backend {
 }
 
 /// Allows initialization or fetch of a [`Track`], used by some utilities such as [`Queue`] to provide standard backend APIs completely ready to use.
+#[async_trait]
 pub trait ToTrack {
     /// Initializes or fetches a new [`Track`] with this track's data.
-    fn track(&self) -> Track;
+    async fn track(&self) -> Result<Track>;
 }
 
 /// Standard in-memory queue system, can and should be used by any backend that does not have its own queue system.
@@ -310,15 +311,22 @@ impl<T: ToTrack> Queue<T> {
     }
 
     /// It uses iterators to capture a part of the queue and generate a `Vec<Track>`. Should be used to implement the `queue` function of the `Backend` trait.
-    pub fn queue(&self, offset: usize, size: usize) -> Vec<Track> {
-        self.queue
-            .read()
-            .unwrap()
-            .iter()
-            .skip(offset)
-            .take(size)
-            .map(|i| i.track())
-            .collect()
+    pub async fn queue(&self, offset: usize, size: usize) -> Result<Vec<Track>> {
+        // Prepare for reading the queue.
+        let queue = self.queue.read().unwrap();
+
+        // Allocate a vector for the tracks.
+        let mut track_queue = Vec::with_capacity(size);
+
+        // It goes through the queue converting or fetching the tracks.
+        for item in queue.iter().skip(offset).take(size) {
+            track_queue.push(item.track().await?);
+        }
+
+        // Deallocate unused space.
+        track_queue.shrink_to_fit();
+
+        Ok(track_queue)
     }
 
     /// Shuffles the queue, changing the tracks position.
