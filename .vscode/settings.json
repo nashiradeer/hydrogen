@@ -4,6 +4,7 @@
         "concatcp",
         "cooldown",
         "decodetrack",
+        "docsrs",
         "hydrolink",
         "Inet",
         "lavalink",
