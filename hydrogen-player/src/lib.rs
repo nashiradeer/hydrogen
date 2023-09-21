@@ -1,17 +1,18 @@
 //! # Hydrogen // Player
 //!
-//! A standardized abstraction of different ways to play audio in Discord voice calls, facilitating the development of music bots while allowing the use of various audio systems (called `engines`), from the internal driver system of [`songbird`] to the client [`hydrolink`] for Lavalink.
+//! An abstraction between your bot and the backends that you can use to play songs in a Discord's voice chat, facilitating the development of music bots while allowing the use of various audio systems (called `engines`), from the internal driver system of [`songbird`] to the client [`hydrolink`] for Lavalink.
 //!
 //! ## Features
 //!
-//! `lavalink` = Enables [`hydrolink`] and the engine [`engine::lavalink::Lavalink`].
+//! `lavalink` = Enables [`hydrolink`] and the engine [`engine::lavalink::Lavalink`]. (default)
 use std::{
     fmt::{self, Display, Formatter},
     result,
 };
 
 use async_trait::async_trait;
-pub use songbird::{
+pub use songbird;
+use songbird::{
     error::JoinError,
     id::{ChannelId, GuildId, UserId},
 };
@@ -24,7 +25,7 @@ pub mod utils;
 pub enum Error {
     /// Errors produced by the Lavalink engine.
     #[cfg(feature = "lavalink")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "time")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "lavalink")))]
     Lavalink(hydrolink::Error),
 
     /// Errors produced by [`songbird`] when connecting to the Discord Gateway.
@@ -58,43 +59,68 @@ pub struct VoiceState {
     pub token: Option<String>,
 }
 
+/// Information about a track in the queue.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Track {
+    /// Track length/time in seconds.
     pub length: i32,
+
+    /// ID from the user that has requested this track.
     pub requester_id: UserId,
+
+    /// Track title.
     pub title: String,
+
+    /// Author of this track.
     pub author: String,
+
+    /// URI where this track can be found by the users.
     pub uri: Option<String>,
+
+    /// URI from the thumbnail of this track.
     pub thumbnail_uri: Option<String>,
 }
 
+/// Information about where and what is added to the queue.
 #[derive(Clone)]
 pub struct QueueAdd {
+    /// A list of tracks added to the queue.
     pub track: Vec<Track>,
+
+    /// Queue offset of this tracks.
     pub offset: usize,
+
+    /// Is true if the max size of the queue has reached.
     pub truncated: bool,
 }
 
+/// Information about the current track playing.
 #[derive(Clone)]
-pub struct Seek {
+pub struct TrackPlaying {
+    /// The current playback position in seconds.
     pub position: usize,
+
+    /// Total track length/time in seconds.
     pub total: usize,
+
+    /// The current track playing.
     pub track: Track,
+
+    /// The current track index playing.
+    pub index: usize,
 }
 
-/// Trait that defines and standardizes a communication interface between [`crate::PlayerManager`] and whatever backend is implemented.
+/// Use this trait instead of using the players directly, this trait is used as an interface to guarantee that all players will have the same methods and behavior independently of the backend used.
 ///
 /// # Why are all methods asynchronous?
 ///
-/// The motivation behind making all methods asynchronous by default comes from the possibility that some backend needs an external server, as in the case of Lavalink, and the possibility that this server can implement all the requirements for the proper functioning of the Hydrogen Player.
+/// The motivation behind making all methods asynchronous comes from the possibility that some player accesses the queue or the music player in an external server, as in the case of Lavalink.
 #[async_trait]
 pub trait Player {
-    /// This method should initiate the voice chat connection using [`songbird`] and initialize the player used by this backend, in addition to saving it in a [`std::collections::HashMap`].
-    ///
-    /// The reason the voice chat connection is not initiated by [`crate::PlayerManager`] is because different backends may use different things from [`songbird`], such as [`songbird::driver::Driver`] which is not required by all backends but may be required by some.
+    /// Initiates the voice chat connection using [`songbird`] and the backend, managing it internally.
     async fn join(&self, guild_id: GuildId) -> Result<()>;
 
-    /// The opposite of [`Backend::join()`], this method must destroy the player, freeing all resources related to it.
+    /// Leaves from the voice chat, closing the connection and destroying the backend.
     async fn leave(&self, guild_id: GuildId) -> Result<()>;
 
     /// Gets the pause state of the player from a given guild.
@@ -127,7 +153,7 @@ pub trait Player {
     /// Sets the autoplay state of the player from a given guild.
     async fn set_autoplay(&self, guild_id: GuildId, autoplay: bool) -> Result<()>;
 
-    /// Fetches and adds the song to the queue, which can also be a playlist.
+    /// Adds a song or playlist to the queue, searching for it if needed.
     async fn queue_add(&self, guild_id: GuildId, song: &str) -> Result<QueueAdd>;
 
     /// Gets a part of the queue.
@@ -142,7 +168,7 @@ pub trait Player {
     /// Starts playing a song from the queue, replacing it if there is one currently playing.
     ///
     /// This method should not resume the song, this is a function of [`Backend::set_pause`].
-    async fn play(&self, guild_id: GuildId, index: usize) -> Result<Track>;
+    async fn play(&self, guild_id: GuildId, index: usize) -> Result<TrackPlaying>;
 
     /// Skips to the next song in the queue, returning to the beginning of the queue if it is already at the end.
     ///
@@ -155,9 +181,9 @@ pub trait Player {
     async fn prev(&self, guild_id: GuildId) -> Result<Option<Track>>;
 
     /// Sets the music playback time.
-    async fn seek(&self, guild_id: GuildId, seconds: i64) -> Result<Seek>;
+    async fn seek(&self, guild_id: GuildId, seconds: i64) -> Result<TrackPlaying>;
 
-    /// Updates the voice state, necessary if the backend uses a third party to establish the voice call such as [`lavalink`].
+    /// Updates the voice state and the voice chat connection.
     async fn voice_state(
         &self,
         guild_id: GuildId,
@@ -166,6 +192,6 @@ pub trait Player {
         old: Option<VoiceState>,
     ) -> Result<()>;
 
-    /// Updates the voice server, necessary if the backend uses a third party to establish the voice call such as [`lavalink`].
+    /// Updates the voice server used to establish the voice chat connection.
     async fn voice_server(&self, guild_id: GuildId, token: &str, endpoint: &str) -> Result<()>;
 }
