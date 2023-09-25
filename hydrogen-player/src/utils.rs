@@ -248,17 +248,21 @@ impl<T: Into<Track> + Clone> Queue<T> {
             new_queue.push(track);
         }
 
+        // Replaces the queue with new one.
+        *queue = new_queue;
+
         // Updates the index, searching for the new position of the track in the new queue or setting to 0 if not found.
         if let Some(current_track) = current_track {
-            if let Some(new_index) = new_queue
-                .iter()
-                .position(|i| i.clone().into() == current_track)
-            {
+            if let Some(new_index) = queue.iter().position(|i| i.clone().into() == current_track) {
                 *index = new_index;
 
                 // Will not be need to replace the current track playing.
                 return None;
             }
         }
+
+        // The current track hasn't found and will need be replaced.
+        *index = 0;
+        queue.get(0).cloned()
     }
 }

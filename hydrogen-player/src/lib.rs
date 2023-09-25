@@ -191,6 +191,9 @@ pub trait Player {
     /// Sets the music playback time.
     async fn seek(&self, guild_id: GuildId, seconds: i64) -> Result<TrackPlaying>;
 
+    /// Shuffles the queue to a random order, if the current track haven't found, returns the track that will replace it.
+    async fn shuffle(&self, guild_id: GuildId) -> Result<Option<TrackPlaying>>;
+
     /// Updates the voice state and the voice chat connection.
     async fn voice_state(
         &self,
