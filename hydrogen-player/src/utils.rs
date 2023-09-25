@@ -170,7 +170,7 @@ impl<T: Into<Track> + Clone> Queue<T> {
     }
 
     /// Add new tracks to the queue.
-    fn add(&self, mut songs: Vec<T>) -> QueueAdd {
+    pub fn add(&self, mut songs: Vec<T>) -> QueueAdd {
         // A WriteGuard to the queue.
         let mut queue = self.queue.write().unwrap();
 
