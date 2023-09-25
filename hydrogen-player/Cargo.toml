@@ -3,12 +3,12 @@ name = "hydrogen-player"
 version = "1.0.0"
 authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 edition = "2021"
-description = "Initialize and manage music playback in Discord voice chats."
+description = "An abstraction between your bot and the backends that you can use to play songs in a Discord's voice chat, facilitating the development of music bots while allowing the use of various audio systems."
 repository = "https://github.com/nashiradeer/hydrogen"
 readme = "README.md"
 license = "GPL-3.0-only"
 keywords = ["discord", "hydrogen", "player", "music", "song"]
-categories = ["data-structures", "multimedia::audio"]
+categories = ["multimedia::audio"]
 
 [features]
 default = ["lavalink"]

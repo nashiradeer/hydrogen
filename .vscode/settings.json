@@ -4,6 +4,7 @@
         "concatcp",
         "cooldown",
         "decodetrack",
+        "docsrs",
         "hydrolink",
         "Inet",
         "lavalink",
@@ -17,6 +18,7 @@
         "seekable",
         "tungstenite",
         "unmark",
+        "webpki",
         "ytmsearch",
         "ytsearch"
     ]
