@@ -167,7 +167,7 @@ pub trait Player {
 
     /// Starts playing a song from the queue, replacing it if there is one currently playing.
     ///
-    /// This method should not resume the song, this is a function of [`Backend::set_pause`].
+    /// This method should not resume the song, this is a function of [`Player::set_pause`].
     async fn play(&self, guild_id: GuildId, index: usize) -> Result<TrackPlaying>;
 
     /// Skips to the next song in the queue, returning to the beginning of the queue if it is already at the end.
