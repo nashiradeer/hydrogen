@@ -242,7 +242,7 @@ impl<T: Into<Track> + Clone> Queue<T> {
             let i = thread_rng().gen_range(0..queue.len());
 
             // Removes 'i' from the current queue to be insert in the new queue.
-            let track = queue.swap_remove(*index);
+            let track = queue.swap_remove(i);
 
             // Adds the track to the new queue.
             new_queue.push(track);
