@@ -5,6 +5,14 @@
 //! ## Features
 //!
 //! `lavalink` = Enables [`hydrolink`] and the engine [`engine::lavalink::Lavalink`]. (default)
+//! `serenity-rustls-webpki` = Enables the `serenity` compatibility and the usage of `rustls` with `webpki-roots`.
+//! `serenity-rustls-native` = Enables the `serenity` compatibility and the usage of `rustls` with the native roots.
+//! `serenity-native` = Enables the `serenity` compatibility and the usage of `native-tls`.
+//! `serenity-native-vendored` = Enables the `serenity` compatibility and the usage of `native-tls` with `vendored` feature.
+//! `twilight-rustls-webpki` = Enables the `twilight` compatibility and the usage of `rustls` with `webpki-roots`.
+//! `twilight-rustls-native` = Enables the `twilight` compatibility and the usage of `rustls` with the native roots.
+//! `twilight-native` = Enables the `twilight` compatibility and the usage of `native-tls`.
+//! `twilight-native-vendored` = Enables the `twilight` compatibility and the usage of `native-tls` with `vendored` feature.
 use std::{
     fmt::{self, Display, Formatter},
     result,
