@@ -6,21 +6,13 @@ use std::sync::{
     Arc, RwLock,
 };
 
-use async_trait::async_trait;
 use rand::{thread_rng, Rng};
 
 use crate::{QueueAdd, Result, Track};
 
-/// Allows initialization or fetch of a [`Track`], used by some utilities such as [`Queue`] to provide standard backend APIs completely ready to use.
-#[async_trait]
-pub trait ToTrack {
-    /// Initializes or fetches a new [`Track`] with this track's data.
-    async fn track(&self) -> Result<Track>;
-}
-
 /// Standard in-memory queue system, can and should be used by any backend that does not have its own queue system.
 #[derive(Clone)]
-pub struct Queue<T: ToTrack> {
+pub struct Queue<T: Into<Track> + Clone> {
     /// The queue stored in memory.
     queue: Arc<RwLock<Vec<T>>>,
 
@@ -43,7 +35,7 @@ pub struct Queue<T: ToTrack> {
     max_size: usize,
 }
 
-impl<T: ToTrack + Clone> Queue<T> {
+impl<T: Into<Track> + Clone> Queue<T> {
     /// Initializes a new queue controller.
     pub fn new(max_size: usize) -> Self {
         Self {
@@ -150,7 +142,7 @@ impl<T: ToTrack + Clone> Queue<T> {
                 *index += 1;
 
                 // Check if the index has exceeded the queue length.
-                if index.ge(&queue.len()) {
+                if *index >= queue.len() {
                     // Check if the queue is in cyclic mode.
                     if self.cyclic_queue.load(Ordering::Relaxed) {
                         // Reset index to the start of the queue.
@@ -202,7 +194,7 @@ impl<T: ToTrack + Clone> Queue<T> {
         let offset = queue.len();
 
         // Collect the tracks for the result before extending the queue.
-        let tracks = songs.iter().map(|i| i.track()).collect();
+        let tracks = songs.iter().map(|i| i.clone().into()).collect();
 
         // Extends the queue.
         queue.extend(songs);
@@ -220,15 +212,12 @@ impl<T: ToTrack + Clone> Queue<T> {
         let queue = self.queue.read().unwrap();
 
         // Allocate a vector for the tracks.
-        let mut track_queue = Vec::with_capacity(size);
-
-        // It goes through the queue converting or fetching the tracks.
-        for item in queue.iter().skip(offset).take(size) {
-            track_queue.push(item.track().await?);
-        }
-
-        // Deallocate unused space.
-        track_queue.shrink_to_fit();
+        let track_queue = queue
+            .iter()
+            .skip(offset)
+            .take(size)
+            .map(|i| i.clone().into())
+            .collect();
 
         Ok(track_queue)
     }
@@ -242,7 +231,7 @@ impl<T: ToTrack + Clone> Queue<T> {
         let mut queue = self.queue.write().unwrap();
 
         // Get the current track to be searched when the new index is needed to be know.
-        let current_track = queue.get(index).map(|i| i.track());
+        let current_track: Option<Track> = queue.get(*index).map(|i| i.clone().into());
 
         // A new vector that will substitute the old queue.
         let mut new_queue = Vec::with_capacity(queue.capacity());
@@ -253,7 +242,7 @@ impl<T: ToTrack + Clone> Queue<T> {
             let i = thread_rng().gen_range(0..queue.len());
 
             // Removes 'i' from the current queue to be insert in the new queue.
-            let track = queue.swap_remove(index);
+            let track = queue.swap_remove(*index);
 
             // Adds the track to the new queue.
             new_queue.push(track);
@@ -261,7 +250,10 @@ impl<T: ToTrack + Clone> Queue<T> {
 
         // Updates the index, searching for the new position of the track in the new queue or setting to 0 if not found.
         if let Some(current_track) = current_track {
-            if let Some(new_index) = new_queue.iter().position(|i| i.track() == current_track) {
+            if let Some(new_index) = new_queue
+                .iter()
+                .position(|i| i.clone().into() == current_track)
+            {
                 *index = new_index;
 
                 // Will not be need to replace the current track playing.
