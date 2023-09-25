@@ -18,6 +18,7 @@
         "seekable",
         "tungstenite",
         "unmark",
+        "webpki",
         "ytmsearch",
         "ytsearch"
     ]
