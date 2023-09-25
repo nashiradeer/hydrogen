@@ -1,9 +1,6 @@
-//! # Hydrogen Player // Backend
+//! # Hydrogen Player // Utils
 //!
-//! Types and utilities used to implement a backend for Hydrogen Player.
-//!
-//! Backends are the most important components of Hydrogen Player, backends implement and manage their own players and may have their own way of initializing a player or even managing the queue, Hydrogen does not impose any rules on how this should be effected, it just establishes an trait [`Backend`] that must be implemented for [`crate::PlayerManager`] to work properly.
-
+//! Utilities to be used when implementing a new engine/backend.
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, RwLock,
@@ -11,10 +8,8 @@ use std::sync::{
 
 use async_trait::async_trait;
 use rand::{thread_rng, Rng};
-pub use songbird;
-use songbird::id::{GuildId, UserId};
 
-use crate::{QueueAddResult, Result, SeekResult, Track, VoiceState};
+use crate::{QueueAdd, Result, Track};
 
 /// Allows initialization or fetch of a [`Track`], used by some utilities such as [`Queue`] to provide standard backend APIs completely ready to use.
 #[async_trait]
@@ -48,7 +43,7 @@ pub struct Queue<T: ToTrack> {
     max_size: usize,
 }
 
-impl<T: ToTrack> Queue<T> {
+impl<T: ToTrack + Clone> Queue<T> {
     /// Initializes a new queue controller.
     pub fn new(max_size: usize) -> Self {
         Self {
@@ -155,7 +150,7 @@ impl<T: ToTrack> Queue<T> {
                 *index += 1;
 
                 // Check if the index has exceeded the queue length.
-                if index >= queue.len() {
+                if index.ge(&queue.len()) {
                     // Check if the queue is in cyclic mode.
                     if self.cyclic_queue.load(Ordering::Relaxed) {
                         // Reset index to the start of the queue.
@@ -176,20 +171,20 @@ impl<T: ToTrack> Queue<T> {
 
         // Check if autoplay is enabled.
         if !disable_autoplay && self.autoplay.load(Ordering::Relaxed) {
-            return queue.get(index).cloned();
+            return queue.get(index.clone()).cloned();
         }
 
         None
     }
 
     /// Add new tracks to the queue.
-    fn add(&self, mut songs: Vec<T>) -> QueueAddResult {
+    fn add(&self, mut songs: Vec<T>) -> QueueAdd {
         // A WriteGuard to the queue.
         let mut queue = self.queue.write().unwrap();
 
         // If the queue already full, skips this operation.
         if queue.len() >= self.max_size {
-            return QueueAddResult {
+            return QueueAdd {
                 offset: 0,
                 track: Vec::new(),
                 truncated: true,
@@ -212,7 +207,7 @@ impl<T: ToTrack> Queue<T> {
         // Extends the queue.
         queue.extend(songs);
 
-        QueueAddResult {
+        QueueAdd {
             track: tracks,
             offset,
             truncated,
