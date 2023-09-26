@@ -1,60 +1,56 @@
 //! Hydrogen Player // Lavalink
 //!
 //! Implementation of a backend for [`hydrolink`].
-
-use std::sync::{atomic::AtomicUsize, Arc, RwLock};
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicUsize, Arc, RwLock},
+};
 
 use async_trait::async_trait;
 pub use hydrolink::Error as LavalinkError;
 use hydrolink::{Session, Track as LavalinkTrack};
 use songbird::{
     id::{GuildId, UserId},
-    Songbird,
+    Call, Songbird,
 };
+use tokio::sync::Mutex as AsyncMutex;
 
-use crate::Connection;
+use crate::{utils::Queue, Player as HydrogenPlayer, Track as HydrogenTrack, Result};
 
-use super::{Player, QueueNext, Track};
-
+/// Track internally used by [`Lavalink`].
 #[derive(Clone)]
-pub struct LavalinkMusic {
-    pub encoded_track: String,
-    pub track: Track,
+pub struct Track {
+    /// Track internally used in [`hydrolink`].
+    pub track: LavalinkTrack,
+
+    /// Who has requested this track.
+    pub requester_id: UserId,
 }
 
-impl LavalinkMusic {
-    pub fn new(value: LavalinkTrack, requester_id: UserId) -> Self {
-        Self {
-            encoded_track: value.encoded,
-            track: Track {
-                length: value.info.length,
-                author: value.info.author,
-                title: value.info.title,
-                uri: value.info.uri,
-                thumbnail_uri: None,
-                requester_id,
-            },
+impl Into<HydrogenTrack> for Track {
+    fn into(self) -> HydrogenTrack {
+        HydrogenTrack {
+            length: self.track.info.length,
+            author: self.track.info.author,
+            title: self.track.info.title,
+            uri: self.track.info.uri,
+            thumbnail_uri: None,
+            requester_id: self.requester_id,
         }
     }
-
-    pub fn track(&self) -> Track {
-        self.track.clone()
-    }
 }
 
 #[derive(Clone)]
-pub struct LavalinkPlayer {
-    pub connection: Arc<RwLock<Connection>>,
+/// Player internally used in [`Lavalink`].
+pub struct Player {
+    voice_state: Arc<RwLock<Call>>,
     guild_id: GuildId,
-    index: Arc<AtomicUsize>,
     lavalink: Session,
-    queue: Arc<RwLock<Vec<LavalinkMusic>>>,
-    queue_next: Arc<RwLock<QueueNext>>,
+    queue: Queue<Track>,
     voice_manager: Arc<Songbird>,
 }
 
-#[async_trait]
-impl Player for LavalinkPlayer {
+impl Player {
     async fn new(guild_id: GuildId, voice_manager: Arc<Songbird>, connection: Connection) -> Self {
         Self {
             connection: Arc::new(RwLock::new(connection)),
@@ -69,18 +65,6 @@ impl Player for LavalinkPlayer {
             text_channel_id,
             voice_manager,
         }
-    }
-
-    pub async fn loop_type(&self) -> LoopType {
-        self.queue_loop.read().await.clone()
-    }
-
-    pub async fn set_loop_type(&self, loop_type: LoopType) {
-        *self.queue_loop.write().await = loop_type;
-    }
-
-    pub fn pause(&self) -> bool {
-        self.paused.load(Ordering::Relaxed)
     }
 
     pub async fn set_pause(&self, paused: bool) -> Result<()> {
@@ -385,5 +369,48 @@ impl Player for LavalinkPlayer {
             .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
 
         Ok(())
+    }
+}
+
+pub struct Lavalink {
+    players: Arc<AsyncMutex<HashMap<GuildId, Player>>>,
+    nodes: Arc<RwLock<Vec<Lavalink>>>,
+    voice_manager:
+}
+
+#[async_trait]
+impl HydrogenPlayer for Lavalink {
+    async fn join(&self, guild_id: GuildId) -> Result<()> {
+        let call = voice_manager
+            .get(guild_id)
+            .ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
+        let connection_info = call
+            .lock()
+            .await
+            .current_connection()
+            .cloned()
+            .ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
+
+        let mut players = self.player.write().await;
+        let lavalink_nodes = self.lavalink.read().await;
+
+        let lavalink_index = self.increment_load_balancer().await;
+
+        let lavalink = lavalink_nodes
+            .get(lavalink_index)
+            .cloned()
+            .ok_or(HydrogenManagerError::LavalinkNotConnected)?;
+        let player = HydrogenPlayer::new(
+            lavalink,
+            guild_id,
+            voice_manager,
+            connection_info.into(),
+            text_channel_id,
+            guild_locale,
+        );
+
+        players.insert(guild_id, player.clone());
+
+        Ok(player)
     }
 }
