@@ -3,19 +3,19 @@
 //! Implementation of a backend for [`hydrolink`].
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicUsize, Arc, RwLock},
+    sync::{atomic::AtomicUsize, Arc, Mutex, RwLock},
 };
 
 use async_trait::async_trait;
 pub use hydrolink::Error as LavalinkError;
-use hydrolink::{Session, Track as LavalinkTrack};
+use hydrolink::{Handler, Session, Track as LavalinkTrack};
 use songbird::{
     id::{GuildId, UserId},
     Call, Songbird,
 };
 use tokio::sync::Mutex as AsyncMutex;
 
-use crate::{utils::Queue, Player as HydrogenPlayer, Track as HydrogenTrack, Result};
+use crate::{utils::Queue, Error, Player as HydrogenPlayer, Result, Track as HydrogenTrack};
 
 /// Track internally used by [`Lavalink`].
 #[derive(Clone)]
@@ -372,18 +372,76 @@ impl Player {
     }
 }
 
+/// Lavalink node wrapper, used to redirect events and to track the players created in it.
+#[derive(Clone)]
+struct Node {
+    /// Players created in this node.
+    pub players: Arc<Mutex<Vec<GuildId>>>,
+
+    /// The node connection.
+    pub session: Session,
+
+    /// Who are managing this node and its players.
+    pub manager: Lavalink,
+}
+
+#[async_trait]
+impl Handler for Node {
+    async fn disconnect(&self, _: Session) {
+        self.manager
+    }
+}
+
+/// Engine/backend that manages players in a pool of Lavalink nodes using [`hydrolink`].
+#[derive(Clone)]
 pub struct Lavalink {
-    players: Arc<AsyncMutex<HashMap<GuildId, Player>>>,
-    nodes: Arc<RwLock<Vec<Lavalink>>>,
-    voice_manager:
+    /// Players from this manager.
+    players: Arc<RwLock<HashMap<GuildId, Player>>>,
+
+    /// Lavalink node pool.
+    nodes: Arc<RwLock<Vec<Node>>>,
+
+    /// Index used to balance the load across the nodes on the pool.
+    index: Arc<Mutex<usize>>,
+
+    /// Voice Manager used to connect to Discord.
+    voice_manager: Arc<Songbird>,
+}
+
+impl Lavalink {
+    /// Gets a Lavalink node from the pool, balancing the load.
+    fn get_node(&self) -> Option<Node> {
+        let nodes = self.nodes.read().unwrap();
+        let mut index = self.index.lock().unwrap();
+
+        for _ in 0..5 {
+            if let Some(node) = nodes.get(*index) {
+                *index = *index + 1;
+                if *index >= nodes.len() {
+                    *index = 0;
+                }
+
+                if node.session.is_connected() {
+                    return Some(node.clone());
+                }
+            } else {
+                break;
+            }
+        }
+
+        None
+    }
 }
 
 #[async_trait]
 impl HydrogenPlayer for Lavalink {
     async fn join(&self, guild_id: GuildId) -> Result<()> {
-        let call = voice_manager
+        let call = self.voice_manager.join_gateway(guild_id, channel_id)
+
+        let call = self
+            .voice_manager
             .get(guild_id)
-            .ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
+            .ok_or(Error::VoiceManagerNotConnected)?;
         let connection_info = call
             .lock()
             .await
