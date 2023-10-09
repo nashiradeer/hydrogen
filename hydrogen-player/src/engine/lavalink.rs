@@ -10,7 +10,7 @@ use async_trait::async_trait;
 pub use hydrolink::Error as LavalinkError;
 use hydrolink::{Handler, Session, Track as LavalinkTrack};
 use songbird::{
-    id::{GuildId, UserId},
+    id::{ChannelId, GuildId, UserId},
     Call, Songbird,
 };
 use tokio::sync::Mutex as AsyncMutex;
@@ -43,30 +43,13 @@ impl Into<HydrogenTrack> for Track {
 #[derive(Clone)]
 /// Player internally used in [`Lavalink`].
 pub struct Player {
-    voice_state: Arc<RwLock<Call>>,
     guild_id: GuildId,
-    lavalink: Session,
+    lavalink: Node,
     queue: Queue<Track>,
     voice_manager: Arc<Songbird>,
 }
 
 impl Player {
-    async fn new(guild_id: GuildId, voice_manager: Arc<Songbird>, connection: Connection) -> Self {
-        Self {
-            connection: Arc::new(RwLock::new(connection)),
-            destroyed: Arc::new(AtomicBool::new(false)),
-            index: Arc::new(AtomicUsize::new(0)),
-            paused: Arc::new(AtomicBool::new(false)),
-            queue: Arc::new(RwLock::new(Vec::new())),
-            queue_loop: Arc::new(RwLock::new(LoopType::None)),
-            guild_locale: guild_locale.to_owned(),
-            guild_id,
-            lavalink,
-            text_channel_id,
-            voice_manager,
-        }
-    }
-
     pub async fn set_pause(&self, paused: bool) -> Result<()> {
         let mut player = LavalinkUpdatePlayer::new();
 
@@ -406,9 +389,23 @@ pub struct Lavalink {
 
     /// Voice Manager used to connect to Discord.
     voice_manager: Arc<Songbird>,
+
+    /// Max queue size.
+    max_size: usize,
 }
 
 impl Lavalink {
+    /// Initialize the Lavalink engine.
+    pub fn new(songbird: Arc<Songbird>, max_size: usize) -> Self {
+        Self {
+            players: Arc::new(RwLock::new(HashMap::new())),
+            nodes: Arc::new(RwLock::new(Vec::new())),
+            index: Arc::new(Mutex::new(0)),
+            voice_manager: songbird,
+            max_size,
+        }
+    }
+
     /// Gets a Lavalink node from the pool, balancing the load.
     fn get_node(&self) -> Option<Node> {
         let nodes = self.nodes.read().unwrap();
@@ -431,44 +428,37 @@ impl Lavalink {
 
         None
     }
+
+    fn disconnection_handler(&self) {
+        self.p
+    }
 }
 
 #[async_trait]
 impl HydrogenPlayer for Lavalink {
-    async fn join(&self, guild_id: GuildId) -> Result<()> {
-        let call = self.voice_manager.join_gateway(guild_id, channel_id)
+    async fn join(&self, guild_id: GuildId, channel_id: ChannelId) -> Result<()> {
+        let connection_info = match self.voice_manager.get(guild_id) {
+            Some(v) => v.lock().await.current_connection().unwrap().clone(),
+            None => self
+                .voice_manager
+                .join_gateway(guild_id, channel_id)
+                .await
+                .1
+                .map_err(Error::Join)?,
+        };
 
-        let call = self
-            .voice_manager
-            .get(guild_id)
-            .ok_or(Error::VoiceManagerNotConnected)?;
-        let connection_info = call
-            .lock()
-            .await
-            .current_connection()
-            .cloned()
-            .ok_or(HydrogenManagerError::VoiceManagerNotConnected)?;
+        let mut players = self.players.write().unwrap();
+        let node = self.get_node().ok_or(Error::NotConnected)?;
 
-        let mut players = self.player.write().await;
-        let lavalink_nodes = self.lavalink.read().await;
-
-        let lavalink_index = self.increment_load_balancer().await;
-
-        let lavalink = lavalink_nodes
-            .get(lavalink_index)
-            .cloned()
-            .ok_or(HydrogenManagerError::LavalinkNotConnected)?;
-        let player = HydrogenPlayer::new(
-            lavalink,
+        let player = Player {
             guild_id,
-            voice_manager,
-            connection_info.into(),
-            text_channel_id,
-            guild_locale,
-        );
+            lavalink: node.clone(),
+            queue: Queue::new(self.max_size),
+            voice_manager: self.voice_manager.clone(),
+        };
 
         players.insert(guild_id, player.clone());
 
-        Ok(player)
+        Ok(())
     }
 }
