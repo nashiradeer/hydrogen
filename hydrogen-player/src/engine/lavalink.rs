@@ -428,10 +428,6 @@ impl Lavalink {
 
         None
     }
-
-    fn disconnection_handler(&self) {
-        self.p
-    }
 }
 
 #[async_trait]
