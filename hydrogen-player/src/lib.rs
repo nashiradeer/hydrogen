@@ -126,7 +126,7 @@ pub struct TrackPlaying {
 #[async_trait]
 pub trait Player {
     /// Initiates the voice chat connection using [`songbird`] and the backend, managing it internally.
-    async fn join(&self, guild_id: GuildId) -> Result<()>;
+    async fn join(&self, guild_id: GuildId, channel_id: ChannelId) -> Result<()>;
 
     /// Leaves from the voice chat, closing the connection and destroying the backend.
     async fn leave(&self, guild_id: GuildId) -> Result<()>;
