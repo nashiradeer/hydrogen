@@ -76,7 +76,7 @@ pub struct VoiceState {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Track {
     /// Track length/time in seconds.
-    pub length: i32,
+    pub length: u32,
 
     /// ID from the user that has requested this track.
     pub requester_id: UserId,
