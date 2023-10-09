@@ -570,6 +570,7 @@ dependencies = [
  "rand",
  "songbird",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
