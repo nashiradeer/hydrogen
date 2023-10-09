@@ -38,6 +38,9 @@ pub enum Error {
 
     /// Errors produced by [`songbird`] when connecting to the Discord Gateway.
     Join(JoinError),
+
+    /// The engine depends on an external server that isn't connected.
+    NotConnected,
 }
 
 impl Display for Error {
@@ -47,6 +50,8 @@ impl Display for Error {
             Self::Lavalink(e) => e.fmt(f),
 
             Self::Join(e) => e.fmt(f),
+
+            Self::NotConnected => write!(f, "server not connected"),
         }
     }
 }
