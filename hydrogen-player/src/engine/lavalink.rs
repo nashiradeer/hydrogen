@@ -3,7 +3,7 @@
 //! Implementation of a backend for [`hydrolink`].
 use std::{
     collections::HashMap,
-    sync::{atomic::AtomicUsize, Arc, Mutex, RwLock},
+    sync::{Arc, Mutex, RwLock},
 };
 
 use async_trait::async_trait;
@@ -11,9 +11,10 @@ pub use hydrolink::Error as LavalinkError;
 use hydrolink::{Handler, Session, Track as LavalinkTrack};
 use songbird::{
     id::{ChannelId, GuildId, UserId},
-    Call, Songbird,
+    Songbird,
 };
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
+use tracing::warn;
 
 use crate::{utils::Queue, Error, Player as HydrogenPlayer, Result, Track as HydrogenTrack};
 
@@ -371,7 +372,8 @@ struct Node {
 #[async_trait]
 impl Handler for Node {
     async fn disconnect(&self, _: Session) {
-        self.manager
+        let owned_players = self.players.lock().unwrap().clone();
+        self.manager.disconnection_handler(owned_players).await;
     }
 }
 
@@ -379,7 +381,7 @@ impl Handler for Node {
 #[derive(Clone)]
 pub struct Lavalink {
     /// Players from this manager.
-    players: Arc<RwLock<HashMap<GuildId, Player>>>,
+    players: Arc<AsyncRwLock<HashMap<GuildId, Player>>>,
 
     /// Lavalink node pool.
     nodes: Arc<RwLock<Vec<Node>>>,
@@ -398,7 +400,7 @@ impl Lavalink {
     /// Initialize the Lavalink engine.
     pub fn new(songbird: Arc<Songbird>, max_size: usize) -> Self {
         Self {
-            players: Arc::new(RwLock::new(HashMap::new())),
+            players: Arc::new(AsyncRwLock::new(HashMap::new())),
             nodes: Arc::new(RwLock::new(Vec::new())),
             index: Arc::new(Mutex::new(0)),
             voice_manager: songbird,
@@ -428,6 +430,19 @@ impl Lavalink {
 
         None
     }
+
+    /// Handle the Lavalink Node disconnection, leaving from the voice chat and removing the players.
+    async fn disconnection_handler(&self, players: Vec<GuildId>) {
+        let mut all_players = self.players.write().await;
+
+        for guild_id in players {
+            if let Err(v) = self.voice_manager.leave(guild_id).await {
+                warn!("[lavalink-engine]: can't leave from voice chat: {:?}", v);
+            }
+
+            all_players.remove(&guild_id);
+        }
+    }
 }
 
 #[async_trait]
@@ -443,7 +458,7 @@ impl HydrogenPlayer for Lavalink {
                 .map_err(Error::Join)?,
         };
 
-        let mut players = self.players.write().unwrap();
+        let mut players = self.players.write().await;
         let node = self.get_node().ok_or(Error::NotConnected)?;
 
         let player = Player {
