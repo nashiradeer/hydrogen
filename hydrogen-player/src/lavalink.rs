@@ -51,6 +51,7 @@ pub struct Player {
 }
 
 impl Player {
+    /// Fetches the [`ConnectionInfo`] from the voice call connection.
     async fn get_connection(&self) -> Option<ConnectionInfo> {
         self.voice_manager
             .get(self.guild_id)?
@@ -60,6 +61,7 @@ impl Player {
             .cloned()
     }
 
+    /// Pauses/resumes the player in Lavalink.
     pub async fn set_pause(&self, paused: bool) -> Result<()> {
         let mut player = UpdatePlayer {
             paused: Some(paused),
