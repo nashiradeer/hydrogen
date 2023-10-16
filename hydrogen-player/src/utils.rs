@@ -215,7 +215,7 @@ impl<T: Into<Track> + Clone> Queue<T> {
     }
 
     /// It uses iterators to capture a part of the queue and generate a `Vec<Track>`. Should be used to implement the `queue` function of the `Backend` trait.
-    pub async fn queue(&self, offset: usize, size: usize) -> Vec<Track> {
+    pub fn queue(&self, offset: usize, size: usize) -> Vec<Track> {
         // Prepare for reading the queue.
         let queue = self.queue.read().unwrap();
 
