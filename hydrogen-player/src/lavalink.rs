@@ -63,17 +63,23 @@ impl Player {
 
     /// Pauses/resumes the player in Lavalink.
     pub async fn set_pause(&self, paused: bool) -> Result<()> {
+        // Prepare to update the player.
         let mut player = UpdatePlayer {
             paused: Some(paused),
             ..Default::default()
         };
 
+        // Get the player from Lavalink server.
         let lavalink_player = self.lavalink.session.get_player(self.guild_id.0).await.ok();
+        // Check if player exists and store the bool to be used later.
         let has_player = lavalink_player.is_some();
 
+        // If isn't any track playing now, get a track from the queue and update the voice state.
         if let Some(lavalink_player) = lavalink_player {
             if lavalink_player.track.is_none() && !paused {
+                // Fetch the connection from the voice chat.
                 let connection = self.get_connection().await.ok_or(Error::NotConnected)?;
+                // Check if should have a song playing now accordingly to the in-memory queue.
                 if let Some(music) = self.queue.now() {
                     player.encoded_track = Some(Some(music.track.encoded.clone()));
                     player.voice = Some(VoiceState::new(
@@ -85,6 +91,7 @@ impl Player {
             }
         }
 
+        // If already have a player in Lavalink server, request the resume.
         if has_player {
             self.lavalink
                 .session
@@ -93,6 +100,7 @@ impl Player {
                 .map_err(|e| Error::Lavalink(e))?;
         }
 
+        // If not, request to start the current track.
         if !has_player && !paused {
             self.start_playing().await?;
         }
