@@ -18,14 +18,15 @@ use std::{
     result,
 };
 
-use async_trait::async_trait;
 pub use songbird;
 use songbird::{
     error::JoinError,
-    id::{ChannelId, GuildId, UserId},
+    id::{ChannelId, UserId},
 };
 
-pub mod engine;
+#[cfg(feature = "lavalink")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lavalink")))]
+pub mod lavalink;
 pub mod utils;
 
 /// Enum that groups all errors produced by this crate.
@@ -116,93 +117,4 @@ pub struct TrackPlaying {
 
     /// The current track index playing.
     pub index: usize,
-}
-
-/// Use this trait instead of using the players directly, this trait is used as an interface to guarantee that all players will have the same methods and behavior independently of the backend used.
-///
-/// # Why are all methods asynchronous?
-///
-/// The motivation behind making all methods asynchronous comes from the possibility that some player accesses the queue or the music player in an external server, as in the case of Lavalink.
-#[async_trait]
-pub trait Player {
-    /// Initiates the voice chat connection using [`songbird`] and the backend, managing it internally.
-    async fn join(&self, guild_id: GuildId) -> Result<()>;
-
-    /// Leaves from the voice chat, closing the connection and destroying the backend.
-    async fn leave(&self, guild_id: GuildId) -> Result<()>;
-
-    /// Gets the pause state of the player from a given guild.
-    async fn pause(&self, guild_id: GuildId) -> Result<bool>;
-
-    /// Gets the repeat music state of the player from a given guild.
-    async fn repeat_music(&self, guild_id: GuildId) -> Result<bool>;
-
-    /// Gets the random next state of the player from a given guild.
-    async fn random_next(&self, guild_id: GuildId) -> Result<bool>;
-
-    /// Gets the cyclic queue of the player from a given guild.
-    async fn cyclic_queue(&self, guild_id: GuildId) -> Result<bool>;
-
-    /// Gets the autoplay state of the player from a given guild.
-    async fn autoplay(&self, guild_id: GuildId) -> Result<bool>;
-
-    /// Sets the pause state of the player from a given guild.
-    async fn set_pause(&self, guild_id: GuildId, pause: bool) -> Result<()>;
-
-    /// Sets the repeat music state of the player from a given guild.
-    async fn set_repeat_music(&self, guild_id: GuildId, repeat_music: bool) -> Result<()>;
-
-    /// Sets the random next state of the player from a given guild.
-    async fn set_random_next(&self, guild_id: GuildId, random_next: bool) -> Result<()>;
-
-    /// Sets the cyclic queue state of the player from a given guild.
-    async fn set_cyclic_queue(&self, guild_id: GuildId, cyclic_queue: bool) -> Result<()>;
-
-    /// Sets the autoplay state of the player from a given guild.
-    async fn set_autoplay(&self, guild_id: GuildId, autoplay: bool) -> Result<()>;
-
-    /// Adds a song or playlist to the queue, searching for it if needed.
-    async fn queue_add(&self, guild_id: GuildId, song: &str) -> Result<QueueAdd>;
-
-    /// Gets a part of the queue.
-    async fn queue(&self, guild_id: GuildId, offset: usize, size: usize) -> Result<Vec<Track>>;
-
-    /// Removes a song from the queue.
-    async fn queue_remove(&self, guild_id: GuildId, index: usize) -> Result<bool>;
-
-    /// Gets the currently playing song.
-    async fn now(&self, guild_id: GuildId) -> Result<Option<Track>>;
-
-    /// Starts playing a song from the queue, replacing it if there is one currently playing.
-    ///
-    /// This method should not resume the song, this is a function of [`Player::set_pause`].
-    async fn play(&self, guild_id: GuildId, index: usize) -> Result<TrackPlaying>;
-
-    /// Skips to the next song in the queue, returning to the beginning of the queue if it is already at the end.
-    ///
-    /// This method should ignore reproduction rules such as random next and cyclic queue.
-    async fn skip(&self, guild_id: GuildId) -> Result<Option<Track>>;
-
-    /// Skips to the previous song in the queue, returning to the end of the queue if it is already at the beginning.
-    ///
-    /// This method should ignore reproduction rules such as random next and cyclic queue.
-    async fn prev(&self, guild_id: GuildId) -> Result<Option<Track>>;
-
-    /// Sets the music playback time.
-    async fn seek(&self, guild_id: GuildId, seconds: i64) -> Result<TrackPlaying>;
-
-    /// Shuffles the queue to a random order, if the current track haven't found, returns the track that will replace it.
-    async fn shuffle(&self, guild_id: GuildId) -> Result<Option<TrackPlaying>>;
-
-    /// Updates the voice state and the voice chat connection.
-    async fn voice_state(
-        &self,
-        guild_id: GuildId,
-        user_id: UserId,
-        new: VoiceState,
-        old: Option<VoiceState>,
-    ) -> Result<()>;
-
-    /// Updates the voice server used to establish the voice chat connection.
-    async fn voice_server(&self, guild_id: GuildId, token: &str, endpoint: &str) -> Result<()>;
 }
