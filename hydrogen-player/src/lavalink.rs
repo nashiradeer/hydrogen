@@ -113,8 +113,8 @@ impl Player {
         self.queue.now().map(Into::into)
     }
 
-    pub async fn queue(&self) -> Vec<HydrogenMusic> {
-        self.queue.read().await.clone()
+    pub fn queue(&self, offset: usize, size: usize) -> Vec<HydrogenTrack> {
+        self.queue.queue(offset, size)
     }
 
     pub async fn skip(&self) -> Result<Option<HydrogenMusic>> {
