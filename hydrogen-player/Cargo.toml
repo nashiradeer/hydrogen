@@ -12,7 +12,7 @@ categories = ["multimedia::audio"]
 
 [features]
 default = ["lavalink"]
-lavalink = ["dep:hydrolink"]
+lavalink = ["dep:hydrolink", "dep:async-trait"]
 serenity-rustls-webpki = [
     "songbird/serenity-rustls",
     "hydrolink?/rustls-webpki-roots",
@@ -41,9 +41,13 @@ twilight-native-vendored = [
 ]
 
 [dependencies]
-async-trait = "0.1.73"
 rand = "0.8.5"
 tracing = "0.1.37"
+
+[dependencies.async-trait]
+package = "async-trait"
+version = "0.1.73"
+optional = true
 
 [dependencies.hydrolink]
 package = "hydrolink"
