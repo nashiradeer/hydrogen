@@ -16,7 +16,7 @@ use songbird::{
 use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
 use tracing::warn;
 
-use crate::{utils::Queue, Error, Player as HydrogenPlayer, Result, Track as HydrogenTrack};
+use crate::{utils::Queue, Error, Result, Track as HydrogenTrack};
 
 /// Track internally used by [`Lavalink`].
 #[derive(Clone)]
@@ -455,8 +455,7 @@ impl Lavalink {
     }
 }
 
-#[async_trait]
-impl HydrogenPlayer for Lavalink {
+impl Lavalink {
     async fn join(&self, guild_id: GuildId, channel_id: ChannelId) -> Result<()> {
         let connection_info = match self.voice_manager.get(guild_id) {
             Some(v) => v.lock().await.current_connection().unwrap().clone(),
