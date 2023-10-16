@@ -108,18 +108,6 @@ impl Player {
         Ok(())
     }
 
-    pub fn lavalink(&self) -> Lavalink {
-        self.lavalink.clone()
-    }
-
-    pub fn text_channel_id(&self) -> ChannelId {
-        self.text_channel_id
-    }
-
-    pub fn guild_locale(&self) -> String {
-        self.guild_locale.clone()
-    }
-
     pub async fn now(&self) -> Option<HydrogenMusic> {
         self.queue
             .read()
