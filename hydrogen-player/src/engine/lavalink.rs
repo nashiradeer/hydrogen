@@ -8,10 +8,10 @@ use std::{
 
 use async_trait::async_trait;
 pub use hydrolink::Error as LavalinkError;
-use hydrolink::{Handler, Session, Track as LavalinkTrack};
+use hydrolink::{Handler, Session, Track as LavalinkTrack, UpdatePlayer};
 use songbird::{
     id::{ChannelId, GuildId, UserId},
-    Songbird,
+    ConnectionInfo, Songbird,
 };
 use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
 use tracing::warn;
@@ -51,17 +51,27 @@ pub struct Player {
 }
 
 impl Player {
+    async fn get_connection(&self) -> Option<ConnectionInfo> {
+        self.voice_manager
+            .get(self.guild_id)?
+            .lock()
+            .await
+            .current_connection()
+            .cloned()
+    }
+
     pub async fn set_pause(&self, paused: bool) -> Result<()> {
-        let mut player = LavalinkUpdatePlayer::new();
+        let mut player = UpdatePlayer {
+            paused: Some(paused),
+            ..Default::default()
+        };
 
-        player.paused(paused);
-
-        let lavalink_player = self.lavalink.get_player(self.guild_id.0).await.ok();
+        let lavalink_player = self.lavalink.session.get_player(self.guild_id.0).await.ok();
         let has_player = lavalink_player.is_some();
 
         if let Some(lavalink_player) = lavalink_player {
             if lavalink_player.track.is_none() && !paused {
-                let connection = self.connection.read().await;
+                let connection = self.get_connection().await.ok_or(Error::NotConnected);
                 if let Some(music) = self
                     .queue
                     .read()
@@ -437,7 +447,7 @@ impl Lavalink {
 
         for guild_id in players {
             if let Err(v) = self.voice_manager.leave(guild_id).await {
-                warn!("[lavalink-engine]: can't leave from voice chat: {:?}", v);
+                warn!("PLAYER [LAVALINK]: can't leave from voice chat: {:?}", v);
             }
 
             all_players.remove(&guild_id);
