@@ -108,7 +108,7 @@ impl Player {
         Ok(())
     }
 
-    /// Get the current playing track.
+    /// Gets the current playing track.
     pub fn now(&self) -> Option<HydrogenTrack> {
         self.queue.now().map(Into::into)
     }
