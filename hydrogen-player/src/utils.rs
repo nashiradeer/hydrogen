@@ -8,7 +8,7 @@ use std::sync::{
 
 use rand::{thread_rng, Rng};
 
-use crate::{QueueAdd, Result, Track};
+use crate::{QueueAdd, Track};
 
 /// Standard in-memory queue system, can and should be used by any backend that does not have its own queue system.
 #[derive(Clone)]
@@ -215,19 +215,17 @@ impl<T: Into<Track> + Clone> Queue<T> {
     }
 
     /// It uses iterators to capture a part of the queue and generate a `Vec<Track>`. Should be used to implement the `queue` function of the `Backend` trait.
-    pub async fn queue(&self, offset: usize, size: usize) -> Result<Vec<Track>> {
+    pub async fn queue(&self, offset: usize, size: usize) -> Vec<Track> {
         // Prepare for reading the queue.
         let queue = self.queue.read().unwrap();
 
         // Allocate a vector for the tracks.
-        let track_queue = queue
+        queue
             .iter()
             .skip(offset)
             .take(size)
             .map(|i| i.clone().into())
-            .collect();
-
-        Ok(track_queue)
+            .collect()
     }
 
     /// Shuffles the queue, changing the tracks position.
