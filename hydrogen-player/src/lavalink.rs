@@ -8,7 +8,7 @@ use std::{
 
 use async_trait::async_trait;
 pub use hydrolink::Error as LavalinkError;
-use hydrolink::{Handler, Session, Track as LavalinkTrack, UpdatePlayer};
+use hydrolink::{Handler, Session, Track as LavalinkTrack, UpdatePlayer, VoiceState};
 use songbird::{
     id::{ChannelId, GuildId, UserId},
     ConnectionInfo, Songbird,
@@ -73,28 +73,25 @@ impl Player {
 
         if let Some(lavalink_player) = lavalink_player {
             if lavalink_player.track.is_none() && !paused {
-                let connection = self.get_connection().await.ok_or(Error::NotConnected);
-                if let Some(music) = self
-                    .queue
-                    .read()
-                    .await
-                    .get(self.index.load(Ordering::Relaxed))
-                {
-                    player
-                        .encoded_track(&music.encoded_track)
-                        .voice_state(connection.clone().into());
+                let connection = self.get_connection().await.ok_or(Error::NotConnected)?;
+                if let Some(music) = self.queue.now() {
+                    player.encoded_track = Some(Some(music.track.encoded.clone()));
+                    player.voice = Some(VoiceState::new(
+                        &connection.token,
+                        &connection.endpoint,
+                        &connection.session_id,
+                    ));
                 }
             }
         }
 
         if has_player {
             self.lavalink
-                .update_player(self.guild_id.0, true, &player)
+                .session
+                .update_player(self.guild_id.0, true, player)
                 .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                .map_err(|e| Error::Lavalink(e))?;
         }
-
-        self.paused.store(paused, Ordering::Relaxed);
 
         if !has_player && !paused {
             self.start_playing().await?;
