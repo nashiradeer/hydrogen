@@ -108,12 +108,9 @@ impl Player {
         Ok(())
     }
 
-    pub async fn now(&self) -> Option<HydrogenMusic> {
-        self.queue
-            .read()
-            .await
-            .get(self.index.load(Ordering::Relaxed))
-            .cloned()
+    /// Get the current playing track.
+    pub fn now(&self) -> Option<HydrogenTrack> {
+        self.queue.now().map(Into::into)
     }
 
     pub async fn queue(&self) -> Vec<HydrogenMusic> {
