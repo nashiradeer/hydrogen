@@ -104,6 +104,14 @@ impl<T: Into<Track> + Clone> Queue<T> {
         self.autoplay.store(autoplay, Ordering::Relaxed);
     }
 
+    /// Get the music playing now.
+    pub fn now(&self) -> Option<T> {
+        let queue = self.queue.read().unwrap();
+        let index = self.index.read().unwrap();
+
+        queue.get(*index).cloned()
+    }
+
     /// Updates the index, returning the track that will be played now or `None` if index is out of bounds.
     pub fn set_index(&self, new_index: usize) -> Option<T> {
         // A ReadGuard to the queue.
