@@ -113,6 +113,7 @@ impl Player {
         self.queue.now().map(Into::into)
     }
 
+    /// Gets a part of the queue.
     pub fn queue(&self, offset: usize, size: usize) -> Vec<HydrogenTrack> {
         self.queue.queue(offset, size)
     }
