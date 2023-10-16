@@ -13,7 +13,7 @@ use songbird::{
     id::{ChannelId, GuildId, UserId},
     ConnectionInfo, Songbird,
 };
-use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
+use tokio::sync::RwLock as AsyncRwLock;
 use tracing::warn;
 
 use crate::{utils::Queue, Error, Result, Track as HydrogenTrack};
