@@ -42,6 +42,9 @@ pub enum Error {
 
     /// The engine depends on an external server that isn't connected.
     NotConnected,
+
+    /// There's no music to be played now.
+    NoSongAvailable,
 }
 
 impl Display for Error {
@@ -53,6 +56,8 @@ impl Display for Error {
             Self::Join(e) => e.fmt(f),
 
             Self::NotConnected => write!(f, "server not connected"),
+
+            Self::NoSongAvailable => write!(f, "no song available"),
         }
     }
 }
