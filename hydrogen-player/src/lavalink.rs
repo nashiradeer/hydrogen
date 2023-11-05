@@ -121,28 +121,17 @@ impl Player {
     }
 
     /// Skips to the next song, ignoring queue next constraints.
-    pub async fn skip(&self) -> Result<Option<HydrogenTrack>> {
-        let queue = self.queue.read().await;
-        let mut index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
-        if index >= queue.len() {
-            self.index.store(0, Ordering::Relaxed);
-            index = 0;
-        }
-        self.start_playing().await?;
-        Ok(queue.get(index).cloned())
+    pub async fn skip(&self) -> Result<HydrogenTrack> {
+        let next_song = self.queue.skip().ok_or(Error::NoSongAvailable)?;
+        self.lavalink_play(next_song.clone()).await?;
+        Ok(next_song.into())
     }
 
-    pub async fn prev(&self) -> Result<Option<HydrogenMusic>> {
-        let queue = self.queue.read().await;
-        let mut index = self.index.load(Ordering::Relaxed);
-        if index == 0 {
-            index = queue.len() - 1;
-        } else {
-            index -= 1;
-        }
-        self.index.store(index, Ordering::Relaxed);
-        self.start_playing().await?;
-        Ok(queue.get(index).cloned())
+    /// Return to the previous song, ignoring queue next constraints.
+    pub async fn prev(&self) -> Result<HydrogenTrack> {
+        let next_song = self.queue.prev().ok_or(Error::NoSongAvailable)?;
+        self.lavalink_play(next_song.clone()).await?;
+        Ok(next_song.into())
     }
 
     pub async fn next(&self) -> Result<()> {
