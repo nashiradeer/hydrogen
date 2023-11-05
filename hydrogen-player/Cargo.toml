@@ -11,8 +11,12 @@ keywords = ["discord", "hydrogen", "player", "music", "song"]
 categories = ["multimedia::audio"]
 
 [features]
-default = ["lavalink"]
+default = ["lavalink", "lavalink-ytsearch"]
 lavalink = ["dep:hydrolink", "dep:async-trait"]
+lavalink-ytsearch = ["_lavalink_search"]
+lavalink-ytmsearch = ["_lavalink_search"]
+lavalink-scsearch = ["_lavalink_search"]
+_lavalink_search = []
 serenity-rustls-webpki = [
     "songbird/serenity-rustls",
     "hydrolink?/rustls-webpki-roots",

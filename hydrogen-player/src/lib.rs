@@ -13,6 +13,14 @@
 //! `twilight-rustls-native` = Enables the `twilight` compatibility and the usage of `rustls` with the native roots.
 //! `twilight-native` = Enables the `twilight` compatibility and the usage of `native-tls`.
 //! `twilight-native-vendored` = Enables the `twilight` compatibility and the usage of `native-tls` with `vendored` feature.
+//!
+//! ### Features for Lavalink.
+//!
+//! If you enable more than one of these features, only one feature will be considered, the prefix is chosen following the order that they appear below from top to bottom.
+//!
+//! `lavalink-ytsearch` = Use `ytsearch:` prefix. (default)
+//! `lavalink-ytmsearch` = Use `ytmsearch:` prefix.
+//! `lavalink-scsearch` = Use `scsearch:` prefix.
 use std::{
     fmt::{self, Display, Formatter},
     result,
@@ -24,8 +32,8 @@ use songbird::{
     id::{ChannelId, UserId},
 };
 
-#[cfg(feature = "lavalink")]
-#[cfg_attr(docsrs, doc(cfg(feature = "lavalink")))]
+#[cfg(feature = "lavalink-ytsearch")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lavalink-ytsearch")))]
 pub mod lavalink;
 pub mod utils;
 

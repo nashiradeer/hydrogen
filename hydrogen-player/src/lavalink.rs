@@ -18,6 +18,32 @@ use tracing::warn;
 
 use crate::{utils::Queue, Error, Result, Track as HydrogenTrack};
 
+#[cfg(feature = "lavalink-ytsearch")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lavalink-ytsearch")))]
+pub const SEARCH_PREFIX: &str = "ytsearch:";
+
+#[cfg(all(feature = "lavalink-ytmsearch", not(feature = "lavalink-ytsearch")))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(all(feature = "lavalink-ytmsearch", not(feature = "lavalink-ytsearch"))))
+)]
+pub const SEARCH_PREFIX: &str = "ytmsearch:";
+
+#[cfg(all(
+    feature = "lavalink-scsearch",
+    not(feature = "lavalink-ytsearch"),
+    not(feature = "lavalink-ytmsearch")
+))]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(all(
+        feature = "lavalink-scsearch",
+        not(feature = "lavalink-ytsearch"),
+        not(feature = "lavalink-ytmsearch")
+    )))
+)]
+pub const SEARCH_PREFIX: &str = "scsearch:";
+
 /// Track internally used by [`Lavalink`].
 #[derive(Clone)]
 pub struct Track {
@@ -148,6 +174,7 @@ impl Player {
         Ok(())
     }
 
+    //
     pub async fn play(&self, music: &str, requester_id: UserId) -> Result<HydrogenPlayCommand> {
         let musics = {
             let mut musics = self
@@ -159,7 +186,7 @@ impl Player {
             if musics.tracks.len() == 0 {
                 musics = self
                     .lavalink
-                    .track_load(&format!("{}{}", HYDROGEN_SEARCH_PREFIX, music))
+                    .track_load(&format!("{}{}", , music))
                     .await
                     .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
             }
