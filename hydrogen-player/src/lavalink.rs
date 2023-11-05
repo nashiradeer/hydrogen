@@ -141,40 +141,10 @@ impl Player {
         Ok(next_song.into())
     }
 
+    /// Go to the next song in the queue, following the queue constraints.
     pub async fn next(&self) -> Result<()> {
-        let queue_loop = self.queue_loop.read().await;
-        let queue = self.queue.read().await;
-
-        if queue_loop.ne(&LoopType::NoAutostart) {
-            if queue_loop.ne(&LoopType::Music) {
-                if queue_loop.ne(&LoopType::Random) {
-                    let index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
-                    if index >= queue.len() {
-                        if queue_loop.eq(&LoopType::Queue) {
-                            self.index.store(0, Ordering::Relaxed);
-                            self.start_playing().await?;
-                        } else {
-                            self.index.store(queue.len() - 1, Ordering::Relaxed);
-                            self.paused.store(true, Ordering::Relaxed);
-                        }
-                    } else {
-                        self.start_playing().await?;
-                    }
-                } else {
-                    let random_index = rand::thread_rng().gen_range(0..queue.len());
-                    self.index.store(random_index, Ordering::Relaxed);
-                    self.start_playing().await?;
-                }
-            } else {
-                self.start_playing().await?;
-            }
-        } else {
-            let index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
-            if index >= queue.len() {
-                self.index.store(queue.len() - 1, Ordering::Relaxed);
-            }
-            self.paused.store(true, Ordering::Relaxed);
-        }
+        let next_song = self.queue.next().ok_or(Error::NoSongAvailable)?;
+        self.lavalink_play(next_song).await?;
         Ok(())
     }
 
