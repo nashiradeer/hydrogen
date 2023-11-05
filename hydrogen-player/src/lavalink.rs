@@ -44,9 +44,16 @@ impl Into<HydrogenTrack> for Track {
 #[derive(Clone)]
 /// Player internally used in [`Lavalink`].
 pub struct Player {
+    /// ID of the guild that this player is playing on.
     guild_id: GuildId,
+
+    /// Lavalink node used by this player.
     lavalink: Node,
+
+    /// Queue of this player.
     queue: Queue<Track>,
+
+    /// Voice manager used to manage the connection to Discord.
     voice_manager: Arc<Songbird>,
 }
 
