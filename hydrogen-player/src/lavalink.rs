@@ -102,7 +102,9 @@ impl Player {
 
         // If not, request to start the current track.
         if !has_player && !paused {
-            self.start_playing().await?;
+            if let Some(track) = self.queue.now() {
+                self.lavalink_play(track).await?;
+            }
         }
 
         Ok(())
@@ -303,7 +305,7 @@ impl Player {
     }
 
     /// Play the track in Lavalink.
-    async fn lavalink_play(&self, track: LavalinkTrack) -> Result<()> {
+    async fn lavalink_play(&self, track: Track) -> Result<()> {
         // Get the voice state.
         let voice_state = {
             let connection = self.get_connection().await.ok_or(Error::NotConnected)?;
@@ -317,7 +319,7 @@ impl Player {
 
         // Create the [`UpdatePlayer`] struct.
         let mut player = UpdatePlayer::default();
-        player.encoded_track = Some(Some(track.encoded));
+        player.encoded_track = Some(Some(track.track.encoded));
         player.voice = Some(voice_state);
         // player.paused = Some(self.paused);
 
