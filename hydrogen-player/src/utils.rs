@@ -295,4 +295,23 @@ impl<T: Into<Track> + Clone> Queue<T> {
 
         queue.get(*index).cloned()
     }
+
+    /// Return to the previous song, ignoring the queue constraints.
+    pub fn prev(&self) -> Option<T> {
+        // Lock index to get the WriteGuard.
+        let mut index = self.index.write().unwrap();
+
+        // Lock queue to get the ReadGuard.
+        let queue = self.queue.read().unwrap();
+
+        // Update index, adding one.
+        *index -= 1;
+
+        // Check if index is out of bounds.
+        if *index < 0 {
+            *index = queue.len();
+        }
+
+        queue.get(*index).cloned()
+    }
 }
