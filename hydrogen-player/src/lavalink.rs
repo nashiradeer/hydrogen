@@ -118,7 +118,8 @@ impl Player {
         self.queue.queue(offset, size)
     }
 
-    pub async fn skip(&self) -> Result<Option<HydrogenMusic>> {
+    /// Skips to the next song, ignoring queue next constraints.
+    pub async fn skip(&self) -> Result<Option<HydrogenTrack>> {
         let queue = self.queue.read().await;
         let mut index = self.index.fetch_add(1, Ordering::Relaxed) + 1;
         if index >= queue.len() {
@@ -301,29 +302,33 @@ impl Player {
         Ok(None)
     }
 
-    async fn start_playing(&self) -> Result<bool> {
-        let connection = self.connection.read().await;
-        if let Some(music) = self
-            .queue
-            .read()
+    /// Play the track in Lavalink.
+    async fn lavalink_play(&self, track: LavalinkTrack) -> Result<()> {
+        // Get the voice state.
+        let voice_state = {
+            let connection = self.get_connection().await.ok_or(Error::NotConnected)?;
+
+            VoiceState::new(
+                &connection.token,
+                &connection.endpoint,
+                &connection.session_id,
+            )
+        };
+
+        // Create the [`UpdatePlayer`] struct.
+        let mut player = UpdatePlayer::default();
+        player.encoded_track = Some(Some(track.encoded));
+        player.voice = Some(voice_state);
+        // player.paused = Some(self.paused);
+
+        // Send the request to Lavalink.
+        self.lavalink
+            .session
+            .update_player(self.guild_id.0, false, player)
             .await
-            .get(self.index.load(Ordering::Relaxed))
-        {
-            let mut player = LavalinkUpdatePlayer::new();
-            player
-                .encoded_track(&music.encoded_track)
-                .voice_state(connection.clone().into())
-                .paused(self.paused.load(Ordering::Relaxed));
+            .map_err(Error::Lavalink)?;
 
-            self.lavalink
-                .update_player(self.guild_id.0, false, &player)
-                .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
-
-            return Ok(true);
-        }
-
-        Ok(false)
+        Ok(())
     }
 
     pub async fn destroy(&self) -> Result<()> {
