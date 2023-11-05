@@ -112,6 +112,11 @@ impl<T: Into<Track> + Clone> Queue<T> {
         queue.get(*index).cloned()
     }
 
+    /// Gets the index from the queue.
+    pub fn index(&self) -> usize {
+        *self.index.read().unwrap()
+    }
+
     /// Updates the index, returning the track that will be played now or `None` if index is out of bounds.
     pub fn set_index(&self, new_index: usize) -> Option<T> {
         // A ReadGuard to the queue.
