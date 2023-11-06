@@ -8,7 +8,9 @@ use std::{
 
 use async_trait::async_trait;
 pub use hydrolink::Error as LavalinkError;
-use hydrolink::{Handler, Session, Track as LavalinkTrack, UpdatePlayer, VoiceState};
+use hydrolink::{
+    Handler, LoadResultType, Session, Track as LavalinkTrack, UpdatePlayer, VoiceState,
+};
 use songbird::{
     id::{ChannelId, GuildId, UserId},
     ConnectionInfo, Songbird,
@@ -16,7 +18,7 @@ use songbird::{
 use tokio::sync::RwLock as AsyncRwLock;
 use tracing::warn;
 
-use crate::{utils::Queue, Error, Result, Track as HydrogenTrack};
+use crate::{utils::Queue, Error, QueueAdd, Result, Track as HydrogenTrack};
 
 #[cfg(feature = "lavalink-ytsearch")]
 #[cfg_attr(docsrs, doc(cfg(feature = "lavalink-ytsearch")))]
@@ -174,29 +176,33 @@ impl Player {
         Ok(())
     }
 
-    //
-    pub async fn play(&self, music: &str, requester_id: UserId) -> Result<HydrogenPlayCommand> {
-        let musics = {
-            let mut musics = self
+    /// Play a song, searching for it if enabled and necessary.
+    pub async fn play(&self, music: &str, requester_id: UserId) -> Result<QueueAdd> {
+        // Try to the get the song or playlist, searching if not found (and enabled).
+        let songs = {
+            let mut song_matching = self
                 .lavalink
+                .session
                 .track_load(music)
                 .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                .map_err(Error::Lavalink)?;
 
+            #[cfg(feature = "_lavalink_search")]
             if musics.tracks.len() == 0 {
-                musics = self
+                return musics = self
                     .lavalink
-                    .track_load(&format!("{}{}", , music))
+                    .session
+                    .track_load(&format!("{}{}", SEARCH_PREFIX, music))
                     .await
-                    .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                    .map_err(Error::Lavalink)?;
             }
 
             musics
         };
 
         let mut truncated = false;
-        let starting_index = self.queue.read().await.len();
-        if musics.load_type == LavalinkLoadResultType::SearchResult {
+        let starting_index = self.queue.len();
+        if musics.load_type == LoadResultType::SearchResult {
             if let Some(music) = musics.tracks.get(0) {
                 let queue_length = self.queue.read().await.len();
                 if queue_length < HYDROGEN_QUEUE_LIMIT {
