@@ -1,6 +1,6 @@
 # Nashira Deer // Hydrogen
 
-An Open Source Discord bot designed to play music on voice calls with efficiency, speed, and performance.
+An open-source music bot for Discord, powered by Lavalink and created in Rust.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H4NKWWN)
 
