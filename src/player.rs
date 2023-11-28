@@ -179,7 +179,7 @@ impl HydrogenPlayer {
 
         player.paused(paused);
 
-        let lavalink_player = self.lavalink.get_player(self.guild_id.0).await.ok();
+        let lavalink_player = self.lavalink.get_player(self.guild_id.get()).await.ok();
         let has_player = lavalink_player.is_some();
 
         if let Some(lavalink_player) = lavalink_player {
@@ -200,7 +200,7 @@ impl HydrogenPlayer {
 
         if has_player {
             self.lavalink
-                .update_player(self.guild_id.0, true, &player)
+                .update_player(self.guild_id.get(), true, &player)
                 .await
                 .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
         }
@@ -356,7 +356,7 @@ impl HydrogenPlayer {
 
         let mut playing = false;
 
-        let lavalink_not_playing = match self.lavalink.get_player(self.guild_id.0).await {
+        let lavalink_not_playing = match self.lavalink.get_player(self.guild_id.get()).await {
             Ok(v) => v.track.is_none(),
             Err(e) => {
                 if let LavalinkError::RestError(er) = e {
@@ -406,7 +406,7 @@ impl HydrogenPlayer {
         update_player.position(milliseconds);
         let player = self
             .lavalink
-            .update_player(self.guild_id.0, false, &update_player)
+            .update_player(self.guild_id.get(), false, &update_player)
             .await
             .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
         if let Some(track) = player.track {
@@ -436,7 +436,7 @@ impl HydrogenPlayer {
                 .paused(self.paused.load(Ordering::Relaxed));
 
             self.lavalink
-                .update_player(self.guild_id.0, false, &player)
+                .update_player(self.guild_id.get(), false, &player)
                 .await
                 .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
 
@@ -455,7 +455,7 @@ impl HydrogenPlayer {
 
             if self.lavalink.connected().await == LavalinkConnection::Connected {
                 self.lavalink
-                    .destroy_player(self.guild_id.0)
+                    .destroy_player(self.guild_id.get())
                     .await
                     .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
             }
@@ -471,7 +471,7 @@ impl HydrogenPlayer {
         player.voice_state(connection.clone().into());
 
         self.lavalink
-            .update_player(self.guild_id.0, true, &player)
+            .update_player(self.guild_id.get(), true, &player)
             .await
             .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
 
