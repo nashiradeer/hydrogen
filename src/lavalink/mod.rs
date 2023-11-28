@@ -4,12 +4,15 @@ use async_trait::async_trait;
 use async_tungstenite::{
     stream::Stream,
     tokio::{connect_async, TokioAdapter},
+    tungstenite::handshake::client::Request,
     WebSocketStream,
 };
 use base64::{prelude::BASE64_STANDARD, Engine};
 use futures::{stream::SplitStream, SinkExt, StreamExt};
-use http::{header::InvalidHeaderValue, HeaderMap, Request};
-use reqwest::Client;
+use reqwest::{
+    header::{HeaderMap, InvalidHeaderValue},
+    Client,
+};
 use serde::Deserialize;
 use tokio::{
     net::TcpStream,
@@ -72,7 +75,7 @@ pub trait LavalinkHandler {
 
 #[derive(Debug)]
 pub enum LavalinkError {
-    Http(http::Error),
+    Http(tungstenite::http::Error),
     WebSocket(tungstenite::Error),
     Reqwest(reqwest::Error),
     InvalidHeaderValue(InvalidHeaderValue),
@@ -169,6 +172,7 @@ impl Lavalink {
             .or_else(|e| Err(LavalinkError::WebSocket(e)))?
             .0
             .split();
+
         let lavalink = Self {
             session_id: Arc::new(RwLock::new(String::new())),
             host: Arc::new(node.host),
