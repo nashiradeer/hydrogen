@@ -1,10 +1,12 @@
 {
     "cSpell.words": [
         "lavalink",
+        "libc",
         "oneshot",
         "reqwest",
         "rustls",
         "seekable",
+        "serde",
         "tungstenite"
     ]
 }
