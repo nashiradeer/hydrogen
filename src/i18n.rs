@@ -8,7 +8,7 @@ use std::{
     sync::Arc,
 };
 
-use serenity::builder::{CreateApplicationCommand, CreateApplicationCommandOption};
+use serenity::builder::{CreateCommand, CreateCommandOption};
 
 #[derive(Debug)]
 pub enum HydrogenI18nError {
@@ -40,7 +40,7 @@ pub struct HydrogenI18n {
 }
 
 impl HydrogenI18n {
-    pub const DEFAULT_LANGUAGE: &str = "en-US";
+    pub const DEFAULT_LANGUAGE: &'static str = "en-US";
 
     pub fn new<P>(path: P, default_language: &str) -> Result<Self>
     where
@@ -102,51 +102,60 @@ impl HydrogenI18n {
         &self,
         category: &str,
         name: &str,
-        application_command: &'a mut CreateApplicationCommand,
-    ) {
+        mut application_command: CreateCommand,
+    ) -> CreateCommand {
         for lang in self.cache.keys() {
             if let Some(value) = self.get(lang, category, name) {
-                application_command.name_localized(lang, value);
+                application_command = application_command.name_localized(lang, value);
             }
         }
+
+        application_command
     }
 
     pub fn translate_application_command_description<'a>(
         &self,
         category: &str,
         name: &str,
-        application_command: &'a mut CreateApplicationCommand,
-    ) {
+        mut application_command: CreateCommand,
+    ) -> CreateCommand {
         for lang in self.cache.keys() {
             if let Some(value) = self.get(lang, category, name) {
-                application_command.description_localized(lang, value);
+                application_command = application_command.description_localized(lang, value);
             }
         }
+
+        application_command
     }
 
     pub fn translate_application_command_option_name<'a>(
         &self,
         category: &str,
         name: &str,
-        application_command_option: &'a mut CreateApplicationCommandOption,
-    ) {
+        mut application_command_option: CreateCommandOption,
+    ) -> CreateCommandOption {
         for lang in self.cache.keys() {
             if let Some(value) = self.get(lang, category, name) {
-                application_command_option.name_localized(lang, value);
+                application_command_option = application_command_option.name_localized(lang, value);
             }
         }
+
+        application_command_option
     }
 
     pub fn translate_application_command_option_description<'a>(
         &self,
         category: &str,
         name: &str,
-        application_command_option: &'a mut CreateApplicationCommandOption,
-    ) {
+        mut application_command_option: CreateCommandOption,
+    ) -> CreateCommandOption {
         for lang in self.cache.keys() {
             if let Some(value) = self.get(lang, category, name) {
-                application_command_option.description_localized(lang, value);
+                application_command_option =
+                    application_command_option.description_localized(lang, value);
             }
         }
+
+        application_command_option
     }
 }
