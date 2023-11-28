@@ -12,16 +12,16 @@ use std::{
 
 use async_trait::async_trait;
 use serenity::{
-    builder::{CreateComponents, CreateEmbedAuthor},
+    all::{
+        ButtonStyle, ChannelId, ChannelType, GuildId, MessageId, ReactionType, UserId,
+        VoiceServerUpdateEvent, VoiceState,
+    },
+    builder::{
+        CreateActionRow, CreateButton, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter,
+        CreateMessage, EditMessage,
+    },
     client::Cache,
     http::{CacheHttp, Http},
-    model::{
-        prelude::{
-            component::ButtonStyle, Channel, ChannelId, ChannelType, GuildId, MessageId,
-            ReactionType, UserId, VoiceServerUpdateEvent,
-        },
-        voice::VoiceState,
-    },
 };
 use songbird::Songbird;
 use tokio::{spawn, sync::RwLock, task::JoinHandle, time::sleep};
@@ -106,7 +106,7 @@ impl HydrogenManager {
 
     pub async fn connect_lavalink(&self, node: LavalinkNodeInfo) -> Result<()> {
         let mut lavalink_vector = self.lavalink.write().await;
-        let lavalink = Lavalink::connect(node, self.cache.current_user().id.0, self.clone())
+        let lavalink = Lavalink::connect(node, self.cache.current_user().id.get(), self.clone())
             .await
             .map_err(|e| HydrogenManagerError::Lavalink(e))?;
         lavalink_vector.push(lavalink);
@@ -285,10 +285,6 @@ impl HydrogenManager {
 
                         connection.session_id = voice_state.session_id;
 
-                        if let Some(token) = voice_state.token {
-                            connection.token = token;
-                        }
-
                         connection.channel_id = Some(channel_id.into());
                     } else {
                         let is_connected = player.connection.read().await.channel_id.is_some();
@@ -306,42 +302,37 @@ impl HydrogenManager {
 
         let connection = player.connection.read().await;
         if let Some(channel_id) = connection.channel_id {
-            if let Channel::Guild(channel) = self
+            let channel = self
                 .cache
                 .channel(channel_id.0)
-                .ok_or(HydrogenManagerError::GuildChannelNotFound)?
-            {
-                if channel.kind == ChannelType::Voice || channel.kind == ChannelType::Stage {
-                    let members_count = channel
-                        .members(self.cache.clone())
-                        .await
-                        .map_err(|e| HydrogenManagerError::Serenity(e))?
-                        .len();
+                .ok_or(HydrogenManagerError::GuildChannelNotFound)?;
 
-                    if members_count <= 1 {
-                        self.timed_destroy(
-                            guild_id,
-                            Duration::from_secs(HYDROGEN_EMPTY_CHAT_TIMEOUT),
-                        )
+            if channel.kind == ChannelType::Voice || channel.kind == ChannelType::Stage {
+                let members_count = channel
+                    .members(self.cache.clone())
+                    .map_err(|e| HydrogenManagerError::Serenity(e))?
+                    .len();
+
+                if members_count <= 1 {
+                    self.timed_destroy(guild_id, Duration::from_secs(HYDROGEN_EMPTY_CHAT_TIMEOUT))
                         .await;
 
-                        self.update_play_message(
-                            guild_id,
-                            &self
-                                .i18n
-                                .translate(&player.guild_locale(), "playing", "timeout_trigger")
-                                .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
-                            HYDROGEN_PRIMARY_COLOR,
-                            HydrogenPlayerState::Thinking,
-                            player.pause(),
-                            player.loop_type().await,
-                            None,
-                        )
-                        .await;
-                    } else {
-                        self.cancel_destroy(guild_id).await;
-                        self.update_now_playing(guild_id).await;
-                    }
+                    self.update_play_message(
+                        guild_id,
+                        &self
+                            .i18n
+                            .translate(&player.guild_locale(), "playing", "timeout_trigger")
+                            .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
+                        HYDROGEN_PRIMARY_COLOR,
+                        HydrogenPlayerState::Thinking,
+                        player.pause(),
+                        player.loop_type().await,
+                        None,
+                    )
+                    .await;
+                } else {
+                    self.cancel_destroy(guild_id).await;
+                    self.update_now_playing(guild_id).await;
                 }
             }
         }
@@ -390,7 +381,11 @@ impl HydrogenManager {
 
             if let Some(message) = messages.get(&guild_id) {
                 self.http
-                    .delete_message(player.text_channel_id().0, message.0)
+                    .delete_message(
+                        player.text_channel_id(),
+                        *message,
+                        Some("Message auto-deleted by timeout."),
+                    )
                     .await
                     .map_err(|e| HydrogenManagerError::Serenity(e))?;
             }
@@ -472,15 +467,13 @@ impl HydrogenManager {
             let mut author_obj = None;
             if let Some(author) = requester {
                 if let Ok(author_user) = author.to_user(self).await {
-                    let mut inner_author_obj = CreateEmbedAuthor::default();
-
-                    inner_author_obj.name(author_user.name.clone());
+                    let mut inner_author_obj = CreateEmbedAuthor::new(author_user.name.clone());
 
                     if let Some(avatar_url) = author_user.avatar_url() {
-                        inner_author_obj.icon_url(avatar_url);
+                        inner_author_obj = inner_author_obj.icon_url(avatar_url);
                     }
 
-                    author_obj = Some(inner_author_obj.to_owned());
+                    author_obj = Some(inner_author_obj);
                 }
             }
 
@@ -516,15 +509,19 @@ impl HydrogenManager {
 
         if let Some(player) = players.get(&guild_id) {
             if let Some(message) = messages.get(&guild_id) {
+                let mut embed = CreateEmbed::new();
+
+                if let Some(author_obj) = author_obj.clone() {
+                    embed = embed.author(author_obj);
+                }
+
                 match player
                     .text_channel_id()
-                    .edit_message(self.http.clone(), message, |message| {
-                        message
-                            .embed(|embed| {
-                                if let Some(author_obj) = author_obj.clone() {
-                                    embed.set_author(author_obj);
-                                }
-
+                    .edit_message(
+                        self.http.clone(),
+                        message,
+                        EditMessage::new()
+                            .embed(
                                 embed
                                     .title(self.i18n.translate(
                                         &player.guild_locale(),
@@ -533,22 +530,21 @@ impl HydrogenManager {
                                     ))
                                     .description(description)
                                     .color(color)
-                                    .footer(|footer| {
-                                        footer
-                                            .text(self.i18n.translate(
-                                                &player.guild_locale(),
-                                                "embed",
-                                                "footer_text",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL)
-                                    })
-                            })
-                            .set_components(Self::play_components(
+                                    .footer(
+                                        CreateEmbedFooter::new(self.i18n.translate(
+                                            &player.guild_locale(),
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL),
+                                    ),
+                            )
+                            .components(Self::play_components(
                                 player_state.clone(),
                                 paused,
                                 loop_type.clone(),
-                            ))
-                    })
+                            )),
+                    )
                     .await
                 {
                     Ok(_) => return,
@@ -560,14 +556,11 @@ impl HydrogenManager {
 
             match player
                 .text_channel_id()
-                .send_message(self.http.clone(), |message| {
-                    message
-                        .embed(|embed| {
-                            if let Some(author_obj) = author_obj {
-                                embed.set_author(author_obj);
-                            }
-
-                            embed
+                .send_message(
+                    self.http.clone(),
+                    CreateMessage::new()
+                        .add_embed(
+                            CreateEmbed::new()
                                 .title(self.i18n.translate(
                                     &player.guild_locale(),
                                     "playing",
@@ -575,18 +568,17 @@ impl HydrogenManager {
                                 ))
                                 .description(description)
                                 .color(color)
-                                .footer(|footer| {
-                                    footer
-                                        .text(self.i18n.translate(
-                                            &player.guild_locale(),
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                        .set_components(Self::play_components(player_state, paused, loop_type))
-                })
+                                .footer(
+                                    CreateEmbedFooter::new(self.i18n.translate(
+                                        &player.guild_locale(),
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        )
+                        .components(Self::play_components(player_state, paused, loop_type)),
+                )
                 .await
             {
                 Ok(v) => {
@@ -602,7 +594,7 @@ impl HydrogenManager {
         state: HydrogenPlayerState,
         paused: bool,
         loop_queue: LoopType,
-    ) -> CreateComponents {
+    ) -> Vec<CreateActionRow> {
         let mut prev_style = ButtonStyle::Primary;
         let mut pause_style = ButtonStyle::Primary;
         let mut skip_style = ButtonStyle::Primary;
@@ -612,7 +604,7 @@ impl HydrogenManager {
         let mut skip_disabled = false;
         let mut loop_disabled = false;
         let mut stop_disabled = false;
-        // QUEUE WILL REMAIN AS WIP UNTIL ALPHA 3.
+        // QUEUE WILL REMAIN AS WIP UNTIL ALPHA 4.
         let mut queue_disabled = true;
 
         let mut pause_emoji = ReactionType::Unicode(String::from("⏸"));
@@ -661,56 +653,36 @@ impl HydrogenManager {
             }
         }
 
-        CreateComponents::default()
-            .create_action_row(|action_row| {
-                action_row
-                    .create_button(|button| {
-                        button
-                            .custom_id("prev")
-                            .disabled(prev_disabled)
-                            .emoji('⏮')
-                            .style(prev_style)
-                    })
-                    .create_button(|button| {
-                        button
-                            .custom_id("pause")
-                            .disabled(pause_disabled)
-                            .emoji(pause_emoji)
-                            .style(pause_style)
-                    })
-                    .create_button(|button| {
-                        button
-                            .custom_id("skip")
-                            .disabled(skip_disabled)
-                            .emoji('⏭')
-                            .style(skip_style)
-                    })
-            })
-            .create_action_row(|action_row| {
-                action_row
-                    .create_button(|button| {
-                        button
-                            .custom_id("loop")
-                            .disabled(loop_disabled)
-                            .emoji(loop_emoji)
-                            .style(ButtonStyle::Secondary)
-                    })
-                    .create_button(|button| {
-                        button
-                            .custom_id("stop")
-                            .disabled(stop_disabled)
-                            .emoji('⏹')
-                            .style(ButtonStyle::Danger)
-                    })
-                    .create_button(|button| {
-                        button
-                            .custom_id("queue")
-                            .disabled(queue_disabled)
-                            .emoji(ReactionType::Unicode("ℹ️".to_owned()))
-                            .style(ButtonStyle::Secondary)
-                    })
-            })
-            .to_owned()
+        Vec::from(&[
+            CreateActionRow::Buttons(Vec::from(&[
+                CreateButton::new("prev")
+                    .disabled(prev_disabled)
+                    .emoji('⏮')
+                    .style(prev_style),
+                CreateButton::new("pause")
+                    .disabled(pause_disabled)
+                    .emoji(pause_emoji)
+                    .style(pause_style),
+                CreateButton::new("skip")
+                    .disabled(skip_disabled)
+                    .emoji('⏭')
+                    .style(skip_style),
+            ])),
+            CreateActionRow::Buttons(Vec::from(&[
+                CreateButton::new("loop")
+                    .disabled(loop_disabled)
+                    .emoji(loop_emoji)
+                    .style(ButtonStyle::Secondary),
+                CreateButton::new("stop")
+                    .disabled(stop_disabled)
+                    .emoji('⏹')
+                    .style(ButtonStyle::Danger),
+                CreateButton::new("queue")
+                    .disabled(queue_disabled)
+                    .emoji(ReactionType::Unicode("ℹ️".to_owned()))
+                    .style(ButtonStyle::Secondary),
+            ])),
+        ])
     }
 
     pub async fn get_loop_type(&self, guild_id: GuildId) -> LoopType {
