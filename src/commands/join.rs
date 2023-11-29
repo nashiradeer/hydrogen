@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use serenity::{
     all::{ChannelId, CommandInteraction, Guild, GuildId, UserId},
     builder::{CreateCommand, CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
-    cache::CacheRef,
     client::Context,
 };
 use songbird::{Call, Songbird};
@@ -20,10 +19,7 @@ pub struct JoinCommand;
 
 impl JoinCommand {
     #[inline]
-    fn get_channel_id(
-        guild: CacheRef<'_, GuildId, Guild>,
-        user_id: UserId,
-    ) -> Result<ChannelId, Result<(), String>> {
+    fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
         Ok(guild
             .voice_states
             .get(&user_id)
@@ -107,7 +103,8 @@ impl JoinCommand {
         let guild = context
             .cache
             .guild(guild_id)
-            .ok_or("guild isn't present in the cache".to_owned())?;
+            .ok_or("guild isn't present in the cache".to_owned())?
+            .clone();
 
         interaction
             .defer_ephemeral(&context.http)

@@ -106,7 +106,8 @@ impl HydrogenManager {
 
     pub async fn connect_lavalink(&self, node: LavalinkNodeInfo) -> Result<()> {
         let mut lavalink_vector = self.lavalink.write().await;
-        let lavalink = Lavalink::connect(node, self.cache.current_user().id.get(), self.clone())
+        let user_id = self.cache.current_user().id.get();
+        let lavalink = Lavalink::connect(node, user_id, self.clone())
             .await
             .map_err(|e| HydrogenManagerError::Lavalink(e))?;
         lavalink_vector.push(lavalink);
@@ -305,7 +306,8 @@ impl HydrogenManager {
             let channel = self
                 .cache
                 .channel(channel_id.0)
-                .ok_or(HydrogenManagerError::GuildChannelNotFound)?;
+                .ok_or(HydrogenManagerError::GuildChannelNotFound)?
+                .clone();
 
             if channel.kind == ChannelType::Voice || channel.kind == ChannelType::Stage {
                 let members_count = channel
