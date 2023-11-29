@@ -4,10 +4,14 @@ use async_trait::async_trait;
 use async_tungstenite::{
     stream::Stream,
     tokio::{connect_async, TokioAdapter},
-    tungstenite::handshake::client::Request,
+    tungstenite::{
+        self,
+        handshake::client::generate_key,
+        http::{self, Request},
+        Message,
+    },
     WebSocketStream,
 };
-use base64::{prelude::BASE64_STANDARD, Engine};
 use futures::{stream::SplitStream, SinkExt, StreamExt};
 use reqwest::{
     header::{HeaderMap, InvalidHeaderValue},
@@ -21,7 +25,6 @@ use tokio::{
     time::sleep,
 };
 use tokio_rustls::client::TlsStream;
-use tungstenite::Message;
 
 use crate::LAVALINK_CONNECTION_TIMEOUT;
 
@@ -75,7 +78,7 @@ pub trait LavalinkHandler {
 
 #[derive(Debug)]
 pub enum LavalinkError {
-    Http(tungstenite::http::Error),
+    Http(http::Error),
     WebSocket(tungstenite::Error),
     Reqwest(reqwest::Error),
     InvalidHeaderValue(InvalidHeaderValue),
@@ -380,11 +383,6 @@ async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
     }
     *origin.connected.write().await = LavalinkConnection::Disconnected;
     handler.lavalink_disconnect(origin).await;
-}
-
-fn generate_key() -> String {
-    let r: [u8; 16] = rand::random();
-    BASE64_STANDARD.encode(&r)
 }
 
 fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {
