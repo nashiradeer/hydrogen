@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::{
-        application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId,
-        Guild, GuildId, UserId,
+    all::{ChannelId, CommandInteraction, CommandOptionType, Guild, GuildId, UserId},
+    builder::{
+        CreateCommand, CreateCommandOption, CreateEmbed, CreateEmbedFooter, EditInteractionResponse,
     },
-    prelude::Context,
+    cache::CacheRef,
+    client::Context,
 };
 use songbird::{Call, Songbird};
 use tokio::sync::Mutex;
@@ -22,7 +22,10 @@ pub struct PlayCommand;
 
 impl PlayCommand {
     #[inline]
-    fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
+    fn get_channel_id(
+        guild: CacheRef<'_, GuildId, Guild>,
+        user_id: UserId,
+    ) -> Result<ChannelId, Result<(), String>> {
         Ok(guild
             .voice_states
             .get(&user_id)
@@ -39,56 +42,57 @@ impl PlayCommand {
     async fn join_channel<'a>(
         hydrogen: &'a HydrogenContext,
         context: &'a Context,
-        interaction: &'a ApplicationCommandInteraction,
+        interaction: &'a CommandInteraction,
         voice_manager: &'a Arc<Songbird>,
         guild_id: GuildId,
         channel_id: ChannelId,
     ) -> Result<Arc<Mutex<Call>>, String> {
-        let voice = voice_manager.join_gateway(guild_id, channel_id).await;
-        Ok(match voice.1 {
-            Ok(_) => voice.0,
-            Err(e) => {
-                if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "play",
-                                    "embed_title",
-                                ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "play",
-                                    "cant_connect",
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
+        Ok(
+            match voice_manager.join_gateway(guild_id, channel_id).await {
+                Ok(v) => v.1,
+                Err(e) => {
+                    if let Err(e) = interaction
+                        .edit_response(
+                            &context.http,
+                            EditInteractionResponse::new().embed(
+                                CreateEmbed::new()
+                                    .title(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "play",
+                                        "embed_title",
+                                    ))
+                                    .description(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "play",
+                                        "cant_connect",
+                                    ))
+                                    .color(HYDROGEN_ERROR_COLOR)
+                                    .footer(
+                                        CreateEmbedFooter::new(hydrogen.i18n.translate(
                                             &interaction.locale,
                                             "embed",
                                             "footer_text",
                                         ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
-                    .await
-                {
-                    warn!("can't response to interaction: {:?}", e);
-                }
+                                        .icon_url(HYDROGEN_LOGO_URL),
+                                    ),
+                            ),
+                        )
+                        .await
+                    {
+                        warn!("can't response to interaction: {:?}", e);
+                    }
 
-                return Err(format!("can't connect to voice chat: {}", e));
-            }
-        })
+                    return Err(format!("can't connect to voice chat: {}", e));
+                }
+            },
+        )
     }
 
     #[inline]
     fn get_message<'a>(
         result: HydrogenPlayCommand,
         hydrogen: &'a HydrogenContext,
-        interaction: &'a ApplicationCommandInteraction,
+        interaction: &'a CommandInteraction,
     ) -> String {
         if let Some(track) = result.track {
             if result.playing && result.count == 1 {
@@ -181,7 +185,7 @@ impl PlayCommand {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     ) -> Result<(), String> {
         let query = interaction
             .data
@@ -190,7 +194,6 @@ impl PlayCommand {
             .ok_or("required 'query' parameter missing".to_owned())?
             .value
             .clone()
-            .ok_or("required 'query' parameter missing".to_owned())?
             .as_str()
             .ok_or("can't convert required 'query' to str".to_owned())?
             .to_owned();
@@ -221,9 +224,10 @@ impl PlayCommand {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "play",
@@ -235,17 +239,16 @@ impl PlayCommand {
                                     "unknown_voice_state",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -287,9 +290,10 @@ impl PlayCommand {
             if let Some(channel_id) = connection_info.channel_id {
                 if channel_id != voice_channel_id.into() {
                     if let Err(e) = interaction
-                        .edit_original_interaction_response(&context.http, |response| {
-                            response.embed(|embed| {
-                                embed
+                        .edit_response(
+                            &context.http,
+                            EditInteractionResponse::new().embed(
+                                CreateEmbed::new()
                                     .title(hydrogen.i18n.translate(
                                         &interaction.locale,
                                         "play",
@@ -301,17 +305,16 @@ impl PlayCommand {
                                         "is_not_same_voice",
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
-                                    .footer(|footer| {
-                                        footer
-                                            .text(hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "embed",
-                                                "footer_text",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL)
-                                    })
-                            })
-                        })
+                                    .footer(
+                                        CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL),
+                                    ),
+                            ),
+                        )
                         .await
                     {
                         warn!("can't response to interaction: {:?}", e);
@@ -338,9 +341,10 @@ impl PlayCommand {
 
         if result.count > 0 {
             if let Err(e) = interaction
-                .edit_original_interaction_response(&context.http, |response| {
-                    response.embed(|embed| {
-                        embed
+                .edit_response(
+                    &context.http,
+                    EditInteractionResponse::new().embed(
+                        CreateEmbed::new()
                             .title(hydrogen.i18n.translate(
                                 &interaction.locale,
                                 "play",
@@ -348,17 +352,16 @@ impl PlayCommand {
                             ))
                             .description(Self::get_message(result, &hydrogen, &interaction))
                             .color(HYDROGEN_PRIMARY_COLOR)
-                            .footer(|footer| {
-                                footer
-                                    .text(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "embed",
-                                        "footer_text",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL)
-                            })
-                    })
-                })
+                            .footer(
+                                CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "embed",
+                                    "footer_text",
+                                ))
+                                .icon_url(HYDROGEN_LOGO_URL),
+                            ),
+                    ),
+                )
                 .await
             {
                 warn!("can't response to interaction: {:?}", e);
@@ -366,9 +369,10 @@ impl PlayCommand {
         } else {
             if !result.truncated {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "play",
@@ -380,26 +384,26 @@ impl PlayCommand {
                                     "not_found",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
                 }
             } else {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "play",
@@ -411,17 +415,16 @@ impl PlayCommand {
                                     "truncated",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -435,31 +438,33 @@ impl PlayCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for PlayCommand {
-    fn register<'a, 'b>(
-        &'a self,
-        i18n: HydrogenI18n,
-        command: &'b mut CreateApplicationCommand,
-    ) -> &'b mut CreateApplicationCommand {
-        i18n.translate_application_command_name("play", "name", command);
-        i18n.translate_application_command_description("play", "description", command);
+    fn register<'a, 'b>(&'a self, i18n: HydrogenI18n) -> CreateCommand {
+        let mut command = CreateCommand::new("play");
+
+        command = i18n.translate_application_command_name("play", "name", command);
+        command = i18n.translate_application_command_description("play", "description", command);
 
         command
             .description(
                 "Searches and plays the requested song, initializing the player if necessary.",
             )
-            .create_option(|option| {
-                i18n.translate_application_command_option_name("play", "query_name", option);
-                i18n.translate_application_command_option_description(
+            .add_option({
+                let mut option = CreateCommandOption::new(
+                    CommandOptionType::String,
+                    "query",
+                    "The query to search for.",
+                )
+                .required(true);
+
+                option =
+                    i18n.translate_application_command_option_name("play", "query_name", option);
+                option = i18n.translate_application_command_option_description(
                     "play",
                     "query_description",
                     option,
                 );
 
                 option
-                    .kind(CommandOptionType::String)
-                    .name("query")
-                    .description("The query to search for.")
-                    .required(true)
             })
             .dm_permission(false)
     }
@@ -468,7 +473,7 @@ impl HydrogenCommandListener for PlayCommand {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     ) {
         if let Err(e) = self._execute(hydrogen, context, interaction).await {
             warn!("{}", e);

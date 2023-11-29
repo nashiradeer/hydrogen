@@ -2,11 +2,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::{
-        application_command::ApplicationCommandInteraction, ChannelId, Guild, GuildId, UserId,
-    },
-    prelude::Context,
+    all::{ChannelId, CommandInteraction, Guild, GuildId, UserId},
+    builder::{CreateCommand, CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
+    cache::CacheRef,
+    client::Context,
 };
 use songbird::{Call, Songbird};
 use tokio::sync::Mutex;
@@ -21,7 +20,10 @@ pub struct JoinCommand;
 
 impl JoinCommand {
     #[inline]
-    fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
+    fn get_channel_id(
+        guild: CacheRef<'_, GuildId, Guild>,
+        user_id: UserId,
+    ) -> Result<ChannelId, Result<(), String>> {
         Ok(guild
             .voice_states
             .get(&user_id)
@@ -38,56 +40,57 @@ impl JoinCommand {
     async fn join_channel<'a>(
         hydrogen: &'a HydrogenContext,
         context: &'a Context,
-        interaction: &'a ApplicationCommandInteraction,
+        interaction: &'a CommandInteraction,
         voice_manager: &'a Arc<Songbird>,
         guild_id: GuildId,
         channel_id: ChannelId,
     ) -> Result<Arc<Mutex<Call>>, String> {
-        let voice = voice_manager.join_gateway(guild_id, channel_id).await;
-        Ok(match voice.1 {
-            Ok(_) => voice.0,
-            Err(e) => {
-                if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "join",
-                                    "embed_title",
-                                ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "join",
-                                    "cant_connect",
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
+        Ok(
+            match voice_manager.join_gateway(guild_id, channel_id).await {
+                Ok(v) => v.1,
+                Err(e) => {
+                    if let Err(e) = interaction
+                        .edit_response(
+                            &context.http,
+                            EditInteractionResponse::new().embed(
+                                CreateEmbed::new()
+                                    .title(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "join",
+                                        "embed_title",
+                                    ))
+                                    .description(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "join",
+                                        "cant_connect",
+                                    ))
+                                    .color(HYDROGEN_ERROR_COLOR)
+                                    .footer(
+                                        CreateEmbedFooter::new(hydrogen.i18n.translate(
                                             &interaction.locale,
                                             "embed",
                                             "footer_text",
                                         ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
-                    .await
-                {
-                    warn!("can't response to interaction: {:?}", e);
-                }
+                                        .icon_url(HYDROGEN_LOGO_URL),
+                                    ),
+                            ),
+                        )
+                        .await
+                    {
+                        warn!("can't response to interaction: {:?}", e);
+                    }
 
-                return Err(format!("can't connect to voice chat: {}", e));
-            }
-        })
+                    return Err(format!("can't connect to voice chat: {}", e));
+                }
+            },
+        )
     }
 
     async fn _execute(
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     ) -> Result<(), String> {
         let manager = hydrogen
             .manager
@@ -113,9 +116,10 @@ impl JoinCommand {
 
         if manager.contains_player(guild_id).await {
             if let Err(e) = interaction
-                .edit_original_interaction_response(&context.http, |response| {
-                    response.embed(|embed| {
-                        embed
+                .edit_response(
+                    &context.http,
+                    EditInteractionResponse::new().embed(
+                        CreateEmbed::new()
                             .title(hydrogen.i18n.translate(
                                 &interaction.locale,
                                 "join",
@@ -127,17 +131,16 @@ impl JoinCommand {
                                 "player_exists",
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
-                            .footer(|footer| {
-                                footer
-                                    .text(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "embed",
-                                        "footer_text",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL)
-                            })
-                    })
-                })
+                            .footer(
+                                CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "embed",
+                                    "footer_text",
+                                ))
+                                .icon_url(HYDROGEN_LOGO_URL),
+                            ),
+                    ),
+                )
                 .await
             {
                 warn!("can't response to interaction: {:?}", e);
@@ -148,9 +151,10 @@ impl JoinCommand {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "join",
@@ -162,17 +166,16 @@ impl JoinCommand {
                                     "unknown_voice_state",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -205,9 +208,10 @@ impl JoinCommand {
             .map_err(|e| e.to_string())?;
 
         if let Err(e) = interaction
-            .edit_original_interaction_response(&context.http, |response| {
-                response.embed(|embed| {
-                    embed
+            .edit_response(
+                &context.http,
+                EditInteractionResponse::new().embed(
+                    CreateEmbed::new()
                         .title(
                             hydrogen
                                 .i18n
@@ -219,17 +223,16 @@ impl JoinCommand {
                             "success",
                         ))
                         .color(HYDROGEN_PRIMARY_COLOR)
-                        .footer(|footer| {
-                            footer
-                                .text(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "embed",
-                                    "footer_text",
-                                ))
-                                .icon_url(HYDROGEN_LOGO_URL)
-                        })
-                })
-            })
+                        .footer(
+                            CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                &interaction.locale,
+                                "embed",
+                                "footer_text",
+                            ))
+                            .icon_url(HYDROGEN_LOGO_URL),
+                        ),
+                ),
+            )
             .await
         {
             warn!("can't response to interaction: {:?}", e);
@@ -241,13 +244,11 @@ impl JoinCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for JoinCommand {
-    fn register<'a, 'b>(
-        &'a self,
-        i18n: HydrogenI18n,
-        command: &'b mut CreateApplicationCommand,
-    ) -> &'b mut CreateApplicationCommand {
-        i18n.translate_application_command_name("join", "name", command);
-        i18n.translate_application_command_description("join", "description", command);
+    fn register(&self, i18n: HydrogenI18n) -> CreateCommand {
+        let mut command = CreateCommand::new("join");
+
+        command = i18n.translate_application_command_name("join", "name", command);
+        command = i18n.translate_application_command_description("join", "description", command);
 
         command
             .description("Connects me to your voice chat by starting a music player without playing anything.")
@@ -258,7 +259,7 @@ impl HydrogenCommandListener for JoinCommand {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     ) {
         if let Err(e) = self._execute(hydrogen, context, interaction).await {
             warn!("{}", e);

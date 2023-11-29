@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::prelude::{
-        application_command::ApplicationCommandInteraction, command::CommandOptionType, ChannelId,
-        Guild, UserId,
+    all::{ChannelId, CommandInteraction, CommandOptionType, Guild, GuildId, UserId},
+    builder::{
+        CreateCommand, CreateCommandOption, CreateEmbed, CreateEmbedFooter, EditInteractionResponse,
     },
-    prelude::Context,
+    cache::CacheRef,
+    client::Context,
 };
 use tracing::warn;
 
@@ -18,7 +18,10 @@ pub struct SeekCommand;
 
 impl SeekCommand {
     #[inline]
-    fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
+    fn get_channel_id(
+        guild: CacheRef<'_, GuildId, Guild>,
+        user_id: UserId,
+    ) -> Result<ChannelId, Result<(), String>> {
         Ok(guild
             .voice_states
             .get(&user_id)
@@ -146,7 +149,7 @@ impl SeekCommand {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     ) -> Result<(), String> {
         interaction
             .defer_ephemeral(&context.http)
@@ -160,7 +163,6 @@ impl SeekCommand {
             .ok_or("required 'time' parameter missing".to_owned())?
             .value
             .clone()
-            .ok_or("required 'time' parameter missing".to_owned())?
             .as_str()
             .ok_or("can't convert required 'time' to str".to_owned())?
             .to_owned();
@@ -182,9 +184,10 @@ impl SeekCommand {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "seek",
@@ -196,17 +199,16 @@ impl SeekCommand {
                                     "unknown_voice_state",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -221,9 +223,10 @@ impl SeekCommand {
                     Ok(v) => v,
                     Err(e) => {
                         if let Err(e) = interaction
-                            .edit_original_interaction_response(&context.http, |response| {
-                                response.embed(|embed| {
-                                    embed
+                            .edit_response(
+                                &context.http,
+                                EditInteractionResponse::new().embed(
+                                    CreateEmbed::new()
                                         .title(hydrogen.i18n.translate(
                                             &interaction.locale,
                                             "seek",
@@ -235,17 +238,16 @@ impl SeekCommand {
                                             "invalid_syntax",
                                         ))
                                         .color(HYDROGEN_ERROR_COLOR)
-                                        .footer(|footer| {
-                                            footer
-                                                .text(hydrogen.i18n.translate(
-                                                    &interaction.locale,
-                                                    "embed",
-                                                    "footer_text",
-                                                ))
-                                                .icon_url(HYDROGEN_LOGO_URL)
-                                        })
-                                })
-                            })
+                                        .footer(
+                                            CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "embed",
+                                                "footer_text",
+                                            ))
+                                            .icon_url(HYDROGEN_LOGO_URL),
+                                        ),
+                                ),
+                            )
                             .await
                         {
                             warn!("can't response to interaction: {:?}", e);
@@ -259,9 +261,10 @@ impl SeekCommand {
                     Ok(Some(v)) => v,
                     Ok(None) => {
                         if let Err(e) = interaction
-                            .edit_original_interaction_response(&context.http, |response| {
-                                response.embed(|embed| {
-                                    embed
+                            .edit_response(
+                                &context.http,
+                                EditInteractionResponse::new().embed(
+                                    CreateEmbed::new()
                                         .title(hydrogen.i18n.translate(
                                             &interaction.locale,
                                             "seek",
@@ -273,17 +276,16 @@ impl SeekCommand {
                                             "empty_queue",
                                         ))
                                         .color(HYDROGEN_ERROR_COLOR)
-                                        .footer(|footer| {
-                                            footer
-                                                .text(hydrogen.i18n.translate(
-                                                    &interaction.locale,
-                                                    "embed",
-                                                    "footer_text",
-                                                ))
-                                                .icon_url(HYDROGEN_LOGO_URL)
-                                        })
-                                })
-                            })
+                                        .footer(
+                                            CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "embed",
+                                                "footer_text",
+                                            ))
+                                            .icon_url(HYDROGEN_LOGO_URL),
+                                        ),
+                                ),
+                            )
                             .await
                         {
                             warn!("can't response to interaction: {:?}", e);
@@ -323,9 +325,10 @@ impl SeekCommand {
                 }
 
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "seek",
@@ -333,26 +336,26 @@ impl SeekCommand {
                                 ))
                                 .description(translation_message)
                                 .color(HYDROGEN_PRIMARY_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
                 }
             } else {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "seek",
@@ -364,17 +367,16 @@ impl SeekCommand {
                                     "not_same_voice_chat",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -382,9 +384,10 @@ impl SeekCommand {
             }
         } else {
             if let Err(e) = interaction
-                .edit_original_interaction_response(&context.http, |response| {
-                    response.embed(|embed| {
-                        embed
+                .edit_response(
+                    &context.http,
+                    EditInteractionResponse::new().embed(
+                        CreateEmbed::new()
                             .title(hydrogen.i18n.translate(
                                 &interaction.locale,
                                 "seek",
@@ -396,17 +399,16 @@ impl SeekCommand {
                                 "player_not_exists",
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
-                            .footer(|footer| {
-                                footer
-                                    .text(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "embed",
-                                        "footer_text",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL)
-                            })
-                    })
-                })
+                            .footer(
+                                CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "embed",
+                                    "footer_text",
+                                ))
+                                .icon_url(HYDROGEN_LOGO_URL),
+                            ),
+                    ),
+                )
                 .await
             {
                 warn!("can't response to interaction: {:?}", e);
@@ -419,29 +421,31 @@ impl SeekCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for SeekCommand {
-    fn register<'a, 'b>(
-        &'a self,
-        i18n: HydrogenI18n,
-        command: &'b mut CreateApplicationCommand,
-    ) -> &'b mut CreateApplicationCommand {
-        i18n.translate_application_command_name("seek", "name", command);
-        i18n.translate_application_command_description("seek", "description", command);
+    fn register(&self, i18n: HydrogenI18n) -> CreateCommand {
+        let mut command = CreateCommand::new("seek");
+
+        command = i18n.translate_application_command_name("seek", "name", command);
+        command = i18n.translate_application_command_description("seek", "description", command);
 
         command
             .description("Sets the current playback time of the song..")
-            .create_option(|option| {
-                i18n.translate_application_command_option_name("seek", "time_name", option);
-                i18n.translate_application_command_option_description(
+            .add_option({
+                let mut option = CreateCommandOption::new(
+                    CommandOptionType::String,
+                    "time",
+                    "The time to be set on the player.",
+                )
+                .required(true);
+
+                option =
+                    i18n.translate_application_command_option_name("seek", "time_name", option);
+                option = i18n.translate_application_command_option_description(
                     "seek",
                     "time_description",
                     option,
                 );
 
                 option
-                    .kind(CommandOptionType::String)
-                    .name("time")
-                    .description("The time to be set on the player.")
-                    .required(true)
             })
             .dm_permission(false)
     }
@@ -450,7 +454,7 @@ impl HydrogenCommandListener for SeekCommand {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     ) {
         if let Err(e) = self._execute(hydrogen, context, interaction).await {
             warn!("{}", e);
