@@ -72,7 +72,7 @@ tls             = "true" / "enabled" / "on"
 
 ## Credits
 
-Hydrogen is a project by Nashira Deer, based another Nashira Deer's Discord Bot, Hellion, and licensed under the [GNU General Public License v3](https://github.com/nashiradeer/hydrogen/blob/main/LICENSE.txt).
+Hydrogen is a project by Nashira Deer, based on another Nashira Deer's Discord Bot, Hellion, and licensed under the [GNU General Public License v3](https://github.com/nashiradeer/hydrogen/blob/main/LICENSE.txt).
 
 ### Third-party projects
 
