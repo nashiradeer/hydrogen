@@ -7,6 +7,7 @@
         "rustls",
         "seekable",
         "serde",
-        "tungstenite"
+        "tungstenite",
+        "ytsearch"
     ]
 }
