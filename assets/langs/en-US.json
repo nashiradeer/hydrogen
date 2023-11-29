@@ -1,59 +1,54 @@
 {
-    "embed": {
-        "footer_text": "Hydrogen by DeerSoftware"
+    "generic": {
+        "embed_footer": "Hydrogen by Nashira Deer"
+    },
+    "error": {
+        "not_intentional": "If you believe this is an error, please report it [here]({bug_url}).",
+        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.",
+        "cant_connect": "Unable to connect to your voice chat, please check that I have permission to access it.",
+        "not_same_voice": "A music player was found but apparently you are not in the same voice chat as it.",
+        "player_exists": "It's not possible to start a new music player while one already exists for that server.",
+        "player_not_exists": "Could not find a music player on that server.",
+        "cant_pause": "Unable to pause/resume this song.",
+        "empty_queue": "There're no songs in the queue."
     },
     "play": {
         "name": "play",
         "description": "Plays or queues a song in the music player, starting a new player if it doesn't already exist.",
         "query_name": "query",
         "query_description": "The query parameter, which can be a URL or a term to be searched for on YouTube.",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "cant_connect": "Unable to connect to your voice chat, please check that I have permission to access it.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "is_not_same_voice": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "embed_title": "Playing songs",
-        "playing_one_uri": "Playing the song [**${music}**](${uri}) by **${author}**.",
-        "playing_one": "Playing the song **${music}** by **${author}**.",
-        "enqueue_one_uri": "The song [**${music}**](${uri}) by **${author}** has been added to the queue.",
-        "enqueue_one": "The song **${music}** by **${author}** has been added to the queue.",
-        "playing_playlist_uri": "**${count}** songs from your playlist have been queued, [**${music}**](${uri}) from **${author}** has been selected to play now.",
-        "playing_playlist_uri_truncated": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**\n\n**${count}** songs from your playlist have been queued, [**${music}**](${uri}) from **${author}** has been selected to play now.",
-        "playing_playlist": "**${count}** songs from your playlist have been queued, **${music}** from **${author}** has been selected to play now.",
-        "playing_playlist_truncated": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**\n\n**${count}** songs from your playlist have been queued, **${music}** from **${author}** has been selected to play now.",
-        "enqueue_playlist": "**${count}** songs from your playlist have been queued.",
-        "enqueue_playlist_truncated": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**\n\n**${count}** songs from your playlist have been queued.",
-        "not_found": "Nothing was found with the query parameter, it is possible that it does not exist or that I do not have access.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "truncated": "It's not possible to add more songs to the queue as the queue is already at the allowed limit, please remove some songs before trying again.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues)."
+        "play_single": "Playing the song **{song_name}** by **{song_author}**.",
+        "play_single_url": "Playing the song [**{song_name}**]({song_url}) by **{song_author}**.",
+        "play_multi": "**{songs_count}** songs from your playlist have been queued, **{song_name}** from **{song_author}** has been selected to play now.",
+        "play_multi_url": "**{songs_count}** songs from your playlist have been queued, [**{song_name}**]({song_url}) from **{song_author}** has been selected to play now.",
+        "enqueue_single": "The song **{song_name}** by **{song_author}** has been added to the queue.",
+        "enqueue_single_url": "The song [**{song_name}**]({song_url}) by **{song_author}** has been added to the queue.",
+        "enqueue_multi": "**{songs_count}** songs from your playlist have been queued.",
+        "truncated": "It's not possible to add more songs to the queue as the queue is already at the allowed limit, please remove some songs before trying again.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
+        "truncated_warn": "**Warning: The playlist is much larger than the queue size limit, the total number of songs added to the queue has been truncated.**"
     },
-    "playing": {
+    "player": {
         "title": "Hydrogen: Music Player",
-        "description_uri": "[**${music}**](${uri})\n${author}",
-        "description": "**${music}**\n${author}",
+        "description_with_url": "[**{song_name}**]({song_url})\n{song_author}",
+        "description": "**{song_name}**\n{song_author}",
         "empty": "_There's nothing currently playing_",
-        "timeout_trigger": "There're no more listeners on the voice chat I'm connected to, leaving in ${time} seconds..."
+        "timeout": "There're no more listeners on the voice chat I'm connected to, leaving in {time} seconds..."
     },
     "join": {
         "name": "join",
         "description": "Connects me to your voice chat by starting a music player without playing anything.",
         "embed_title": "Joining to the voice chat",
-        "player_exists": "It's not possible to start a new music player while one already exists for that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "cant_connect": "Unable to connect to your voice chat, please check that I have permission to access it.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "success": "All ready! The music player has already started and I'm already connected to your voice chat."
+        "joined": "All ready! The music player has already started and I'm already connected to your voice chat."
     },
     "stop": {
         "embed_title": "Stopping the music player",
-        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "success": "The music player has stopped, thanks for using Hydrogen, hope to see you soon."
+        "stopped": "The music player has stopped, thanks for using Hydrogen, hope to see you soon."
     },
     "loop": {
         "embed_title": "Looping the queue",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "success": "The queue's loop mode has been changed to: **${loop}**.",
-        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "autostart": "Normal",
+        "looping": "The queue's loop mode has been changed to: **{loop}**.",
+        "autostart": "Autostart enabled",
         "no_autostart": "Autostart disabled",
         "music": "Music",
         "queue": "Queue",
@@ -61,41 +56,23 @@
     },
     "pause": {
         "embed_title": "Pausing/Resuming the music player",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "cant_pause": "Unable to pause/resume this song.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
         "paused": "The music player has been paused.",
         "resumed": "The music player has been resumed."
     },
     "skip": {
         "embed_title": "Skipping to the next song",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "cant_pause": "Unable to pause/resume this song.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "empty_queue": "There're no songs in the queue.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "success_uri": "Skipping to the song [**${music}**](${uri}) by **${author}**.",
-        "success": "Skipping to the song **${music}** by **${author}**."
+        "skipping": "Skipping to the song **{song_name}** by **{song_author}**.",
+        "skipping_url": "Skipping to the song [**{song_name}**]({song_url}) by **{song_author}**."
     },
     "prev": {
         "embed_title": "Going back to the previous song",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "cant_pause": "Unable to pause/resume this song.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "empty_queue": "There're no songs in the queue.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "success_uri": "Going back to the song [**${music}**](${uri}) by **${author}**.",
-        "success": "Going back to the previous song **${music}** by **${author}**."
+        "returning": "Going back to the previous song **{song_name}** by **{song_author}**.",
+        "returning_url": "Going back to the song [**{song_name}**]({song_url}) by **{song_author}**."
     },
     "seek": {
         "embed_title": "Seeking music time",
-        "unknown_voice_state": "Unable to determine which voice chat you are in, please join a voice chat or check my permissions if you are already in one.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "not_same_voice_chat": "A music player was found but apparently you are not in the same voice chat as it.\nIf you believe this is an error, report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "player_not_exists": "Could not find a music player on that server.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "invalid_syntax": "Unable to understand the requested song time.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "empty_queue": "There're no songs in the queue.\nIf you believe this is an error, please report it [here](https://gitlab.com/deersoftware/hydrogen/-/issues).",
-        "success_uri": "[**${music}**](${uri})\n${author}\n``${current}/${total}``\n${bar}",
-        "success": "**${music}**\n${author}\n``${current}/${total}``\n${bar}"
+        "invalid_syntax": "Unable to understand the requested song time.",
+        "seeking": "**{song_name}**\n{song_author}\n``{time_current}/{time_total}``\n{progress_bar}",
+        "seeking_url": "[**{song_name}**]({song_url})\n{song_author}\n``{time_current}/{time_total}``\n{progress_bar}"
     }
 }
