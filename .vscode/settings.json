@@ -2,11 +2,13 @@
     "cSpell.words": [
         "lavalink",
         "libc",
+        "loadtracks",
         "oneshot",
         "reqwest",
         "rustls",
         "seekable",
         "serde",
-        "tungstenite"
+        "tungstenite",
+        "ytsearch"
     ]
 }

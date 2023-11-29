@@ -4,12 +4,19 @@ use async_trait::async_trait;
 use async_tungstenite::{
     stream::Stream,
     tokio::{connect_async, TokioAdapter},
+    tungstenite::{
+        self,
+        handshake::client::generate_key,
+        http::{self, Request},
+        Message,
+    },
     WebSocketStream,
 };
-use base64::{prelude::BASE64_STANDARD, Engine};
 use futures::{stream::SplitStream, SinkExt, StreamExt};
-use http::{header::InvalidHeaderValue, HeaderMap, Request};
-use reqwest::Client;
+use reqwest::{
+    header::{HeaderMap, InvalidHeaderValue},
+    Client,
+};
 use serde::Deserialize;
 use tokio::{
     net::TcpStream,
@@ -18,7 +25,6 @@ use tokio::{
     time::sleep,
 };
 use tokio_rustls::client::TlsStream;
-use tungstenite::Message;
 
 use crate::LAVALINK_CONNECTION_TIMEOUT;
 
@@ -169,6 +175,7 @@ impl Lavalink {
             .or_else(|e| Err(LavalinkError::WebSocket(e)))?
             .0
             .split();
+
         let lavalink = Self {
             session_id: Arc::new(RwLock::new(String::new())),
             host: Arc::new(node.host),
@@ -376,11 +383,6 @@ async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
     }
     *origin.connected.write().await = LavalinkConnection::Disconnected;
     handler.lavalink_disconnect(origin).await;
-}
-
-fn generate_key() -> String {
-    let r: [u8; 16] = rand::random();
-    BASE64_STANDARD.encode(&r)
 }
 
 fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {

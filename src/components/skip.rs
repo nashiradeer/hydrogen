@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use serenity::{
-    model::prelude::{message_component::MessageComponentInteraction, ChannelId, Guild, UserId},
-    prelude::Context,
+    all::{ChannelId, ComponentInteraction, Guild, GuildId, UserId},
+    builder::{CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
+    cache::CacheRef,
+    client::Context,
 };
 use tracing::warn;
 
@@ -14,7 +16,10 @@ pub struct SkipComponent;
 
 impl SkipComponent {
     #[inline]
-    fn get_channel_id(guild: Guild, user_id: UserId) -> Result<ChannelId, Result<(), String>> {
+    fn get_channel_id(
+        guild: CacheRef<'_, GuildId, Guild>,
+        user_id: UserId,
+    ) -> Result<ChannelId, Result<(), String>> {
         Ok(guild
             .voice_states
             .get(&user_id)
@@ -31,7 +36,7 @@ impl SkipComponent {
     fn get_message<'a>(
         track: HydrogenMusic,
         hydrogen: &'a HydrogenContext,
-        interaction: &'a MessageComponentInteraction,
+        interaction: &'a ComponentInteraction,
     ) -> String {
         if let Some(uri) = track.uri {
             return hydrogen
@@ -53,7 +58,7 @@ impl SkipComponent {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: MessageComponentInteraction,
+        interaction: ComponentInteraction,
     ) -> Result<(), String> {
         interaction
             .defer_ephemeral(&context.http)
@@ -78,9 +83,10 @@ impl SkipComponent {
             Ok(v) => v,
             Err(e) => {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "skip",
@@ -92,17 +98,16 @@ impl SkipComponent {
                                     "unknown_voice_state",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -117,9 +122,10 @@ impl SkipComponent {
                     Ok(v) => v,
                     Err(e) => {
                         if let Err(e) = interaction
-                            .edit_original_interaction_response(&context.http, |response| {
-                                response.embed(|embed| {
-                                    embed
+                            .edit_response(
+                                &context.http,
+                                EditInteractionResponse::new().embed(
+                                    CreateEmbed::new()
                                         .title(hydrogen.i18n.translate(
                                             &interaction.locale,
                                             "skip",
@@ -131,17 +137,16 @@ impl SkipComponent {
                                             "player_not_exists",
                                         ))
                                         .color(HYDROGEN_ERROR_COLOR)
-                                        .footer(|footer| {
-                                            footer
-                                                .text(hydrogen.i18n.translate(
-                                                    &interaction.locale,
-                                                    "embed",
-                                                    "footer_text",
-                                                ))
-                                                .icon_url(HYDROGEN_LOGO_URL)
-                                        })
-                                })
-                            })
+                                        .footer(
+                                            CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "embed",
+                                                "footer_text",
+                                            ))
+                                            .icon_url(HYDROGEN_LOGO_URL),
+                                        ),
+                                ),
+                            )
                             .await
                         {
                             warn!("can't response to interaction: {:?}", e);
@@ -153,9 +158,10 @@ impl SkipComponent {
 
                 let Some(music) = music else {
                     if let Err(e) = interaction
-                        .edit_original_interaction_response(&context.http, |response| {
-                            response.embed(|embed| {
-                                embed
+                        .edit_response(
+                            &context.http,
+                            EditInteractionResponse::new().embed(
+                                CreateEmbed::new()
                                     .title(hydrogen.i18n.translate(
                                         &interaction.locale,
                                         "skip",
@@ -167,17 +173,16 @@ impl SkipComponent {
                                         "empty_queue",
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
-                                    .footer(|footer| {
-                                        footer
-                                            .text(hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "embed",
-                                                "footer_text",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL)
-                                    })
-                            })
-                        })
+                                    .footer(
+                                        CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "embed",
+                                            "footer_text",
+                                        ))
+                                        .icon_url(HYDROGEN_LOGO_URL),
+                                    ),
+                            ),
+                        )
                         .await
                     {
                         warn!("can't response to interaction: {:?}", e);
@@ -187,9 +192,10 @@ impl SkipComponent {
                 };
 
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "skip",
@@ -197,26 +203,26 @@ impl SkipComponent {
                                 ))
                                 .description(Self::get_message(music, &hydrogen, &interaction))
                                 .color(HYDROGEN_PRIMARY_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
                 }
             } else {
                 if let Err(e) = interaction
-                    .edit_original_interaction_response(&context.http, |response| {
-                        response.embed(|embed| {
-                            embed
+                    .edit_response(
+                        &context.http,
+                        EditInteractionResponse::new().embed(
+                            CreateEmbed::new()
                                 .title(hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "skip",
@@ -228,17 +234,16 @@ impl SkipComponent {
                                     "not_same_voice_chat",
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
-                                .footer(|footer| {
-                                    footer
-                                        .text(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "embed",
-                                            "footer_text",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL)
-                                })
-                        })
-                    })
+                                .footer(
+                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "embed",
+                                        "footer_text",
+                                    ))
+                                    .icon_url(HYDROGEN_LOGO_URL),
+                                ),
+                        ),
+                    )
                     .await
                 {
                     warn!("can't response to interaction: {:?}", e);
@@ -246,9 +251,10 @@ impl SkipComponent {
             }
         } else {
             if let Err(e) = interaction
-                .edit_original_interaction_response(&context.http, |response| {
-                    response.embed(|embed| {
-                        embed
+                .edit_response(
+                    &context.http,
+                    EditInteractionResponse::new().embed(
+                        CreateEmbed::new()
                             .title(hydrogen.i18n.translate(
                                 &interaction.locale,
                                 "skip",
@@ -260,17 +266,16 @@ impl SkipComponent {
                                 "player_not_exists",
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
-                            .footer(|footer| {
-                                footer
-                                    .text(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "embed",
-                                        "footer_text",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL)
-                            })
-                    })
-                })
+                            .footer(
+                                CreateEmbedFooter::new(hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "embed",
+                                    "footer_text",
+                                ))
+                                .icon_url(HYDROGEN_LOGO_URL),
+                            ),
+                    ),
+                )
                 .await
             {
                 warn!("can't response to interaction: {:?}", e);
@@ -287,7 +292,7 @@ impl HydrogenComponentListener for SkipComponent {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: MessageComponentInteraction,
+        interaction: ComponentInteraction,
     ) {
         if let Err(e) = self._execute(hydrogen, context, interaction).await {
             warn!("{}", e);

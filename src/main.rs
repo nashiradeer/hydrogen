@@ -6,18 +6,12 @@ use i18n::HydrogenI18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
 use serenity::{
-    builder::CreateApplicationCommand,
-    model::{
-        prelude::{
-            command::Command,
-            interaction::{application_command::ApplicationCommandInteraction, Interaction},
-            message_component::MessageComponentInteraction,
-            Ready, VoiceServerUpdateEvent,
-        },
-        voice::VoiceState,
+    all::{
+        Client, Command, CommandInteraction, ComponentInteraction, GatewayIntents, Interaction,
+        Ready, VoiceServerUpdateEvent, VoiceState,
     },
-    prelude::{Context, EventHandler, GatewayIntents},
-    Client,
+    builder::CreateCommand,
+    client::{Context, EventHandler},
 };
 use songbird::SerenityInit;
 use tokio::sync::RwLock;
@@ -66,16 +60,13 @@ struct HydrogenHandler {
 
 #[async_trait]
 trait HydrogenCommandListener {
-    fn register<'a, 'b>(
-        &'a self,
-        i18n: HydrogenI18n,
-        command: &'b mut CreateApplicationCommand,
-    ) -> &'b mut CreateApplicationCommand;
+    fn register(&self, i18n: HydrogenI18n) -> CreateCommand;
+
     async fn execute(
         &self,
         hydrogen_context: HydrogenContext,
         context: Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
     );
 }
 
@@ -85,7 +76,7 @@ trait HydrogenComponentListener {
         &self,
         hydrogen: HydrogenContext,
         context: Context,
-        interaction: MessageComponentInteraction,
+        interaction: ComponentInteraction,
     );
 }
 
@@ -106,13 +97,11 @@ impl EventHandler for HydrogenHandler {
         debug!("registering commands...");
         for (name, command) in self.commands.iter() {
             debug!("registering '{}' command...", name);
-            if let Err(e) =
-                Command::create_global_application_command(ctx.http.clone(), |create_command| {
-                    command
-                        .register(self.context.i18n.clone(), create_command)
-                        .name(name)
-                })
-                .await
+            if let Err(e) = Command::create_global_command(
+                ctx.http.clone(),
+                command.register(self.context.i18n.clone()),
+            )
+            .await
             {
                 error!("can't register '{}' command: {}", name, e);
             }
@@ -141,7 +130,7 @@ impl EventHandler for HydrogenHandler {
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         match interaction {
-            Interaction::ApplicationCommand(command) => {
+            Interaction::Command(command) => {
                 let command_name = command.data.name.clone();
                 debug!("executing application command: {}", command_name);
 
@@ -153,7 +142,7 @@ impl EventHandler for HydrogenHandler {
 
                 debug!("application command executed: {}", command_name);
             }
-            Interaction::MessageComponent(component) => {
+            Interaction::Component(component) => {
                 let component_name = component.data.custom_id.clone();
                 debug!("executing message component: {}", component_name);
 
