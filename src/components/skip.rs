@@ -8,8 +8,8 @@ use serenity::{
 use tracing::warn;
 
 use crate::{
-    player::HydrogenMusic, HydrogenComponentListener, HydrogenContext, HYDROGEN_ERROR_COLOR,
-    HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    player::HydrogenMusic, HydrogenComponentListener, HydrogenContext, HYDROGEN_BUG_URL,
+    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct SkipComponent;
@@ -99,11 +99,10 @@ impl SkipComponent {
                                         "error",
                                         "unknown_voice_state",
                                     ),
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_intentional",
-                                    )
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
@@ -139,11 +138,12 @@ impl SkipComponent {
                                             "skip",
                                             "embed_title",
                                         ))
-                                        .description(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "error",
-                                            "unknown",
-                                        ))
+                                        .description(
+                                            hydrogen
+                                                .i18n
+                                                .translate(&interaction.locale, "error", "unknown")
+                                                .replace("{url}", HYDROGEN_BUG_URL),
+                                        )
                                         .color(HYDROGEN_ERROR_COLOR)
                                         .footer(
                                             CreateEmbedFooter::new(hydrogen.i18n.translate(
@@ -182,11 +182,14 @@ impl SkipComponent {
                                             "error",
                                             "empty_queue",
                                         ),
-                                        hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "error",
-                                            "not_intentional",
-                                        )
+                                        hydrogen
+                                            .i18n
+                                            .translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
+                                            .replace("{url}", HYDROGEN_BUG_URL)
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
@@ -251,11 +254,10 @@ impl SkipComponent {
                                         "error",
                                         "not_in_voice_chat",
                                     ),
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_intentional",
-                                    )
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
@@ -291,11 +293,10 @@ impl SkipComponent {
                                     "error",
                                     "player_not_exists",
                                 ),
-                                hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "error",
-                                    "not_intentional",
-                                )
+                                hydrogen
+                                    .i18n
+                                    .translate(&interaction.locale, "error", "not_intentional",)
+                                    .replace("{url}", HYDROGEN_BUG_URL)
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
                             .footer(

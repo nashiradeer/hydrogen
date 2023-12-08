@@ -15,7 +15,7 @@ use tracing::warn;
 
 use crate::{
     i18n::HydrogenI18n, player::HydrogenPlayCommand, HydrogenCommandListener, HydrogenContext,
-    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    HYDROGEN_BUG_URL, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct PlayCommand;
@@ -68,11 +68,14 @@ impl PlayCommand {
                                             "error",
                                             "cant_connect",
                                         ),
-                                        hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "error",
-                                            "not_intentional",
-                                        )
+                                        hydrogen
+                                            .i18n
+                                            .translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
+                                            .replace("{url}", HYDROGEN_BUG_URL)
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
@@ -262,11 +265,10 @@ impl PlayCommand {
                                         "error",
                                         "unknown_voice_state",
                                     ),
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_intentional",
-                                    )
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
@@ -336,11 +338,14 @@ impl PlayCommand {
                                             "error",
                                             "player_exists",
                                         ),
-                                        hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "error",
-                                            "not_intentional",
-                                        )
+                                        hydrogen
+                                            .i18n
+                                            .translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
+                                            .replace("{url}", HYDROGEN_BUG_URL)
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
@@ -423,11 +428,10 @@ impl PlayCommand {
                                         "play",
                                         "not_found",
                                     ),
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_intentional",
-                                    )
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
@@ -462,11 +466,10 @@ impl PlayCommand {
                                         "play",
                                         "truncated",
                                     ),
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_intentional",
-                                    )
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
