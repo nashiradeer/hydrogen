@@ -55,17 +55,25 @@ impl JoinCommand {
                                         "join",
                                         "embed_title",
                                     ))
-                                    .description(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "join",
-                                        "cant_connect",
+                                    .description(format!(
+                                        "{}\n\n{}",
+                                        hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "error",
+                                            "cant_connect",
+                                        ),
+                                        hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "error",
+                                            "not_intentional",
+                                        )
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
                                         CreateEmbedFooter::new(hydrogen.i18n.translate(
                                             &interaction.locale,
-                                            "embed",
-                                            "footer_text",
+                                            "generic",
+                                            "embed_footer",
                                         ))
                                         .icon_url(HYDROGEN_LOGO_URL),
                                     ),
@@ -122,17 +130,25 @@ impl JoinCommand {
                                 "join",
                                 "embed_title",
                             ))
-                            .description(hydrogen.i18n.translate(
-                                &interaction.locale,
-                                "join",
-                                "player_exists",
+                            .description(format!(
+                                "{}\n\n{}",
+                                hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "error",
+                                    "player_exists",
+                                ),
+                                hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "error",
+                                    "not_intentional",
+                                )
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
                             .footer(
                                 CreateEmbedFooter::new(hydrogen.i18n.translate(
                                     &interaction.locale,
-                                    "embed",
-                                    "footer_text",
+                                    "generic",
+                                    "embed_footer",
                                 ))
                                 .icon_url(HYDROGEN_LOGO_URL),
                             ),
@@ -157,17 +173,25 @@ impl JoinCommand {
                                     "join",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "join",
-                                    "unknown_voice_state",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "unknown_voice_state",
+                                    ),
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "not_intentional",
+                                    )
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -214,17 +238,17 @@ impl JoinCommand {
                                 .i18n
                                 .translate(&interaction.locale, "join", "embed_title"),
                         )
-                        .description(hydrogen.i18n.translate(
-                            &interaction.locale,
-                            "join",
-                            "success",
-                        ))
+                        .description(
+                            hydrogen
+                                .i18n
+                                .translate(&interaction.locale, "join", "joined"),
+                        )
                         .color(HYDROGEN_PRIMARY_COLOR)
                         .footer(
                             CreateEmbedFooter::new(hydrogen.i18n.translate(
                                 &interaction.locale,
-                                "embed",
-                                "footer_text",
+                                "generic",
+                                "embed_footer",
                             ))
                             .icon_url(HYDROGEN_LOGO_URL),
                         ),
@@ -248,7 +272,7 @@ impl HydrogenCommandListener for JoinCommand {
         command = i18n.translate_application_command_description("join", "description", command);
 
         command
-            .description("Connects me to your voice chat by starting a music player without playing anything.")
+            .description("Make me join your voice chat without playing anything.")
             .dm_permission(false)
     }
 

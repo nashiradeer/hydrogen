@@ -193,17 +193,25 @@ impl SeekCommand {
                                     "seek",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "seek",
-                                    "unknown_voice_state",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "unknown_voice_state",
+                                    ),
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "not_intentional",
+                                    )
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -232,17 +240,25 @@ impl SeekCommand {
                                             "seek",
                                             "embed_title",
                                         ))
-                                        .description(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "seek",
-                                            "invalid_syntax",
+                                        .description(format!(
+                                            "{}\n\n{}",
+                                            hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "seek",
+                                                "invalid_syntax",
+                                            ),
+                                            hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
                                         ))
                                         .color(HYDROGEN_ERROR_COLOR)
                                         .footer(
                                             CreateEmbedFooter::new(hydrogen.i18n.translate(
                                                 &interaction.locale,
-                                                "embed",
-                                                "footer_text",
+                                                "generic",
+                                                "embed_footer",
                                             ))
                                             .icon_url(HYDROGEN_LOGO_URL),
                                         ),
@@ -270,17 +286,25 @@ impl SeekCommand {
                                             "seek",
                                             "embed_title",
                                         ))
-                                        .description(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "seek",
-                                            "empty_queue",
+                                        .description(format!(
+                                            "{}\n\n{}",
+                                            hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "empty_queue",
+                                            ),
+                                            hydrogen.i18n.translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
                                         ))
                                         .color(HYDROGEN_ERROR_COLOR)
                                         .footer(
                                             CreateEmbedFooter::new(hydrogen.i18n.translate(
                                                 &interaction.locale,
-                                                "embed",
-                                                "footer_text",
+                                                "generic",
+                                                "embed_footer",
                                             ))
                                             .icon_url(HYDROGEN_LOGO_URL),
                                         ),
@@ -306,22 +330,22 @@ impl SeekCommand {
                 if let Some(uri) = seek_result.track.uri {
                     translation_message = hydrogen
                         .i18n
-                        .translate(&interaction.locale, "seek", "success_uri")
-                        .replace("${music}", &seek_result.track.title)
-                        .replace("${author}", &seek_result.track.author)
-                        .replace("${uri}", &uri)
-                        .replace("${current}", &current_time)
-                        .replace("${total}", &total_time)
-                        .replace("${bar}", &progress_bar);
+                        .translate(&interaction.locale, "seek", "seeking_url")
+                        .replace("{name}", &seek_result.track.title)
+                        .replace("{author}", &seek_result.track.author)
+                        .replace("{url}", &uri)
+                        .replace("{current}", &current_time)
+                        .replace("{total}", &total_time)
+                        .replace("{progress}", &progress_bar);
                 } else {
                     translation_message = hydrogen
                         .i18n
-                        .translate(&interaction.locale, "seek", "success")
-                        .replace("${music}", &seek_result.track.title)
-                        .replace("${author}", &seek_result.track.author)
-                        .replace("${current}", &current_time)
-                        .replace("${total}", &total_time)
-                        .replace("${bar}", &progress_bar);
+                        .translate(&interaction.locale, "seek", "seeking")
+                        .replace("{name}", &seek_result.track.title)
+                        .replace("{author}", &seek_result.track.author)
+                        .replace("{current}", &current_time)
+                        .replace("{total}", &total_time)
+                        .replace("{progress}", &progress_bar);
                 }
 
                 if let Err(e) = interaction
@@ -339,8 +363,8 @@ impl SeekCommand {
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -361,17 +385,25 @@ impl SeekCommand {
                                     "seek",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "seek",
-                                    "not_same_voice_chat",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "not_in_voice_chat",
+                                    ),
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "not_intentional",
+                                    )
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -393,10 +425,18 @@ impl SeekCommand {
                                 "seek",
                                 "embed_title",
                             ))
-                            .description(hydrogen.i18n.translate(
-                                &interaction.locale,
-                                "seek",
-                                "player_not_exists",
+                            .description(format!(
+                                "{}\n\n{}",
+                                hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "error",
+                                    "player_not_exists",
+                                ),
+                                hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "error",
+                                    "not_intentional",
+                                )
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
                             .footer(
@@ -428,12 +468,12 @@ impl HydrogenCommandListener for SeekCommand {
         command = i18n.translate_application_command_description("seek", "description", command);
 
         command
-            .description("Sets the current playback time of the song..")
+            .description("Seek for the time in the current music playing.")
             .add_option({
                 let mut option = CreateCommandOption::new(
                     CommandOptionType::String,
                     "time",
-                    "The time to be set on the player.",
+                    "Time in seconds or a supported syntax.",
                 )
                 .required(true);
 
