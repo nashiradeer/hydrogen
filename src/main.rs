@@ -44,6 +44,7 @@ pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 
 pub static HYDROGEN_LOGO_URL: &str =
     "https://raw.githubusercontent.com/nashiradeer/hydrogen/main/icon.png";
+pub static HYDROGEN_BUG_URL: &str = "https://github.com/nashiradeer/hydrogen/issues";
 
 #[derive(Clone)]
 struct HydrogenContext {
