@@ -15,7 +15,7 @@ use tracing::warn;
 
 use crate::{
     i18n::HydrogenI18n, player::HydrogenPlayCommand, HydrogenCommandListener, HydrogenContext,
-    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    HYDROGEN_BUG_URL, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct PlayCommand;
@@ -61,17 +61,28 @@ impl PlayCommand {
                                         "play",
                                         "embed_title",
                                     ))
-                                    .description(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "play",
-                                        "cant_connect",
+                                    .description(format!(
+                                        "{}\n\n{}",
+                                        hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "error",
+                                            "cant_connect",
+                                        ),
+                                        hydrogen
+                                            .i18n
+                                            .translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
+                                            .replace("{url}", HYDROGEN_BUG_URL)
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
                                         CreateEmbedFooter::new(hydrogen.i18n.translate(
                                             &interaction.locale,
-                                            "embed",
-                                            "footer_text",
+                                            "generic",
+                                            "embed_footer",
                                         ))
                                         .icon_url(HYDROGEN_LOGO_URL),
                                     ),
@@ -99,86 +110,100 @@ impl PlayCommand {
                 if let Some(uri) = track.uri {
                     return hydrogen
                         .i18n
-                        .translate(&interaction.locale, "play", "playing_one_uri")
-                        .replace("${music}", &track.title)
-                        .replace("${author}", &track.author)
-                        .replace("${uri}", &uri);
+                        .translate(&interaction.locale, "play", "play_single_url")
+                        .replace("{name}", &track.title)
+                        .replace("{author}", &track.author)
+                        .replace("{url}", &uri);
                 } else {
                     return hydrogen
                         .i18n
-                        .translate(&interaction.locale, "play", "playing_one")
-                        .replace("${music}", &track.title)
-                        .replace("${author}", &track.author);
+                        .translate(&interaction.locale, "play", "play_single")
+                        .replace("{name}", &track.title)
+                        .replace("{author}", &track.author);
                 }
             } else if result.count == 1 {
                 if let Some(uri) = track.uri {
                     return hydrogen
                         .i18n
-                        .translate(&interaction.locale, "play", "enqueue_one_uri")
-                        .replace("${music}", &track.title)
-                        .replace("${author}", &track.author)
-                        .replace("${uri}", &uri);
+                        .translate(&interaction.locale, "play", "enqueue_single_url")
+                        .replace("{name}", &track.title)
+                        .replace("{author}", &track.author)
+                        .replace("{url}", &uri);
                 } else {
                     return hydrogen
                         .i18n
-                        .translate(&interaction.locale, "play", "enqueue_one")
-                        .replace("${music}", &track.title)
-                        .replace("${author}", &track.author);
+                        .translate(&interaction.locale, "play", "enqueue_single")
+                        .replace("{name}", &track.title)
+                        .replace("{author}", &track.author);
                 }
             } else if result.playing {
                 if !result.truncated {
                     if let Some(uri) = track.uri {
                         return hydrogen
                             .i18n
-                            .translate(&interaction.locale, "play", "playing_playlist_uri")
-                            .replace("${music}", &track.title)
-                            .replace("${author}", &track.author)
-                            .replace("${uri}", &uri)
-                            .replace("${count}", &result.count.to_string());
+                            .translate(&interaction.locale, "play", "play_multi_url")
+                            .replace("{name}", &track.title)
+                            .replace("{author}", &track.author)
+                            .replace("{url}", &uri)
+                            .replace("{count}", &result.count.to_string());
                     } else {
                         return hydrogen
                             .i18n
-                            .translate(&interaction.locale, "play", "playing_playlist")
-                            .replace("${music}", &track.title)
-                            .replace("${author}", &track.author)
-                            .replace("${count}", &result.count.to_string());
+                            .translate(&interaction.locale, "play", "play_multi")
+                            .replace("{name}", &track.title)
+                            .replace("{author}", &track.author)
+                            .replace("{count}", &result.count.to_string());
                     }
                 } else {
                     if let Some(uri) = track.uri {
-                        return hydrogen
-                            .i18n
-                            .translate(
-                                &interaction.locale,
-                                "play",
-                                "playing_playlist_uri_truncated",
-                            )
-                            .replace("${music}", &track.title)
-                            .replace("${author}", &track.author)
-                            .replace("${uri}", &uri)
-                            .replace("${count}", &result.count.to_string());
+                        return format!(
+                            "{}\n\n{}",
+                            hydrogen
+                                .i18n
+                                .translate(&interaction.locale, "play", "truncated_warn",),
+                            hydrogen
+                                .i18n
+                                .translate(&interaction.locale, "play", "play_multi_url",)
+                                .replace("{name}", &track.title)
+                                .replace("{author}", &track.author)
+                                .replace("{url}", &uri)
+                                .replace("{count}", &result.count.to_string())
+                        );
                     } else {
-                        return hydrogen
-                            .i18n
-                            .translate(&interaction.locale, "play", "playing_playlist_truncated")
-                            .replace("${music}", &track.title)
-                            .replace("${author}", &track.author)
-                            .replace("${count}", &result.count.to_string());
+                        return format!(
+                            "{}\n\n{}",
+                            hydrogen
+                                .i18n
+                                .translate(&interaction.locale, "play", "truncated_warn",),
+                            hydrogen
+                                .i18n
+                                .translate(&interaction.locale, "play", "play_multi")
+                                .replace("{name}", &track.title)
+                                .replace("{author}", &track.author)
+                                .replace("{count}", &result.count.to_string())
+                        );
                     }
                 }
             }
         }
 
         if result.truncated {
-            return hydrogen
-                .i18n
-                .translate(&interaction.locale, "play", "enqueue_playlist_truncated")
-                .replace("${count}", &result.count.to_string());
+            return format!(
+                "{}\n\n{}",
+                hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "play", "truncated_warn",),
+                hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "play", "enqueue_multi")
+                    .replace("{count}", &result.count.to_string())
+            );
         }
 
         hydrogen
             .i18n
-            .translate(&interaction.locale, "play", "enqueue_playlist")
-            .replace("${count}", &result.count.to_string())
+            .translate(&interaction.locale, "play", "enqueue_multi")
+            .replace("{count}", &result.count.to_string())
     }
 
     async fn _execute(
@@ -233,17 +258,24 @@ impl PlayCommand {
                                     "play",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "play",
-                                    "unknown_voice_state",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "unknown_voice_state",
+                                    ),
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -299,17 +331,28 @@ impl PlayCommand {
                                         "play",
                                         "embed_title",
                                     ))
-                                    .description(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "play",
-                                        "is_not_same_voice",
+                                    .description(format!(
+                                        "{}\n\n{}",
+                                        hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "error",
+                                            "player_exists",
+                                        ),
+                                        hydrogen
+                                            .i18n
+                                            .translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
+                                            .replace("{url}", HYDROGEN_BUG_URL)
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
                                         CreateEmbedFooter::new(hydrogen.i18n.translate(
                                             &interaction.locale,
-                                            "embed",
-                                            "footer_text",
+                                            "generic",
+                                            "embed_footer",
                                         ))
                                         .icon_url(HYDROGEN_LOGO_URL),
                                     ),
@@ -355,8 +398,8 @@ impl PlayCommand {
                             .footer(
                                 CreateEmbedFooter::new(hydrogen.i18n.translate(
                                     &interaction.locale,
-                                    "embed",
-                                    "footer_text",
+                                    "generic",
+                                    "embed_footer",
                                 ))
                                 .icon_url(HYDROGEN_LOGO_URL),
                             ),
@@ -378,17 +421,24 @@ impl PlayCommand {
                                     "play",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "play",
-                                    "not_found",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "play",
+                                        "not_found",
+                                    ),
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -409,17 +459,24 @@ impl PlayCommand {
                                     "play",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "play",
-                                    "truncated",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "play",
+                                        "truncated",
+                                    ),
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -446,13 +503,13 @@ impl HydrogenCommandListener for PlayCommand {
 
         command
             .description(
-                "Searches and plays the requested song, initializing the player if necessary.",
+                "Request music to be played, enqueuing it in the queue or playing immediately if empty.",
             )
             .add_option({
                 let mut option = CreateCommandOption::new(
                     CommandOptionType::String,
                     "query",
-                    "The query to search for.",
+                    "A music or playlist URL, or a search term.",
                 )
                 .required(true);
 

@@ -8,8 +8,8 @@ use serenity::{
 use tracing::warn;
 
 use crate::{
-    player::HydrogenMusic, HydrogenComponentListener, HydrogenContext, HYDROGEN_ERROR_COLOR,
-    HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    player::HydrogenMusic, HydrogenComponentListener, HydrogenContext, HYDROGEN_BUG_URL,
+    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct PrevComponent;
@@ -41,15 +41,15 @@ impl PrevComponent {
         if let Some(uri) = track.uri {
             return hydrogen
                 .i18n
-                .translate(&interaction.locale, "prev", "success_uri")
-                .replace("${music}", &track.title)
-                .replace("${author}", &track.author)
-                .replace("${uri}", &uri);
+                .translate(&interaction.locale, "prev", "returning_url")
+                .replace("{name}", &track.title)
+                .replace("{author}", &track.author)
+                .replace("{url}", &uri);
         } else {
             return hydrogen
                 .i18n
-                .translate(&interaction.locale, "prev", "success")
-                .replace("${music}", &track.title)
+                .translate(&interaction.locale, "prev", "returning")
+                .replace("${name}", &track.title)
                 .replace("${author}", &track.author);
         }
     }
@@ -92,17 +92,24 @@ impl PrevComponent {
                                     "prev",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "prev",
-                                    "unknown_voice_state",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "unknown_voice_state",
+                                    ),
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -131,17 +138,18 @@ impl PrevComponent {
                                             "prev",
                                             "embed_title",
                                         ))
-                                        .description(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "prev",
-                                            "player_not_exists",
-                                        ))
+                                        .description(
+                                            hydrogen
+                                                .i18n
+                                                .translate(&interaction.locale, "error", "unknown")
+                                                .replace("{url}", HYDROGEN_BUG_URL),
+                                        )
                                         .color(HYDROGEN_ERROR_COLOR)
                                         .footer(
                                             CreateEmbedFooter::new(hydrogen.i18n.translate(
                                                 &interaction.locale,
-                                                "embed",
-                                                "footer_text",
+                                                "generic",
+                                                "embed_footer",
                                             ))
                                             .icon_url(HYDROGEN_LOGO_URL),
                                         ),
@@ -167,17 +175,28 @@ impl PrevComponent {
                                         "prev",
                                         "embed_title",
                                     ))
-                                    .description(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "prev",
-                                        "empty_queue",
+                                    .description(format!(
+                                        "{}\n\n{}",
+                                        hydrogen.i18n.translate(
+                                            &interaction.locale,
+                                            "error",
+                                            "empty_queue",
+                                        ),
+                                        hydrogen
+                                            .i18n
+                                            .translate(
+                                                &interaction.locale,
+                                                "error",
+                                                "not_intentional",
+                                            )
+                                            .replace("{url}", HYDROGEN_BUG_URL)
                                     ))
                                     .color(HYDROGEN_ERROR_COLOR)
                                     .footer(
                                         CreateEmbedFooter::new(hydrogen.i18n.translate(
                                             &interaction.locale,
-                                            "embed",
-                                            "footer_text",
+                                            "generic",
+                                            "embed_footer",
                                         ))
                                         .icon_url(HYDROGEN_LOGO_URL),
                                     ),
@@ -206,8 +225,8 @@ impl PrevComponent {
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -228,17 +247,24 @@ impl PrevComponent {
                                     "prev",
                                     "embed_title",
                                 ))
-                                .description(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "prev",
-                                    "not_same_voice_chat",
+                                .description(format!(
+                                    "{}\n\n{}",
+                                    hydrogen.i18n.translate(
+                                        &interaction.locale,
+                                        "error",
+                                        "not_in_voice_chat",
+                                    ),
+                                    hydrogen
+                                        .i18n
+                                        .translate(&interaction.locale, "error", "not_intentional",)
+                                        .replace("{url}", HYDROGEN_BUG_URL)
                                 ))
                                 .color(HYDROGEN_ERROR_COLOR)
                                 .footer(
                                     CreateEmbedFooter::new(hydrogen.i18n.translate(
                                         &interaction.locale,
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -260,17 +286,24 @@ impl PrevComponent {
                                 "prev",
                                 "embed_title",
                             ))
-                            .description(hydrogen.i18n.translate(
-                                &interaction.locale,
-                                "prev",
-                                "player_not_exists",
+                            .description(format!(
+                                "{}\n\n{}",
+                                hydrogen.i18n.translate(
+                                    &interaction.locale,
+                                    "error",
+                                    "player_not_exists",
+                                ),
+                                hydrogen
+                                    .i18n
+                                    .translate(&interaction.locale, "error", "not_intentional",)
+                                    .replace("{url}", HYDROGEN_BUG_URL)
                             ))
                             .color(HYDROGEN_ERROR_COLOR)
                             .footer(
                                 CreateEmbedFooter::new(hydrogen.i18n.translate(
                                     &interaction.locale,
-                                    "embed",
-                                    "footer_text",
+                                    "generic",
+                                    "embed_footer",
                                 ))
                                 .icon_url(HYDROGEN_LOGO_URL),
                             ),
