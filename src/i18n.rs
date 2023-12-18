@@ -20,7 +20,7 @@ impl Display for HydrogenI18nError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HydrogenI18nError::DefaultLanguageNotFound => {
-                write!(f, "default language file doesn't exists")
+                write!(f, "default language not found")
             }
             HydrogenI18nError::Io(e) => write!(f, "{}", e),
         }
