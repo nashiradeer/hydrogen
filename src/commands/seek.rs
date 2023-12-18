@@ -25,12 +25,10 @@ impl SeekCommand {
         Ok(guild
             .voice_states
             .get(&user_id)
-            .ok_or(Err(
-                "can't find the user voice state in the origin guild".to_owned()
-            ))?
+            .ok_or(Err("cannot get the author's VoiceState".to_owned()))?
             .channel_id
             .ok_or(Err(
-                "can't get the channel id from the voice state".to_owned()
+                "cannot get the ChannelId from the author's VoiceState".to_owned()
             ))?)
     }
 
@@ -39,7 +37,7 @@ impl SeekCommand {
         if let Some(time) = time.strip_suffix("m") {
             let minutes = time
                 .parse::<u16>()
-                .map_err(|_| "minute syntax detected but with a weird number".to_owned())?
+                .map_err(|_| "cannot parse the number with minute suffix".to_owned())?
                 * 60
                 * 1000;
             return Ok(minutes.into());
@@ -48,7 +46,7 @@ impl SeekCommand {
         if let Some(time) = time.strip_suffix("h") {
             let hours = time
                 .parse::<u16>()
-                .map_err(|_| "hour syntax detected but with a weird number".to_owned())?
+                .map_err(|_| "cannot parse the number with hour suffix".to_owned())?
                 * 60
                 * 60
                 * 1000;
@@ -59,62 +57,83 @@ impl SeekCommand {
             .split(":")
             .map(|i| {
                 i.parse::<u16>()
-                    .map_err(|_| "minute syntax detected but with a weird number".to_owned())
+                    .map_err(|_| "cannot parse the numbers from the colon syntax".to_owned())
             })
             .collect();
 
         let components = components?;
 
         if components.len() == 0 {
-            return Err("not detected any time syntax".to_owned());
+            return Err("cannot parse time using any of the syntaxes supported".to_owned());
         } else if components.len() == 1 {
             let seconds = i32::from(components[0])
                 .checked_mul(1000)
-                .ok_or("overflow detected".to_owned())?;
+                .ok_or("conversion to milliseconds overflowed".to_owned())?;
             return Ok(seconds);
         } else if components.len() == 2 {
             let mut seconds = i32::from(components[1])
                 .checked_mul(1000)
-                .ok_or("overflow detected".to_owned())?;
+                .ok_or("colon (mm:ss) syntax: sum seconds overflowed".to_owned())?;
 
             seconds = seconds
                 .checked_add(
                     i32::from(components[0])
                         .checked_mul(60)
-                        .ok_or("overflow detected".to_owned())?
+                        .ok_or(
+                            "colon (mm:ss) syntax: conversion minutes to seconds overflowed"
+                                .to_owned(),
+                        )?
                         .checked_mul(1000)
-                        .ok_or("overflow detected".to_owned())?,
+                        .ok_or(
+                            "colon (mm:ss) syntax: conversion minutes to milliseconds overflowed"
+                                .to_owned(),
+                        )?,
                 )
-                .ok_or("overflow detected".to_owned())?;
+                .ok_or("colon (mm:ss) syntax: sum minutes overflowed".to_owned())?;
 
             return Ok(seconds);
         }
 
         let mut seconds = i32::from(components[2])
             .checked_mul(1000)
-            .ok_or("overflow detected".to_owned())?;
+            .ok_or("colon (hh::mm:ss) syntax: sum seconds overflowed".to_owned())?;
 
         seconds = seconds
             .checked_add(
                 i32::from(components[1])
                     .checked_mul(60)
-                    .ok_or("overflow detected".to_owned())?
+                    .ok_or(
+                        "colon (hh:mm:ss) syntax: conversion minutes to seconds overflowed"
+                            .to_owned(),
+                    )?
                     .checked_mul(1000)
-                    .ok_or("overflow detected".to_owned())?,
+                    .ok_or(
+                        "colon (hh:mm:ss) syntax: conversion minutes to milliseconds overflowed"
+                            .to_owned(),
+                    )?,
             )
-            .ok_or("overflow detected".to_owned())?;
+            .ok_or("colon (hh:mm:ss) syntax: sum minutes overflowed".to_owned())?;
 
         seconds = seconds
             .checked_add(
                 i32::from(components[0])
                     .checked_mul(60)
-                    .ok_or("overflow detected".to_owned())?
+                    .ok_or(
+                        "colon (hh:mm:ss) syntax: conversion hours to minutes overflowed"
+                            .to_owned(),
+                    )?
                     .checked_mul(60)
-                    .ok_or("overflow detected".to_owned())?
+                    .ok_or(
+                        "colon (hh:mm:ss) syntax: conversion hours to seconds overflowed"
+                            .to_owned(),
+                    )?
                     .checked_mul(1000)
-                    .ok_or("overflow detected".to_owned())?,
+                    .ok_or(
+                        "colon (hh:mm:ss) syntax: conversion hours to milliseconds overflowed"
+                            .to_owned(),
+                    )?,
             )
-            .ok_or("overflow detected".to_owned())?;
+            .ok_or("colon (hh:mm:ss) syntax: sum hours overflowed".to_owned())?;
         Ok(seconds)
     }
 
@@ -154,31 +173,31 @@ impl SeekCommand {
         interaction
             .defer_ephemeral(&context.http)
             .await
-            .map_err(|e| format!("can't defer the response: {}", e))?;
+            .map_err(|e| format!("cannot defer the interaction response: {}", e))?;
 
         let time = interaction
             .data
             .options
             .get(0)
-            .ok_or("required 'time' parameter missing".to_owned())?
+            .ok_or("cannot get the required 'time' option".to_owned())?
             .value
             .clone()
             .as_str()
-            .ok_or("can't convert required 'time' to str".to_owned())?
+            .ok_or("required 'time' option isn't a &str".to_owned())?
             .to_owned();
         let manager = hydrogen
             .manager
             .read()
             .await
             .clone()
-            .ok_or("manager not initialized".to_owned())?;
+            .ok_or("Hydrogen's PlayerManager not initialized".to_owned())?;
         let guild_id = interaction
             .guild_id
-            .ok_or("interaction doesn't have a guild_id".to_owned())?;
+            .ok_or("cannot get the interaction's GuildId".to_owned())?;
         let guild = context
             .cache
             .guild(guild_id)
-            .ok_or("guild isn't present in the cache".to_owned())?;
+            .ok_or("cannot get the guild from the cache".to_owned())?;
 
         let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
             Ok(v) => v,
@@ -211,7 +230,7 @@ impl SeekCommand {
                     )
                     .await
                 {
-                    warn!("can't response to interaction: {:?}", e);
+                    warn!("cannot send a response to the interaction: {:?}", e);
                 }
                 return e;
             }
@@ -250,10 +269,10 @@ impl SeekCommand {
                             )
                             .await
                         {
-                            warn!("can't response to interaction: {:?}", e);
+                            warn!("cannot send a response to the interaction: {:?}", e);
                         }
 
-                        return Err(format!("can't parse time: {}", e));
+                        return Err(format!("cannot parse the 'time' option: {}", e));
                     }
                 };
 
@@ -288,13 +307,13 @@ impl SeekCommand {
                             )
                             .await
                         {
-                            warn!("can't response to interaction: {:?}", e);
+                            warn!("cannot send a response to the interaction: {:?}", e);
                         }
 
                         return Ok(());
                     }
                     Err(e) => {
-                        return Err(format!("can't seek the player: {}", e));
+                        return Err(format!("cannot seek time in the player: {}", e));
                     }
                 };
 
@@ -348,7 +367,7 @@ impl SeekCommand {
                     )
                     .await
                 {
-                    warn!("can't response to interaction: {:?}", e);
+                    warn!("cannot send a response to the interaction: {:?}", e);
                 }
             } else {
                 if let Err(e) = interaction
@@ -379,7 +398,7 @@ impl SeekCommand {
                     )
                     .await
                 {
-                    warn!("can't response to interaction: {:?}", e);
+                    warn!("cannot send a response to the interaction: {:?}", e);
                 }
             }
         } else {
@@ -411,7 +430,7 @@ impl SeekCommand {
                 )
                 .await
             {
-                warn!("can't response to interaction: {:?}", e);
+                warn!("cannot send a response to the interaction: {:?}", e);
             }
         }
 

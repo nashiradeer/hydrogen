@@ -29,12 +29,10 @@ impl PlayCommand {
         Ok(guild
             .voice_states
             .get(&user_id)
-            .ok_or(Err(
-                "can't find the user voice state in the origin guild".to_owned()
-            ))?
+            .ok_or(Err("cannot get the author's VoiceState".to_owned()))?
             .channel_id
             .ok_or(Err(
-                "can't get the channel id from the voice state".to_owned()
+                "cannot get the ChannelId from the author's VoiceState".to_owned()
             ))?)
     }
 
@@ -79,10 +77,10 @@ impl PlayCommand {
                         )
                         .await
                     {
-                        warn!("can't response to interaction: {:?}", e);
+                        warn!("cannot send a response to the interaction: {:?}", e);
                     }
 
-                    return Err(format!("can't connect to voice chat: {}", e));
+                    return Err(format!("cannot connect to the author's voice chat: {}", e));
                 }
             },
         )
@@ -191,34 +189,34 @@ impl PlayCommand {
             .data
             .options
             .get(0)
-            .ok_or("required 'query' parameter missing".to_owned())?
+            .ok_or("cannot get the required 'query' option".to_owned())?
             .value
             .clone()
             .as_str()
-            .ok_or("can't convert required 'query' to str".to_owned())?
+            .ok_or("required 'query' option isn't a &str".to_owned())?
             .to_owned();
 
         interaction
             .defer_ephemeral(&context.http)
             .await
-            .map_err(|e| format!("can't defer the response: {}", e))?;
+            .map_err(|e| format!("cannot defer the interaction response: {}", e))?;
 
         let manager = hydrogen
             .manager
             .read()
             .await
             .clone()
-            .ok_or("manager not initialized".to_owned())?;
+            .ok_or("Hydrogen's PlayerManager not initialized".to_owned())?;
         let voice_manager = songbird::get(&context)
             .await
-            .ok_or("songbird not registered".to_owned())?;
+            .ok_or("Songbird's VoiceManager not initialized".to_owned())?;
         let guild_id = interaction
             .guild_id
-            .ok_or("interaction doesn't have a guild_id".to_owned())?;
+            .ok_or("cannot get the interaction's GuildId".to_owned())?;
         let guild = context
             .cache
             .guild(guild_id)
-            .ok_or("guild isn't present in the cache".to_owned())?;
+            .ok_or("cannot get the guild from the cache".to_owned())?;
 
         let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
             Ok(v) => v,
@@ -251,7 +249,7 @@ impl PlayCommand {
                     )
                     .await
                 {
-                    warn!("can't response to interaction: {:?}", e);
+                    warn!("cannot send a response to the interaction: {:?}", e);
                 }
                 return e;
             }
@@ -317,10 +315,13 @@ impl PlayCommand {
                         )
                         .await
                     {
-                        warn!("can't response to interaction: {:?}", e);
+                        warn!("cannot send a response to the interaction: {:?}", e);
                     }
 
-                    return Err("user isn't in the same channel".to_owned());
+                    return Err(
+                        "author's VoiceState ChannelId is different from music player's ChannelId"
+                            .to_owned(),
+                    );
                 }
             }
         }
@@ -364,7 +365,7 @@ impl PlayCommand {
                 )
                 .await
             {
-                warn!("can't response to interaction: {:?}", e);
+                warn!("cannot send a response to the interaction: {:?}", e);
             }
         } else {
             if !result.truncated {
@@ -396,7 +397,7 @@ impl PlayCommand {
                     )
                     .await
                 {
-                    warn!("can't response to interaction: {:?}", e);
+                    warn!("cannot send a response to the interaction: {:?}", e);
                 }
             } else {
                 if let Err(e) = interaction
@@ -427,7 +428,7 @@ impl PlayCommand {
                     )
                     .await
                 {
-                    warn!("can't response to interaction: {:?}", e);
+                    warn!("cannot send a response to the interaction: {:?}", e);
                 }
             }
         }
