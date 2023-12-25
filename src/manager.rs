@@ -1,13 +1,12 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    process::exit,
     result,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use async_trait::async_trait;
@@ -25,7 +24,7 @@ use serenity::{
 };
 use songbird::Songbird;
 use tokio::{spawn, sync::RwLock, task::JoinHandle, time::sleep};
-use tracing::{debug, error, warn};
+use tracing::{debug, error, warn, info};
 
 use crate::{
     i18n::HydrogenI18n,
@@ -58,13 +57,13 @@ impl Display for HydrogenManagerError {
             Self::Lavalink(e) => e.fmt(f),
             Self::Serenity(e) => e.fmt(f),
             Self::Player(e) => e.fmt(f),
-            Self::LavalinkNotConnected => write!(f, "there're no lavalink nodes connected"),
+            Self::LavalinkNotConnected => write!(f, "no lavalink nodes connected"),
             Self::VoiceManagerNotConnected => {
-                write!(f, "voice manager doesn't have a call for this guild")
+                write!(f, "call not found in voice manager for guild")
             }
-            Self::GuildIdMissing => write!(f, "guild id missing"),
-            Self::GuildChannelNotFound => write!(f, "guild channel not found"),
-            Self::PlayerNotFound => write!(f, "player not found"),
+            Self::GuildIdMissing => write!(f, "GuildId missing"),
+            Self::GuildChannelNotFound => write!(f, "GuildChannel not found"),
+            Self::PlayerNotFound => write!(f, "music player not found"),
         }
     }
 }
@@ -551,7 +550,7 @@ impl HydrogenManager {
                 {
                     Ok(_) => return,
                     Err(e) => {
-                        warn!("can't edit player message: {}", e);
+                        warn!("cannot edit player message: {}", e);
                     }
                 }
             }
@@ -587,7 +586,7 @@ impl HydrogenManager {
                     messages.insert(guild_id, v.id);
                     ()
                 }
-                Err(e) => warn!("can't send a new playing message: {}", e),
+                Err(e) => warn!("cannot send a new music player message: {}", e),
             };
         }
     }
@@ -737,78 +736,88 @@ impl HydrogenManager {
 #[async_trait]
 impl LavalinkHandler for HydrogenManager {
     async fn lavalink_ready(&self, node: Lavalink, _: bool) {
-        debug!("processing lavalink ready...");
+        let timer = Instant::now();
+        debug!("(ready): processing...");
+
         let lavalink_nodes = self.lavalink.read().await;
         if let Some(index) = find_lavalink(&lavalink_nodes, &node).await {
-            debug!("managed lavalink {} initialized and connected", index);
+            debug!("(ready): lavalink node {} connected", index);
         } else {
-            debug!("unknown lavalink initialized and connected");
+            warn!("(ready): unknown lavalink connected");
         }
-        debug!("processed lavalink ready");
+
+        info!("(ready): processed in {}ms", timer.elapsed().as_millis());
     }
 
     async fn lavalink_disconnect(&self, node: Lavalink) {
-        debug!("processing lavalink disconnect...");
+        let timer = Instant::now();
+        debug!("(disconnect): processing...");
+
         let mut lavalink_nodes = self.lavalink.write().await;
         if let Some(index) = find_lavalink(&lavalink_nodes, &node).await {
-            warn!("managed lavalink {} has disconnected", index);
+            warn!("(disconnect): lavalink node {} disconnected", index);
             lavalink_nodes.remove(index);
         } else {
-            warn!("unknown lavalink has disconnected");
+            warn!("(disconnect): unknown lavalink disconnected");
         }
 
         if lavalink_nodes.len() == 0 {
-            error!("there's not lavalink available anymore, exiting...");
-            exit(1);
+            panic!("(disconnect): no lavalink nodes connected.");
         }
 
-        warn!("destroying all players that are using this lavalink...");
         let mut players = self.player.write().await;
         let players_clone = players.clone();
         for (guild_id, player) in players_clone.iter() {
             if node.eq(&player.lavalink()).await {
                 players.remove(guild_id);
                 if let Err(e) = player.destroy().await {
-                    error!("can't cleanup some player: {}", e);
+                    error!("(disconnect): cannot cleanup player: {}", e);
                 }
             }
         }
-        debug!("processed lavalink disconnect");
+
+        info!("(disconnect): processed in {}ms", timer.elapsed().as_millis());
     }
 
     async fn lavalink_track_start(&self, _: Lavalink, message: LavalinkTrackStartEvent) {
-        debug!("processing lavalink track start...");
+        let timer = Instant::now();
+        debug!("(track_start): processing...");
+
         let guild_id = match message.guild_id.parse::<u64>() {
             Ok(v) => v,
             Err(e) => {
-                warn!("invalid guild id in track start event: {}", e);
+                warn!("(track_start): invalid GuildId: {}", e);
                 return;
             }
         };
 
         self.update_now_playing(guild_id.into()).await;
-        debug!("processed lavalink track start");
+
+        info!("(track_start): processed in {}ms", timer.elapsed().as_millis());
     }
 
     async fn lavalink_track_end(&self, _: Lavalink, message: LavalinkTrackEndEvent) {
-        debug!("processing lavalink track end...");
+        let timer = Instant::now();
+        debug!("(track_end): processing...");
+
         if message.reason == LavalinkTrackEndReason::Finished {
             let guild_id = match message.guild_id.parse::<u64>() {
                 Ok(v) => v,
                 Err(e) => {
-                    warn!("invalid guild id in track end event: {}", e);
+                    warn!("(track_end): invalid GuildId: {}", e);
                     return;
                 }
             };
             if let Some(player) = self.player.read().await.get(&guild_id.into()) {
                 if let Err(e) = player.next().await {
-                    warn!("can't go to the next music: {}", e);
+                    warn!("(track_end): cannot go to the next music: {}", e);
                 }
 
                 self.update_now_playing(guild_id.into()).await;
             }
         }
-        debug!("processed lavalink track end");
+
+        info!("(track_end): processed in {}ms", timer.elapsed().as_millis());
     }
 }
 

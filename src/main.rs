@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, process::exit, sync::Arc};
+use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
 use commands::play::PlayCommand;
@@ -85,101 +85,108 @@ trait HydrogenComponentListener {
 #[async_trait]
 impl EventHandler for HydrogenHandler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        info!("client initialized and connected to: {}", ready.user.name);
+        let timer = Instant::now();
+        debug!("(ready): processing...");
 
-        debug!("initializing hydrogen manager...");
         let manager = HydrogenManager::new(
             ctx.cache.clone(),
             ctx.http.clone(),
             self.context.i18n.clone(),
         );
         *self.context.manager.write().await = Some(manager.clone());
-        info!("hydrogen manager initialized");
+        debug!("(ready): HydrogenManager initialized");
 
-        debug!("registering commands...");
         for (name, command) in self.commands.iter() {
-            debug!("registering '{}' command...", name);
+            debug!("(ready): registering command: {}", name);
             if let Err(e) = Command::create_global_command(
                 ctx.http.clone(),
                 command.register(self.context.i18n.clone()),
             )
             .await
             {
-                error!("can't register '{}' command: {}", name, e);
+                error!("(ready): cannot register the command '{}': {}", name, e);
             }
         }
-        info!("commands registered");
+        debug!("(ready): commands registered");
 
-        info!("connecting to the lavalink nodes...");
         for i in 0..self.lavalink_nodes.len() {
             if let Some(node) = self.lavalink_nodes.get(i) {
                 if let Err(e) = manager.connect_lavalink(node.clone()).await {
-                    error!("can't connect to the lavalink node {}: {}", i, e);
+                    error!("(ready): cannot connect to the lavalink node {}: {}", i, e);
                 }
             }
         }
 
         if manager.lavalink_node_count().await == 0 {
-            error!("there's not lavalink nodes connected");
+            error!("(ready): no lavalink nodes connected.");
             exit(1);
         }
 
         info!(
-            "connected to {} lavalink nodes",
+            "(ready): connected to {} lavalink nodes",
             manager.lavalink_node_count().await
         );
+
+        info!("(ready): client connected to '{}' in {}ms", ready.user.name, timer.elapsed().as_millis());
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        let timer = Instant::now();
+        debug!("(interaction_create): processing...");
+
         match interaction {
             Interaction::Command(command) => {
                 let command_name = command.data.name.clone();
-                debug!("executing application command: {}", command_name);
 
                 if let Some(listener) = self.commands.get(&command_name) {
                     listener.execute(self.context.clone(), ctx, command).await;
                 } else {
-                    warn!("unknown command: {}", command_name);
+                    warn!("(interaction_create): command not found: {}", command_name);
                 }
 
-                debug!("application command executed: {}", command_name);
+                info!("(interaction_create): command '{}' executed in {}ms", command_name, timer.elapsed().as_millis());
             }
             Interaction::Component(component) => {
                 let component_name = component.data.custom_id.clone();
-                debug!("executing message component: {}", component_name);
 
                 if let Some(listener) = self.components.get(&component_name) {
                     listener.execute(self.context.clone(), ctx, component).await;
                 } else {
-                    warn!("unknown component: {}", component_name);
+                    warn!("(interaction_create): component not found: {}", component_name);
                 }
 
-                debug!("message component executed: {}", component_name);
+                info!("(interaction_create): component '{}' executed in {}ms", component_name, timer.elapsed().as_millis());
             }
             _ => (),
         }
     }
 
     async fn voice_state_update(&self, _: Context, old: Option<VoiceState>, new: VoiceState) {
-        debug!("processing voice state update...");
+        let timer = Instant::now();
+        debug!("(voice_state_update): processing...");
+
         let option_manager = self.context.manager.read().await.clone();
         if let Some(manager) = option_manager {
             if let Err(e) = manager.update_voice_state(old, new).await {
-                warn!("error when updating player voice state: {}", e);
+                warn!("(voice_state_update): cannot update the HydrogenManager's player voice state: {}", e);
             }
         }
-        debug!("processed voice state update");
+
+        info!("(voice_state_update): processed in {}ms", timer.elapsed().as_millis());
     }
 
     async fn voice_server_update(&self, _: Context, voice_server: VoiceServerUpdateEvent) {
-        debug!("processing voice server update...");
+        let timer = Instant::now();
+        debug!("(voice_server_update): processing...");
+
         let option_manager = self.context.manager.read().await.clone();
         if let Some(manager) = option_manager {
             if let Err(e) = manager.update_voice_server(voice_server).await {
-                warn!("error when updating player voice server: {}", e);
+                warn!("(voice_server_update): cannot update HydrogenManager's player voice server: {}", e);
             }
         }
-        debug!("processed voice server update");
+
+        info!("(voice_server_update): processed in {}ms...", timer.elapsed().as_millis());
     }
 }
 
@@ -190,17 +197,13 @@ async fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
-    info!("starting up...");
-
-    debug!("initializing i18n...");
     let i18n = {
         let path =
             env::var("LANGUAGE_PATH").expect("you need to set LANGUAGE_PATH environment variable");
         HydrogenI18n::new(path, HydrogenI18n::DEFAULT_LANGUAGE)
     }
-    .expect("can't initialize i18n");
+    .expect("cannot initialize HydrogenI18n");
 
-    debug!("parsing lavalink config...");
     let lavalink_nodes = {
         let mut lavalink_nodes = Vec::new();
         let lavalink_env =
@@ -214,7 +217,7 @@ async fn main() {
 
             let password = node_components
                 .next()
-                .expect("some lavalink node doesn't have password set");
+                .expect("lavalink node doesn't have a password set");
             let tls = node_components.next().unwrap_or("");
 
             lavalink_nodes.push(LavalinkNodeInfo {
@@ -225,14 +228,12 @@ async fn main() {
         }
 
         if lavalink_nodes.len() == 0 {
-            error!("at least one lavalink node is required to work");
-            exit(1);
+            panic!("at least one lavalink node is required to work");
         }
 
         Arc::new(lavalink_nodes)
     };
 
-    debug!("initializing handler...");
     let app = HydrogenHandler {
         context: HydrogenContext {
             manager: Arc::new(RwLock::new(None)),
@@ -263,7 +264,6 @@ async fn main() {
         lavalink_nodes,
     };
 
-    debug!("initializing client...");
     Client::builder(
         env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"),
         GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES,
@@ -271,8 +271,8 @@ async fn main() {
     .event_handler(app)
     .register_songbird()
     .await
-    .expect("can't initialize the client")
+    .expect("cannot initialize client")
     .start()
     .await
-    .expect("can't start the client");
+    .expect("cannot start client");
 }

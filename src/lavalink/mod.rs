@@ -95,8 +95,8 @@ impl Display for LavalinkError {
             Self::Reqwest(e) => e.fmt(f),
             Self::InvalidHeaderValue(e) => e.fmt(f),
             Self::InvalidResponse(e) => e.fmt(f),
-            Self::RestError(e) => write!(f, "rest error: {}", e.message),
-            Self::NotConnected => write!(f, "lavalink websocket hasn't connected before timeout"),
+            Self::RestError(e) => write!(f, "rest api error: {}", e.message),
+            Self::NotConnected => write!(f, "lavalink connection timeout"),
         }
     }
 }
