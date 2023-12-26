@@ -31,7 +31,7 @@
     },
     "player": {
         "title": "Hydrogen: Music Player",
-        "description_with_url": "[**{name}**]({url})\n{author}",
+        "description_url": "[**{name}**]({url})\n{author}",
         "description": "**{name}**\n{author}",
         "empty": "_There's nothing currently playing._",
         "timeout": "There's no one else connected to me on voice chat. I will leave in {time} seconds."
