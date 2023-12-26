@@ -1,0 +1,83 @@
+{
+    "generic": {
+        "embed_footer": "Hydrogen por Nashira Deer"
+    },
+    "error": {
+        "not_intentional": "Se você acredita que isso é um erro, por favor reporte [aqui]({url}).",
+        "unknown": "Um erro estranho ocorreu! Por favor reporte [aqui]({url}).",
+        "unknown_voice_state": "Eu não pude determinar seu estado de voz, cheque minhas permissões, ou se você está em um chat de voz.",
+        "cant_connect": "Eu não pude entrar no seu chat de voz. Cheque se eu tenho permissões para acessar ele.",
+        "not_in_voice_chat": "Você não pode controlar o tocador de música de fora do chat de voz.",
+        "player_exists": "Já existe um tocador de música em um outro chat de voz.",
+        "player_not_exists": "Não tem um tocador de música nesse servidor.",
+        "empty_queue": "Não há músicas na fila."
+    },
+    "play": {
+        "name": "tocar",
+        "description": "Pede para uma música ser tocada, enfileirando ela na fila ou tocando imediatamente se vazio.",
+        "query_name": "pesquisa",
+        "query_description": "Uma música ou URL de uma playlist, ou um termo de pesquisa.",
+        "embed_title": "Enfileirando/Tocando músicas",
+        "play_single": "Tocando: **{name}** by **{author}**.",
+        "play_single_url": "Tocando: [**{name}**]({url}) por **{author}**.",
+        "play_multi": "**{count}** músicas de sua playlist foram enfileirados, **{name}** por **{author}** foi selecionada para tocar agora.",
+        "play_multi_url": "**{count}** músicas de sua playlist foram enfileirados, [**{name}**]({url}) por **{author}** foi selecionada para tocar agora.",
+        "enqueue_single": "**{name}** por **{author}** foi adicionado na fila.",
+        "enqueue_single_url": "[**{name}**]({url}) por **{author}** foi adicionado na fila.",
+        "enqueue_multi": "**{count}** músicas da sua playlist foram enfileirados.",
+        "not_found": "Eu não pude encontrar a música solicitada.",
+        "truncated": "Você não pode adicionar mais músicas na queue uma vez que ela já esteja no limite permitido. Por favor remova umas algumas músicas antes de tentar de novo.",
+        "truncated_warn": "**Aviso: Eu preciso ignorar algumas músicas da sua playlist porque ela maior que o limite permitido.**"
+    },
+    "player": {
+        "title": "Hydrogen: Tocador de Música",
+        "description_url": "[**{name}**]({url})\n{author}",
+        "description": "**{name}**\n{author}",
+        "empty": "_Atualmente não estou tocando nada._",
+        "timeout": "Não há mais ninguém conectado no chat de voz. Eu estarei saindo em {time} segundos."
+    },
+    "join": {
+        "name": "entrar",
+        "description": "Me faça entrar no chat de voz sem tocar nada.",
+        "embed_title": "Entrando no chat de voz",
+        "joined": "Eu entrei no seu chat de voz, e agora você pode pedir qualquer música usando {play}."
+    },
+    "stop": {
+        "embed_title": "Parando o tocador de música",
+        "stopped": "Eu estou saindo do chat de voz. Espero te ver em breve."
+    },
+    "loop": {
+        "embed_title": "Repetindo a fila",
+        "looping": "A repetição da fila foi alterado para **{loop}**.",
+        "autostart": "Normal",
+        "no_autostart": "Normal sem auto-reprodução",
+        "music": "Repetir Música",
+        "queue": "Repetir Fila",
+        "random": "Próxima música aleatória"
+    },
+    "pause": {
+        "embed_title": "Pausando/Resumindo o tocador de música",
+        "paused": "Você pausou o tocador de música.",
+        "resumed": "Você resumiu o tocador de música."
+    },
+    "skip": {
+        "embed_title": "Pulando para próxima música",
+        "skipping": "Pulando para a música **{name}** por **{author}**.",
+        "skipping_url": "Pulando para a música [**{name}**]({url}) por **{author}**."
+    },
+    "prev": {
+        "embed_title": "Voltando para a música anterior",
+        "returning": "Voltando para a música **{name}** por **{author}**.",
+        "returning_url": "Voltando para a música [**{name}**]({url}) por **{author}**."
+    },
+    "seek": {
+        "name": "procurar",
+        "description": "Procura pelo tempo na música tocando atualmente.",
+        "time_name": "tempo",
+        "time_description": "Tempo em segundos ou sintaxe suportada.",
+        "embed_title": "Procurando o tempo de música",
+        "invalid_syntax": "Sintaxe de tempo inválida. Você pode usar números como segundos ou sufixa-los com `m` para minutos ou `h` para horas. Você também pode usar `00:00` ou `00:00:00` para definir as horas.",
+        "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
+        "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    }
+}
