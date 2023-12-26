@@ -24,7 +24,7 @@ use serenity::{
 };
 use songbird::Songbird;
 use tokio::{spawn, sync::RwLock, task::JoinHandle, time::sleep};
-use tracing::{debug, error, warn, info};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     i18n::HydrogenI18n,
@@ -322,8 +322,8 @@ impl HydrogenManager {
                         guild_id,
                         &self
                             .i18n
-                            .translate(&player.guild_locale(), "playing", "timeout_trigger")
-                            .replace("${time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
+                            .translate(&player.guild_locale(), "player", "timeout")
+                            .replace("{time}", &HYDROGEN_EMPTY_CHAT_TIMEOUT.to_string()),
                         HYDROGEN_PRIMARY_COLOR,
                         HydrogenPlayerState::Thinking,
                         player.pause(),
@@ -446,21 +446,21 @@ impl HydrogenManager {
                     let message = match v.uri {
                         Some(v) => self
                             .i18n
-                            .translate(&player.guild_locale(), "playing", "description_uri")
-                            .replace("${uri}", &v),
+                            .translate(&player.guild_locale(), "player", "description_url")
+                            .replace("{uri}", &v),
                         None => {
                             self.i18n
-                                .translate(&player.guild_locale(), "playing", "description")
+                                .translate(&player.guild_locale(), "player", "description")
                         }
                     }
-                    .replace("${music}", &v.title)
-                    .replace("${author}", &v.author);
+                    .replace("{music}", &v.title)
+                    .replace("{author}", &v.author);
 
                     (message, Some(v.requester_id))
                 }
                 None => (
                     self.i18n
-                        .translate(&player.guild_locale(), "playing", "empty"),
+                        .translate(&player.guild_locale(), "player", "empty"),
                     None,
                 ),
             };
@@ -526,7 +526,7 @@ impl HydrogenManager {
                                 embed
                                     .title(self.i18n.translate(
                                         &player.guild_locale(),
-                                        "playing",
+                                        "player",
                                         "title",
                                     ))
                                     .description(description)
@@ -534,8 +534,8 @@ impl HydrogenManager {
                                     .footer(
                                         CreateEmbedFooter::new(self.i18n.translate(
                                             &player.guild_locale(),
-                                            "embed",
-                                            "footer_text",
+                                            "generic",
+                                            "embed_footer",
                                         ))
                                         .icon_url(HYDROGEN_LOGO_URL),
                                     ),
@@ -564,7 +564,7 @@ impl HydrogenManager {
                             CreateEmbed::new()
                                 .title(self.i18n.translate(
                                     &player.guild_locale(),
-                                    "playing",
+                                    "player",
                                     "title",
                                 ))
                                 .description(description)
@@ -572,8 +572,8 @@ impl HydrogenManager {
                                 .footer(
                                     CreateEmbedFooter::new(self.i18n.translate(
                                         &player.guild_locale(),
-                                        "embed",
-                                        "footer_text",
+                                        "generic",
+                                        "embed_footer",
                                     ))
                                     .icon_url(HYDROGEN_LOGO_URL),
                                 ),
@@ -776,7 +776,10 @@ impl LavalinkHandler for HydrogenManager {
             }
         }
 
-        info!("(disconnect): processed in {}ms", timer.elapsed().as_millis());
+        info!(
+            "(disconnect): processed in {}ms",
+            timer.elapsed().as_millis()
+        );
     }
 
     async fn lavalink_track_start(&self, _: Lavalink, message: LavalinkTrackStartEvent) {
@@ -793,7 +796,10 @@ impl LavalinkHandler for HydrogenManager {
 
         self.update_now_playing(guild_id.into()).await;
 
-        info!("(track_start): processed in {}ms", timer.elapsed().as_millis());
+        info!(
+            "(track_start): processed in {}ms",
+            timer.elapsed().as_millis()
+        );
     }
 
     async fn lavalink_track_end(&self, _: Lavalink, message: LavalinkTrackEndEvent) {
@@ -817,7 +823,10 @@ impl LavalinkHandler for HydrogenManager {
             }
         }
 
-        info!("(track_end): processed in {}ms", timer.elapsed().as_millis());
+        info!(
+            "(track_end): processed in {}ms",
+            timer.elapsed().as_millis()
+        );
     }
 }
 
