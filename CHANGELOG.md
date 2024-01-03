@@ -4,8 +4,8 @@
 
 ### Changed
 
-- Refactor translation keys.
 - Refactor en-US translation.
-- Refactor log messages.
 - Refactor error messages.
+- Refactor log messages.
+- Refactor translation keys.
 - Update pt-BR translation.
