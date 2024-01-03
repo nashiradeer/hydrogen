@@ -14,7 +14,7 @@
     },
     "play": {
         "name": "abspielen",
-        "description": "Musik zum Abspielen anfordern, indem sie in die Warteschlange eingereiht oder sofort abgespielt wird, wenn sie leer ist.",
+        "description": "Musik anfordern, in Warteschlange einreihen oder sofort abspielen wenn leer.",
         "query_name": "abfrage",
         "query_description": "Ein Musik- oder Playlist-URL oder ein Suchbegriff.",
         "embed_title": "Hinzufügen/Wiedergabe von Musik",
@@ -43,40 +43,40 @@
         "joined": "Ich bin deinem Voice-Chat beigetreten, und jetzt kannst du jede Musik mit {play} anfordern."
     },
     "stop": {
-        "embed_title": "Stopping the music player",
-        "stopped": "I'm leaving the voice chat. Hope to see you soon."
+        "embed_title": "Den Musikplayer stoppen",
+        "stopped": "Ich verlasse den Voice-Chat. Hoffe, dich bald zu sehen."
     },
     "loop": {
-        "embed_title": "Looping the queue",
-        "looping": "Queue's loop mode has changed to **{loop}**.",
+        "embed_title": "Die Warteschleife durchlaufen",
+        "looping": "Der Wiederholungsmodus der Warteschleife wurde auf **{loop}** geändert.",
         "autostart": "Normal",
-        "no_autostart": "Normal without auto-playing",
-        "music": "Repeat Music",
-        "queue": "Repeat Queue",
-        "random": "Next Music Random"
+        "no_autostart": "Normal ohne automatisches Abspielen",
+        "music": "Musik wiederholen",
+        "queue": "Warteschleife wiederholen",
+        "random": "Nächste Musik zufällig"
     },
     "pause": {
-        "embed_title": "Pausing/Resuming the music player",
-        "paused": "You have paused the music player.",
-        "resumed": "You have resumed the music player."
+        "embed_title": "Pausieren/Fortsetzen des Musikplayers",
+        "paused": "Du hast den Musikplayer pausiert.",
+        "resumed": "Du hast den Musikplayer fortgesetzt."
     },
     "skip": {
-        "embed_title": "Skipping to the next music",
-        "skipping": "Skipping to the music **{name}** by **{author}**.",
-        "skipping_url": "Skipping to the music [**{name}**]({url}) by **{author}**."
+        "embed_title": "Zur nächsten Musik springen.",
+        "skipping": "Zur Musik **{name}** von **{author}** springen.",
+        "skipping_url": "Zur Musik [**{name}**]({url}) von **{author}** springen."
     },
     "prev": {
-        "embed_title": "Backing to the previous music",
-        "returning": "Backing to the music **{name}** by **{author}**.",
-        "returning_url": "Backing to the music [**{name}**]({url}) by **{author}**."
+        "embed_title": "Zur vorherigen Musik zurückgehen.",
+        "returning": "Zur Musik **{name}** von **{author}** zurückgehen.",
+        "returning_url": "Zur Musik [**{name}**]({url}) von **{author}** zurückgehen."
     },
     "seek": {
-        "name": "seek",
-        "description": "Seek for the time in the current music playing.",
-        "time_name": "time",
-        "time_description": "Time in seconds or a supported syntax.",
-        "embed_title": "Seeking music time",
-        "invalid_syntax": "Invalid time time syntax. You can use numbers as seconds or suffix them with `m` to be minutes or `h` to be hours. You can also use `00:00` or `00:00:00` to set the hours.",
+        "name": "suchen",
+        "description": "Die Zeit in der gerade laufenden Musik suchen.",
+        "time_name": "zeit",
+        "time_description": "Zeit in Sekunden oder einer unterstützten Syntax.",
+        "embed_title": "Suche nach der Musikzeit",
+        "invalid_syntax": "Ungültige Zeitsyntax. Sie können Zahlen als Sekunden verwenden oder sie mit `m` für Minuten oder `h` für Stunden versehen. Sie können auch `00:00` oder `00:00:00` verwenden, um die Stunden festzulegen.",
         "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
         "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
     }
