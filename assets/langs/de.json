@@ -1,0 +1,83 @@
+{
+    "generic": {
+        "embed_footer": "Hydrogen von Nashira Deer"
+    },
+    "error": {
+        "not_intentional": "Wenn Sie glauben, dass es sich hierbei um einen Fehler handelt, melden Sie sich bitte [hier]({url}).",
+        "unknown": "Es ist ein unbekannter Fehler aufgetreten! Melden Sie sich bitte [hier]({url}).",
+        "unknown_voice_state": "Ich kann deinen Sprachzustand nicht feststellen, meine Berechtigungen überprüfen oder herausfinden, ob du dich in einem Voice-Chat befindest.",
+        "cant_connect": "Ich kann Ihrem Voice-Chat nicht beitreten. Überprüfen Sie, ob ich die Berechtigung habe, darauf zuzugreifen.",
+        "not_in_voice_chat": "Du kannst den Musikplayer nicht von außerhalb des Voice-Chats steuern.",
+        "player_exists": "Es gibt bereits einen Musikplayer in einem anderen Voice-Chat.",
+        "player_not_exists": "Es gibt keinen Musikplayer auf diesem Server.",
+        "empty_queue": "Es gibt keine Musik in der Warteschlange."
+    },
+    "play": {
+        "name": "abspielen",
+        "description": "Musik anfordern, in Warteschlange einreihen oder sofort abspielen wenn leer.",
+        "query_name": "abfrage",
+        "query_description": "Ein Musik- oder Playlist-URL oder ein Suchbegriff.",
+        "embed_title": "Hinzufügen/Wiedergabe von Musik",
+        "play_single": "Ab spielen: **{name}** von **{author}**.",
+        "play_single_url": "Ab spielen: [**{name}**]({url}) von **{author}**.",
+        "play_multi": "**{count}** Musikstücke aus deiner Playlist wurden in die Warteschlange gestellt. **{name}** von **{author}** wurde ausgewählt und wird jetzt abgespielt.",
+        "play_multi_url": "**{count}** Musikstücke aus deiner Playlist wurden in die Warteschlange gestellt. [**{name}**]({url}) von **{author}** wurde ausgewählt und wird jetzt abgespielt.",
+        "enqueue_single": "**{name}** von **{author}** wurde zur Warteschlange hinzugefügt.",
+        "enqueue_single_url": "[**{name}**]({url}) von **{author}** wurde zur Warteschlange hinzugefügt.",
+        "enqueue_multi": "**{count}** Musikstücke aus deiner Playlist wurden in die Warteschlange gestellt.",
+        "not_found": "Ich kann die angeforderte Musik nicht finden.",
+        "truncated": "Du kannst keine weiteren Musikstücke zur Warteschlange hinzufügen, da die Warteschlange bereits das erlaubte Limit erreicht hat. Bitte entferne einige Musikstücke, bevor du es erneut versuchst.",
+        "truncated_warn": "**Warnung: Ich muss einige Musikstücke aus deiner Playlist ignorieren, da sie das erlaubte Limit überschreiten.**"
+    },
+    "player": {
+        "title": "Hydrogen: Musikplayer",
+        "description_url": "[**{name}**]({url})\n{author}",
+        "description": "**{name}**\n{author}",
+        "empty": "_Es wird gerade nichts abgespielt._",
+        "timeout": "Es ist niemand sonst mit mir im Voice-Chat verbunden. Ich werde in {time} Sekunden verlassen."
+    },
+    "join": {
+        "name": "beitreten",
+        "description": "Bring mich in deinen Voice-Chat, ohne etwas abzuspielen.",
+        "embed_title": "Dem Voice-Chat beitreten",
+        "joined": "Ich bin deinem Voice-Chat beigetreten, und jetzt kannst du jede Musik mit {play} anfordern."
+    },
+    "stop": {
+        "embed_title": "Den Musikplayer stoppen",
+        "stopped": "Ich verlasse den Voice-Chat. Hoffe, dich bald zu sehen."
+    },
+    "loop": {
+        "embed_title": "Die Warteschleife durchlaufen",
+        "looping": "Der Wiederholungsmodus der Warteschleife wurde auf **{loop}** geändert.",
+        "autostart": "Normal",
+        "no_autostart": "Normal ohne automatisches Abspielen",
+        "music": "Musik wiederholen",
+        "queue": "Warteschleife wiederholen",
+        "random": "Nächste Musik zufällig"
+    },
+    "pause": {
+        "embed_title": "Pausieren/Fortsetzen des Musikplayers",
+        "paused": "Du hast den Musikplayer pausiert.",
+        "resumed": "Du hast den Musikplayer fortgesetzt."
+    },
+    "skip": {
+        "embed_title": "Zur nächsten Musik springen.",
+        "skipping": "Zur Musik **{name}** von **{author}** springen.",
+        "skipping_url": "Zur Musik [**{name}**]({url}) von **{author}** springen."
+    },
+    "prev": {
+        "embed_title": "Zur vorherigen Musik zurückgehen.",
+        "returning": "Zur Musik **{name}** von **{author}** zurückgehen.",
+        "returning_url": "Zur Musik [**{name}**]({url}) von **{author}** zurückgehen."
+    },
+    "seek": {
+        "name": "suchen",
+        "description": "Die Zeit in der gerade laufenden Musik suchen.",
+        "time_name": "zeit",
+        "time_description": "Zeit in Sekunden oder einer unterstützten Syntax.",
+        "embed_title": "Suche nach der Musikzeit",
+        "invalid_syntax": "Ungültige Zeitsyntax. Sie können Zahlen als Sekunden verwenden oder sie mit `m` für Minuten oder `h` für Stunden versehen. Sie können auch `00:00` oder `00:00:00` verwenden, um die Stunden festzulegen.",
+        "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
+        "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    }
+}
