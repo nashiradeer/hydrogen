@@ -1,0 +1,83 @@
+{
+    "generic": {
+        "embed_footer": "Hydrogen by Nashira Deer"
+    },
+    "error": {
+        "not_intentional": "If you believe this is an error, please report it [here]({url}).",
+        "unknown": "An unknown error has happened! Please report it [here]({url}).",
+        "unknown_voice_state": "I can't determine your voice state, check my permissions, or if you're in a voice chat.",
+        "cant_connect": "I can't join your voice chat. Check if I have permission to access it.",
+        "not_in_voice_chat": "You can't control the music player from outside the voice chat.",
+        "player_exists": "There's already a music player in another voice chat.",
+        "player_not_exists": "There's no music player on this server.",
+        "empty_queue": "There're no musics in the queue."
+    },
+    "play": {
+        "name": "play",
+        "description": "Request music to be played, enqueuing it in the queue or playing immediately if empty.",
+        "query_name": "query",
+        "query_description": "A music or playlist URL, or a search term.",
+        "embed_title": "Enqueuing/Playing musics",
+        "play_single": "Playing: **{name}** by **{author}**.",
+        "play_single_url": "Playing: [**{name}**]({url}) by **{author}**.",
+        "play_multi": "**{count}** musics from your playlist have been queued, **{name}** from **{author}** has been selected to play now.",
+        "play_multi_url": "**{count}** musics from your playlist have been queued, [**{name}**]({url}) from **{author}** has been selected to play now.",
+        "enqueue_single": "**{name}** by **{author}** has been added to the queue.",
+        "enqueue_single_url": "[**{name}**]({url}) by **{author}** has been added to the queue.",
+        "enqueue_multi": "**{count}** musics from your playlist have been queued.",
+        "not_found": "I can't find the requested music.",
+        "truncated": "You can't add more music to the queue as the queue is already at the allowed limit. Please remove some music before trying again.",
+        "truncated_warn": "**Warning: I need to ignore some music from your playlist because it's larger than the allowed limit.**"
+    },
+    "player": {
+        "title": "Hydrogen: Music Player",
+        "description_url": "[**{name}**]({url})\n{author}",
+        "description": "**{name}**\n{author}",
+        "empty": "_There's nothing currently playing._",
+        "timeout": "There's no one else connected to me on voice chat. I will leave in {time} seconds."
+    },
+    "join": {
+        "name": "join",
+        "description": "Make me join your voice chat without playing anything.",
+        "embed_title": "Joining the voice chat",
+        "joined": "I have joined your voice chat, and now you can request any music using {play}."
+    },
+    "stop": {
+        "embed_title": "Stopping the music player",
+        "stopped": "I'm leaving the voice chat. Hope to see you soon."
+    },
+    "loop": {
+        "embed_title": "Looping the queue",
+        "looping": "Queue's loop mode has changed to **{loop}**.",
+        "autostart": "Normal",
+        "no_autostart": "Normal without auto-playing",
+        "music": "Repeat Music",
+        "queue": "Repeat Queue",
+        "random": "Next Music Random"
+    },
+    "pause": {
+        "embed_title": "Pausing/Resuming the music player",
+        "paused": "You have paused the music player.",
+        "resumed": "You have resumed the music player."
+    },
+    "skip": {
+        "embed_title": "Skipping to the next music",
+        "skipping": "Skipping to the music **{name}** by **{author}**.",
+        "skipping_url": "Skipping to the music [**{name}**]({url}) by **{author}**."
+    },
+    "prev": {
+        "embed_title": "Backing to the previous music",
+        "returning": "Backing to the music **{name}** by **{author}**.",
+        "returning_url": "Backing to the music [**{name}**]({url}) by **{author}**."
+    },
+    "seek": {
+        "name": "seek",
+        "description": "Seek for the time in the current music playing.",
+        "time_name": "time",
+        "time_description": "Time in seconds or a supported syntax.",
+        "embed_title": "Seeking music time",
+        "invalid_syntax": "Invalid time time syntax. You can use numbers as seconds or suffix them with `m` to be minutes or `h` to be hours. You can also use `00:00` or `00:00:00` to set the hours.",
+        "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
+        "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    }
+}
