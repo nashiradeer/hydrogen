@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Create de-DE translation.
+
 ### Changed
 
 - Refactor en-US translation.
