@@ -139,7 +139,7 @@ impl LoopComponent {
                                 .description(
                                     hydrogen
                                         .i18n
-                                        .translate(&interaction.locale, "loop", "success")
+                                        .translate(&interaction.locale, "loop", "looping")
                                         .replace("{loop}", &loop_type_translation),
                                 )
                                 .color(HYDROGEN_PRIMARY_COLOR)
