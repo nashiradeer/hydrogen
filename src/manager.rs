@@ -447,13 +447,13 @@ impl HydrogenManager {
                         Some(v) => self
                             .i18n
                             .translate(&player.guild_locale(), "player", "description_url")
-                            .replace("{uri}", &v),
+                            .replace("{url}", &v),
                         None => {
                             self.i18n
                                 .translate(&player.guild_locale(), "player", "description")
                         }
                     }
-                    .replace("{music}", &v.title)
+                    .replace("{name}", &v.title)
                     .replace("{author}", &v.author);
 
                     (message, Some(v.requester_id))
