@@ -1,0 +1,83 @@
+{
+    "generic": {
+        "embed_footer": "Hydrogen por Nashira Deer"
+    },
+    "error": {
+        "not_intentional": "Si crees que esto es un error, por favor, repórtalo [aquí]({url}).",
+        "unknown": "¡Ha ocurrido un error desconocido! Por favor, repórtalo [aquí]({url}).",
+        "unknown_voice_state": "No puedo determinar el estado de tu voz, verifica mis permisos o si estás en un chat de voz.",
+        "cant_connect": "No puedo unirme a tu chat de voz. Verifica si tengo permisos para acceder.",
+        "not_in_voice_chat": "No puedes controlar el reproductor de música desde fuera del chat de voz.",
+        "player_exists": "Ya hay un reproductor de música en otro chat de voz.",
+        "player_not_exists": "No hay un reproductor de música en este servidor.",
+        "empty_queue": "No hay canciones en la cola."
+    },
+    "play": {
+        "name": "tocar",
+        "description": "Solicitar canción, encolar o reproducir si está vacía.",
+        "query_name": "consulta",
+        "query_description": "URL de música, lista o término de búsqueda.",
+        "embed_title": "Encolando/Reproduciendo canciones",
+        "play_single": "Reproduciendo: **{name}** de **{author}**.",
+        "play_single_url": "Reproduciendo: [**{name}**]({url}) de **{author}**.",
+        "play_multi": "**{count}** canciones de tu lista de reproducción se han encolado. Se ha seleccionado reproducir ahora **{name}** de **{author}**.",
+        "play_multi_url": "**{count}** canciones de tu lista de reproducción se han encolado. Se ha seleccionado reproducir ahora [**{name}**]({url}) de **{author}**.",
+        "enqueue_single": "**{name}** por **{author}** ha sido añadida a la cola.",
+        "enqueue_single_url": "[**{name}**]({url}) por **{author}** ha sido añadida a la cola.",
+        "enqueue_multi": "Se han encolado **{count}** canciones de tu lista de reproducción.",
+        "not_found": "No puedo encontrar la canción solicitada.",
+        "truncated": "No puedes añadir más canciones a la cola, ya que esta ha alcanzado el límite permitido. Por favor, elimina algunas canciones antes de intentarlo nuevamente.",
+        "truncated_warn": "**Advertencia: Necesito ignorar algunas canciones de tu lista de reproducción porque excede el límite permitido.**"
+    },
+    "player": {
+        "title": "Hydrogen: Reproductor de Música",
+        "description_url": "[**{name}**]({url})\n{author}",
+        "description": "**{name}**\n{author}",
+        "empty": "_En este momento no hay nada reproduciéndose._",
+        "timeout": "No hay nadie más conectado a mi chat de voz. Saldré en {time} segundos."
+    },
+    "join": {
+        "name": "unir",
+        "description": "Haz que me una a tu chat de voz sin reproducir nada.",
+        "embed_title": "Uniéndome al chat de voz.",
+        "joined": "Me he unido a tu chat de voz, y ahora puedes solicitar cualquier música usando {play}."
+    },
+    "stop": {
+        "embed_title": "Deteniendo el reproductor de música",
+        "stopped": "Me estoy retirando del chat de voz. Espero verte pronto."
+    },
+    "loop": {
+        "embed_title": "Reproduciendo la cola en bucle",
+        "looping": "El modo de bucle de la cola ha cambiado a **{loop}**.",
+        "autostart": "Normal",
+        "no_autostart": "Normal sin reproducción automática.",
+        "music": "Repetir Canción",
+        "queue": "Repetir Cola",
+        "random": "Próxima Canción al Azar"
+    },
+    "pause": {
+        "embed_title": "Pausando/Reanudando el reproductor de música",
+        "paused": "Has pausado el reproductor de música.",
+        "resumed": "Has reanudado el reproductor de música."
+    },
+    "skip": {
+        "embed_title": "Saltando a la siguiente canción",
+        "skipping": "Saltando a la canción **{name}** de **{author}**.",
+        "skipping_url": "Saltando a la canción [**{name}**]({url}) de **{author}**."
+    },
+    "prev": {
+        "embed_title": "Retrocediendo a la música anterior",
+        "returning": "Retrocediendo a la canción **{name}** de **{author}**.",
+        "returning_url": "Retrocediendo a la canción [**{name}**]({url}) de **{author}**."
+    },
+    "seek": {
+        "name": "buscar",
+        "description": "Buscar en el tiempo de la música actual.",
+        "time_name": "tiempo",
+        "time_description": "Tiempo en segundos o una sintaxis compatible.",
+        "embed_title": "Buscando tiempo de la música",
+        "invalid_syntax": "Sintaxis de tiempo no válida. Puedes usar números como segundos o añadirles el sufijo `m` para minutos o `h` para horas. También puedes usar `00:00` o `00:00:00` para establecer las horas.",
+        "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
+        "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    }
+}

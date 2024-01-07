@@ -5,6 +5,7 @@
 ### Added
 
 - Create de-DE translation.
+- Create es-ES translation.
 
 ### Changed
 
