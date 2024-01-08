@@ -227,6 +227,11 @@ impl JoinCommand {
             .await
             .map_err(|e| e.to_string())?;
 
+        let play_command = match hydrogen.commands_id.read().await.get("play") {
+            Some(v) => format!("</play:{}>", v.get()),
+            None => "`/play`".to_owned(),
+        };
+
         if let Err(e) = interaction
             .edit_response(
                 &context.http,
@@ -240,7 +245,8 @@ impl JoinCommand {
                         .description(
                             hydrogen
                                 .i18n
-                                .translate(&interaction.locale, "join", "joined"),
+                                .translate(&interaction.locale, "join", "joined")
+                                .replace("{play}", &play_command),
                         )
                         .color(HYDROGEN_PRIMARY_COLOR)
                         .footer(

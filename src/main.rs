@@ -7,8 +7,8 @@ use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
 use serenity::{
     all::{
-        Client, Command, CommandInteraction, ComponentInteraction, GatewayIntents, Interaction,
-        Ready, VoiceServerUpdateEvent, VoiceState,
+        Client, Command, CommandId, CommandInteraction, ComponentInteraction, GatewayIntents,
+        Interaction, Ready, VoiceServerUpdateEvent, VoiceState,
     },
     builder::CreateCommand,
     client::{Context, EventHandler},
@@ -50,6 +50,7 @@ pub static HYDROGEN_BUG_URL: &str = "https://github.com/nashiradeer/hydrogen/iss
 struct HydrogenContext {
     pub i18n: HydrogenI18n,
     pub manager: Arc<RwLock<Option<HydrogenManager>>>,
+    pub commands_id: Arc<RwLock<HashMap<String, CommandId>>>,
 }
 
 #[derive(Clone)]
@@ -96,17 +97,24 @@ impl EventHandler for HydrogenHandler {
         *self.context.manager.write().await = Some(manager.clone());
         debug!("(ready): HydrogenManager initialized");
 
+        let mut commands_id = self.context.commands_id.write().await;
         for (name, command) in self.commands.iter() {
             debug!("(ready): registering command: {}", name);
-            if let Err(e) = Command::create_global_command(
+            match Command::create_global_command(
                 ctx.http.clone(),
                 command.register(self.context.i18n.clone()),
             )
             .await
             {
-                error!("(ready): cannot register the command '{}': {}", name, e);
+                Ok(v) => {
+                    commands_id.insert(name.clone(), v.id);
+                }
+                Err(e) => {
+                    error!("(ready): cannot register the command '{}': {}", name, e);
+                }
             }
         }
+        drop(commands_id);
         debug!("(ready): commands registered");
 
         for i in 0..self.lavalink_nodes.len() {
@@ -127,7 +135,11 @@ impl EventHandler for HydrogenHandler {
             manager.lavalink_node_count().await
         );
 
-        info!("(ready): client connected to '{}' in {}ms", ready.user.name, timer.elapsed().as_millis());
+        info!(
+            "(ready): client connected to '{}' in {}ms",
+            ready.user.name,
+            timer.elapsed().as_millis()
+        );
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -144,7 +156,11 @@ impl EventHandler for HydrogenHandler {
                     warn!("(interaction_create): command not found: {}", command_name);
                 }
 
-                info!("(interaction_create): command '{}' executed in {}ms", command_name, timer.elapsed().as_millis());
+                info!(
+                    "(interaction_create): command '{}' executed in {}ms",
+                    command_name,
+                    timer.elapsed().as_millis()
+                );
             }
             Interaction::Component(component) => {
                 let component_name = component.data.custom_id.clone();
@@ -152,10 +168,17 @@ impl EventHandler for HydrogenHandler {
                 if let Some(listener) = self.components.get(&component_name) {
                     listener.execute(self.context.clone(), ctx, component).await;
                 } else {
-                    warn!("(interaction_create): component not found: {}", component_name);
+                    warn!(
+                        "(interaction_create): component not found: {}",
+                        component_name
+                    );
                 }
 
-                info!("(interaction_create): component '{}' executed in {}ms", component_name, timer.elapsed().as_millis());
+                info!(
+                    "(interaction_create): component '{}' executed in {}ms",
+                    component_name,
+                    timer.elapsed().as_millis()
+                );
             }
             _ => (),
         }
@@ -172,7 +195,10 @@ impl EventHandler for HydrogenHandler {
             }
         }
 
-        info!("(voice_state_update): processed in {}ms", timer.elapsed().as_millis());
+        info!(
+            "(voice_state_update): processed in {}ms",
+            timer.elapsed().as_millis()
+        );
     }
 
     async fn voice_server_update(&self, _: Context, voice_server: VoiceServerUpdateEvent) {
@@ -186,7 +212,10 @@ impl EventHandler for HydrogenHandler {
             }
         }
 
-        info!("(voice_server_update): processed in {}ms...", timer.elapsed().as_millis());
+        info!(
+            "(voice_server_update): processed in {}ms...",
+            timer.elapsed().as_millis()
+        );
     }
 }
 
@@ -237,6 +266,7 @@ async fn main() {
     let app = HydrogenHandler {
         context: HydrogenContext {
             manager: Arc::new(RwLock::new(None)),
+            commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n,
         },
         commands: {
