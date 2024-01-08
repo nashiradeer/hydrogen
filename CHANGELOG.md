@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.0.1-alpha.3] - 2023-01-08
+
 ### Added
 
 - Create de-DE translation.
