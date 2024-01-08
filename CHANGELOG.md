@@ -6,6 +6,7 @@
 
 - Create de-DE translation.
 - Create es-ES translation.
+- Create a HashMap with command's IDs.
 
 ### Changed
 
