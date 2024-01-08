@@ -14,3 +14,8 @@
 - Refactor log messages.
 - Refactor translation keys.
 - Update pt-BR translation.
+
+### Fixed
+
+- Wrong translation key in LoopComponent. (Issue #16)
+- Wrong translations variables in HydrogenManager. (Issue #16)
