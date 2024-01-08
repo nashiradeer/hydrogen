@@ -17,5 +17,6 @@
 
 ### Fixed
 
+- Missing variable value in JoinCommand. (Issue #15)
 - Wrong translation key in LoopComponent. (Issue #16)
 - Wrong translations variables in HydrogenManager. (Issue #16)
