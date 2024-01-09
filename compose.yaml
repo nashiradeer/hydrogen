@@ -9,7 +9,7 @@ services:
     networks:
       - lavalink
   hydrogen:
-    image: nashiradeer/hydrogen:0.0.1-alpha.2
+    image: nashiradeer/hydrogen:0.0.1-alpha.4
     container_name: hydrogen
     restart: unless-stopped
     networks:
