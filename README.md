@@ -1,63 +1,45 @@
 # Nashira Deer // Hydrogen
 
-An open-source music bot for Discord, powered by Lavalink and created in Rust.
+**Warning: Hydrogen still in the alpha development stage.**
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H4NKWWN)
+Open-source Dungeon Master helper with useful features and a music player for your sessions.
 
-## Contributing
+[![PayPal](https://img.shields.io/badge/Paypal-003087?style=for-the-badge&logo=paypal&logoColor=%23fff)
+](https://www.paypal.com/donate/?business=QQGMTC3FQAJF6&no_recurring=0&item_name=Thanks+for+donating+for+me%2C+this+helps+me+a+lot+to+continue+developing+and+maintaining+my+projects.&currency_code=USD)
+[![GitHub Sponsor](https://img.shields.io/badge/GitHub%20Sponsor-181717?style=for-the-badge&logo=github&logoColor=%23fff)
+](https://github.com/sponsors/nashiradeer)
+[![Discord](https://img.shields.io/badge/Discord%20Bot-5865F2?style=for-the-badge&logo=discord&logoColor=%23fff)](https://discord.com/api/oauth2/authorize?client_id=1128087591179268116&permissions=275417975808&scope=bot+applications.commands)
+[![Docker](https://img.shields.io/docker/v/nashiradeer/hydrogen?style=for-the-badge&logo=docker&logoColor=%23fff&label=Docker&labelColor=%23000&color=%232496ED)](https://hub.docker.com/r/nashiradeer/hydrogen)
 
-If you want to contribute to this project, you can create your fork or branch, make the changes you want and then create a Merge Request for the development branch, remembering that this project follows the following standards and conventions:
+Manage RPG campaigns and role-play characters inside Discord without downloading external tools. You can create campaigns, sheet models, register notes, schedule sessions, generate loot and encounters, play music on voice chats, and many other features with Hydrogen!
 
-- <https://www.conventionalcommits.org/en/v1.0.0/>
-- <https://keepachangelog.com/en/1.0.0/>
-- <https://semver.org/lang/pt-BR/>
-- <https://dev.to/varbsan/a-simplified-convention-for-naming-branches-and-commits-in-git-il4>
+## Donating
 
-*Remembering that so far this project does not follow any standard or convention regarding naming and describing Merge Requests or naming and describing Issues, just be coherent and concise in your naming and description, if you want to suggest a standard or convention for this project, use the Issues tab.
+Independent if you are using public instance, or it owns instance, consider donating to make Hydrogen development possible. You can donate thought Nashira Deer's [PayPal](https://www.paypal.com/donate/?business=QQGMTC3FQAJF6&no_recurring=0&item_name=Thanks+for+donating+for+me%2C+this+helps+me+a+lot+to+continue+developing+and+maintaining+my+projects.&currency_code=USD) or [GitHub Sponsor](https://github.com/sponsors/nashiradeer).
 
-If you want to contribute with the translations, you can do this editing the files in this repository, they are named by the language code used and provided by Discord (link to this list below), inside the folder `assets/langs` and formatted in JSON. Copy and modify the original English file (`en-US.json`), remembering that the words involved in {} are variables inserted at runtime, so they should not be translated, you can use the `pt-BR.json` file as an example.
+## Official Public Instance
 
-- <https://discord.com/developers/docs/reference#locales>
+If you are interested in a public instance of Hydrogen, you can add our official instance, hosted by [Nashira Deer](https://github.com/nashiradeer), to your Discord's server, [clicking here](https://discord.com/api/oauth2/authorize?client_id=1128087591179268116&permissions=275417975808&scope=bot+applications.commands).
 
-## Using Docker
+## Building/running
 
-If you don't want to compile from source, you can use the official Docker image, this is the only alternative officially supported by Nashira Deer, you can access it at: <https://hub.docker.com/r/nashiradeer/hydrogen>
-
-## Building
-
-This project can be built from simple commands in Cargo or Docker, there are no changes, scripts or requirements in the process of building this project, if you don't know how to do this, below is a step by step on how to assemble the debug or release versions of project.
+Only the methods listed below is officially supported and tested by Nashira Deer, we don't recommend you using any other alternative to build Hydrogen as Hydrogen isn't developed to support it.
 
 ### Docker
 
-1. Run in a terminal: `docker build .`
+You can build Hydrogen using `docker build -t hydrogen:latest .` in a terminal with [Docker](https://docker.com) (Podman not supported) installed and running, before the build is completed you will have a ready to use Docker image available with "hydrogen:latest" name.
 
-This will build a new fully ready-to-use Hydrogen image, no additional work is required.
+If you don't want to build your own image, you can use our prebuilt image found on [Docker Hub](https://hub.docker.com/r/nashiradeer/hydrogen). To run it, you can see our example using [Docker Compose](https://github.com/nashiradeer/hydrogen/blob/main/compose.yaml).
 
-### Debug
-
-1. Install libc headers, required to build dependencies.
-2. Run in a terminal: `cargo build`
-
-When finished, you will find the executable under `target/debug` and it will be named `hydrogen` on UNIX platforms or `hydrogen.exe` on Windows platforms.
-
-### Release
-
-1. Install libc headers, required to build dependencies.
-2. Run in a terminal: `cargo build -r`
-
-When finished, you will find the executable under `target/release` and it will be named `hydrogen` on UNIX platforms or `hydrogen.exe` on Windows platforms.
-
-## Running
-
-Before we configure Hydrogen, we need to ensure that the following dependencies are up and running:
-
-- [Lavalink Server compatible with the Lavalink API v3](https://github.com/lavalink-devs/Lavalink/)
+## Configuring
 
 To configure Hydrogen you will use the following environment variables:
 
-- LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (required if not Docker image)
+- LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (optional)
 - LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
 - DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
+
+You can see our example using [Docker Compose](https://github.com/nashiradeer/hydrogen/blob/main/compose.yaml).
 
 ### LAVALINK environment variable syntax
 
@@ -68,30 +50,8 @@ host            = ip ":" port
 tls             = "true" / "enabled" / "on"
 ```
 
-*Due to a bug, the TLS parameter needs to be written in lower case.
+*TLS parameter needs to be written in lower case.
 
 ## Credits
 
-Hydrogen is a project by Nashira Deer, based on another Nashira Deer's Discord Bot, Hellion, and licensed under the [GNU General Public License v3](https://github.com/nashiradeer/hydrogen/blob/main/LICENSE.txt).
-
-### Third-party projects
-
-- [async-trait](https://github.com/dtolnay/async-trait), licensed with [Apache License 2.0](https://github.com/dtolnay/async-trait/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/dtolnay/async-trait/blob/master/LICENSE-MIT)
-- [async-tungstenite](https://github.com/sdroege/async-tungstenite), licensed with [MIT License](https://github.com/sdroege/async-tungstenite/blob/main/LICENSE)
-- [base64](https://github.com/marshallpierce/rust-base64), licensed with [Apache License 2.0](https://github.com/marshallpierce/rust-base64/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/marshallpierce/rust-base64/blob/master/LICENSE-MIT)
-- [futures](https://github.com/rust-lang/futures-rs), licensed with [Apache License 2.0](https://github.com/rust-lang/futures-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT)
-- [http](https://github.com/hyperium/http), licensed with [Apache License 2.0](https://github.com/hyperium/http/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/hyperium/http/blob/master/LICENSE-MIT)
-- [Lavalink](https://github.com/lavalink-devs/Lavalink/), licensed with [MIT License](https://github.com/lavalink-devs/Lavalink/blob/master/LICENSE)
-- [Rand](https://github.com/rust-random/rand), licensed with [Apache License 2.0](https://github.com/rust-random/rand/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-random/rand/blob/master/LICENSE-MIT)
-- [Reqwest](https://github.com/seanmonstar/reqwest), licensed with [Apache License 2.0](https://github.com/seanmonstar/reqwest/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/seanmonstar/reqwest/blob/master/LICENSE-MIT)
-- [Rust](https://github.com/rust-lang/rust), licensed with [Apache License 2.0](https://github.com/rust-lang/rust/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/rust-lang/rust/blob/master/LICENSE-MIT)
-- [Rustls](https://github.com/rustls/rustls), licensed with [Apache License 2.0](https://github.com/rustls/rustls/blob/main/LICENSE-APACHE), [ISC License](https://github.com/rustls/rustls/blob/main/LICENSE-ISC), and [MIT License](https://github.com/rustls/rustls/blob/main/LICENSE-MIT)
-- [Serde](https://github.com/serde-rs/serde), licensed with [Apache License 2.0](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/serde/blob/master/LICENSE-MIT)
-- [Serde JSON](https://github.com/serde-rs/json), licensed with [Apache License 2.0](https://github.com/serde-rs/json/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/serde-rs/json/blob/master/LICENSE-MIT)
-- [Serenity](https://github.com/serenity-rs/serenity), licensed with [ISC License](https://github.com/serenity-rs/serenity/blob/current/LICENSE.md)
-- [Songbird](https://github.com/serenity-rs/songbird), licensed with [ISC License](https://github.com/serenity-rs/songbird/blob/current/LICENSE.md)
-- [Tokio](https://github.com/tokio-rs/tokio), licensed with [MIT License](https://github.com/tokio-rs/tokio/blob/master/LICENSE)
-- [tokio-rustls](https://github.com/rustls/tokio-rustls), licensed with [Apache License 2.0](https://github.com/rustls/tokio-rustls/blob/main/LICENSE-APACHE) and [MIT License](https://github.com/rustls/tokio-rustls/blob/main/LICENSE-MIT)
-- [Tracing](https://github.com/tokio-rs/tracing), licensed with [MIT License](https://github.com/tokio-rs/tracing/blob/master/LICENSE)
-- [tracing-subscriber](https://github.com/tokio-rs/tracing), licensed with [MIT License](https://github.com/tokio-rs/tracing/blob/master/LICENSE)
-- [Tungstenite](https://github.com/snapview/tungstenite-rs), licensed with [Apache License 2.0](https://github.com/snapview/tungstenite-rs/blob/master/LICENSE-APACHE) and [MIT License](https://github.com/snapview/tungstenite-rs/blob/master/LICENSE-MIT)
+Hydrogen is a Nashira Deer's project licensed under the [GNU General Public License v3](https://github.com/nashiradeer/hydrogen/blob/main/LICENSE.txt).
