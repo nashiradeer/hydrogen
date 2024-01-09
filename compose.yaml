@@ -16,7 +16,7 @@ services:
       - lavalink
     environment:
       - DISCORD_TOKEN=
-      - LAVALINK=lavalink:2333,youshallnotpass
+      - LAVALINK=lavalink:2333,youshallnotpass,no
     depends_on:
       - lavalink
 networks:
