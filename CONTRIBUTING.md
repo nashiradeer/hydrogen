@@ -1,4 +1,4 @@
-# Nashira Deer // Contributing
+# Hydrogen // Contributing
 
 If you want to contribute to this project, you can create your fork or branch (following the standards and conventions listed below), make the changes you want and then create a Pull Request for the 'dev' branch.
 
