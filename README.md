@@ -9,7 +9,7 @@ Open-source Dungeon Master helper with useful features and a music player for yo
 [![GitHub Sponsor](https://img.shields.io/badge/GitHub%20Sponsor-181717?style=for-the-badge&logo=github&logoColor=%23fff)
 ](https://github.com/sponsors/nashiradeer)
 [![Discord](https://img.shields.io/badge/Discord%20Bot-5865F2?style=for-the-badge&logo=discord&logoColor=%23fff)](https://discord.com/api/oauth2/authorize?client_id=1128087591179268116&permissions=275417975808&scope=bot+applications.commands)
-[![Docker](https://img.shields.io/docker/v/nashiradeer/hydrogen?style=for-the-badge&logo=docker&logoColor=%23fff&label=Docker&labelColor=%23000&color=%232496ED)](https://hub.docker.com/r/nashiradeer/hydrogen)
+[![Docker](https://img.shields.io/docker/v/nashiradeer/hydrogen?style=for-the-badge&logo=docker&logoColor=%23fff&label=Docker&labelColor=%232496ED&color=%232496ED)](https://hub.docker.com/r/nashiradeer/hydrogen)
 
 Manage RPG campaigns and role-play characters inside Discord without downloading external tools. You can create campaigns, sheet models, register notes, schedule sessions, generate loot and encounters, play music on voice chats, and many other features with Hydrogen!
 
