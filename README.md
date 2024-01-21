@@ -36,6 +36,7 @@ If you don't want to build your own image, you can use our prebuilt image found 
 To configure Hydrogen you will use the following environment variables:
 
 - LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (optional)
+- DEFAULT_LANGUAGE: Sets a new default language to Hydrogen. (optional)
 - LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
 - DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
 
