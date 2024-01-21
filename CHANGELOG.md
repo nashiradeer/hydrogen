@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- New default 'builtin-language' feature to include 'assets/langs/en-US.json' in the binary as default language.
+
+### Changed
+
+- Replace internal i18n with 'hydrogen-i18n'.
+
 ## [0.0.1-alpha.3] - 2023-01-08
 
 ### Added

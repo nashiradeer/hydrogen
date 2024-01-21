@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
+use hydrogen_i18n::I18n;
 use serenity::{
     all::{ChannelId, CommandInteraction, CommandOptionType, Guild, GuildId, UserId},
     builder::{
@@ -10,8 +13,8 @@ use serenity::{
 use tracing::warn;
 
 use crate::{
-    i18n::HydrogenI18n, HydrogenCommandListener, HydrogenContext, HYDROGEN_BUG_URL,
-    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    HydrogenCommandListener, HydrogenContext, HYDROGEN_BUG_URL, HYDROGEN_ERROR_COLOR,
+    HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct SeekCommand;
@@ -483,11 +486,11 @@ impl SeekCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for SeekCommand {
-    fn register(&self, i18n: HydrogenI18n) -> CreateCommand {
+    fn register(&self, i18n: Arc<I18n>) -> CreateCommand {
         let mut command = CreateCommand::new("seek");
 
-        command = i18n.translate_application_command_name("seek", "name", command);
-        command = i18n.translate_application_command_description("seek", "description", command);
+        command = i18n.serenity_command_name("seek", "name", command);
+        command = i18n.serenity_command_description("seek", "description", command);
 
         command
             .description("Seek for the time in the current music playing.")
@@ -499,13 +502,9 @@ impl HydrogenCommandListener for SeekCommand {
                 )
                 .required(true);
 
+                option = i18n.serenity_command_option_name("seek", "time_name", option);
                 option =
-                    i18n.translate_application_command_option_name("seek", "time_name", option);
-                option = i18n.translate_application_command_option_description(
-                    "seek",
-                    "time_description",
-                    option,
-                );
+                    i18n.serenity_command_option_description("seek", "time_description", option);
 
                 option
             })

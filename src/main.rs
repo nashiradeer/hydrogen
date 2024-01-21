@@ -2,7 +2,7 @@ use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
 use commands::play::PlayCommand;
-use i18n::HydrogenI18n;
+use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
 use serenity::{
@@ -30,7 +30,6 @@ use crate::{
 
 mod commands;
 mod components;
-mod i18n;
 mod lavalink;
 mod manager;
 mod player;
@@ -46,9 +45,13 @@ pub static HYDROGEN_LOGO_URL: &str =
     "https://raw.githubusercontent.com/nashiradeer/hydrogen/main/icon.png";
 pub static HYDROGEN_BUG_URL: &str = "https://github.com/nashiradeer/hydrogen/issues";
 
+#[cfg(feature = "builtin-language")]
+/// Default language file already loaded in the binary.
+pub static HYDROGEN_DEFAULT_LANGUAGE: &str = include_str!("../assets/langs/en-US.json");
+
 #[derive(Clone)]
 struct HydrogenContext {
-    pub i18n: HydrogenI18n,
+    pub i18n: Arc<I18n>,
     pub manager: Arc<RwLock<Option<HydrogenManager>>>,
     pub commands_id: Arc<RwLock<HashMap<String, CommandId>>>,
 }
@@ -63,7 +66,7 @@ struct HydrogenHandler {
 
 #[async_trait]
 trait HydrogenCommandListener {
-    fn register(&self, i18n: HydrogenI18n) -> CreateCommand;
+    fn register(&self, i18n: Arc<I18n>) -> CreateCommand;
 
     async fn execute(
         &self,
@@ -219,20 +222,59 @@ impl EventHandler for HydrogenHandler {
     }
 }
 
+#[cfg(not(feature = "builtin-language"))]
+/// Create a new i18n instance.
+#[inline]
+fn new_i18n() -> I18n {
+    I18n::new()
+}
+
+#[cfg(feature = "builtin-language")]
+/// Create a new i18n instance with default language if can be parsed.
+#[inline]
+fn new_i18n() -> I18n {
+    if let Ok(default_language) = hydrogen_i18n::serde_json::from_str(HYDROGEN_DEFAULT_LANGUAGE) {
+        I18n::new_with_default(default_language)
+    } else {
+        I18n::new()
+    }
+}
+
+/// Executable entrypoint.
 #[tokio::main]
 async fn main() {
+    // Initialize logger.
     registry()
         .with(layer())
         .with(EnvFilter::from_default_env())
         .init();
 
-    let i18n = {
-        let path =
-            env::var("LANGUAGE_PATH").expect("you need to set LANGUAGE_PATH environment variable");
-        HydrogenI18n::new(path, HydrogenI18n::DEFAULT_LANGUAGE)
-    }
-    .expect("cannot initialize HydrogenI18n");
+    // Initialize i18n with default language if can be parsed.
+    let mut i18n = new_i18n();
 
+    // Load a possible new default language from HYDROGEN_DEFAULT_LANGUAGE environment variable.
+    let new_default_language = env::var("DEFAULT_LANGUAGE");
+
+    // Load language files from HYDROGEN_LANGUAGE_PATH environment variable.
+    if let Ok(language_path) = env::var("LANGUAGE_PATH") {
+        if let Err(e) =
+            i18n.from_dir_with_links(language_path, false, new_default_language.is_err())
+        {
+            warn!("cannot load language files: {}", e);
+        } else {
+            i18n.cleanup_links();
+        }
+    }
+
+    // Set a new default language if the environment variable is set.
+    if let Ok(default_language) = new_default_language {
+        if !i18n.set_default(&default_language, true) {
+            error!("cannot set default language to '{}'", default_language);
+        }
+        // TODO: deduplicate loaded language when hydrogen_i18n supports it.
+    }
+
+    // Initialize lavalink nodes.
     let lavalink_nodes = {
         let mut lavalink_nodes = Vec::new();
         let lavalink_env =
@@ -263,11 +305,12 @@ async fn main() {
         Arc::new(lavalink_nodes)
     };
 
+    // Initialize HydrogenHandler.
     let app = HydrogenHandler {
         context: HydrogenContext {
             manager: Arc::new(RwLock::new(None)),
             commands_id: Arc::new(RwLock::new(HashMap::new())),
-            i18n,
+            i18n: Arc::new(i18n),
         },
         commands: {
             let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =
