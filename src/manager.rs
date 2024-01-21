@@ -10,6 +10,7 @@ use std::{
 };
 
 use async_trait::async_trait;
+use hydrogen_i18n::I18n;
 use serenity::{
     all::{
         ButtonStyle, ChannelId, ChannelType, GuildId, MessageId, ReactionType, UserId,
@@ -27,7 +28,6 @@ use tokio::{spawn, sync::RwLock, task::JoinHandle, time::sleep};
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    i18n::HydrogenI18n,
     lavalink::{
         websocket::{LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackStartEvent},
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
@@ -82,7 +82,7 @@ pub struct HydrogenManager {
     cache: Arc<Cache>,
     destroy_handle: Arc<RwLock<HashMap<GuildId, JoinHandle<()>>>>,
     http: Arc<Http>,
-    i18n: HydrogenI18n,
+    i18n: Arc<I18n>,
     lavalink: Arc<RwLock<Vec<Lavalink>>>,
     load_balancer: Arc<AtomicUsize>,
     message: Arc<RwLock<HashMap<GuildId, MessageId>>>,
@@ -90,7 +90,7 @@ pub struct HydrogenManager {
 }
 
 impl HydrogenManager {
-    pub fn new(cache: Arc<Cache>, http: Arc<Http>, i18n: HydrogenI18n) -> Self {
+    pub fn new(cache: Arc<Cache>, http: Arc<Http>, i18n: Arc<I18n>) -> Self {
         Self {
             lavalink: Arc::new(RwLock::new(Vec::new())),
             destroy_handle: Arc::new(RwLock::new(HashMap::new())),

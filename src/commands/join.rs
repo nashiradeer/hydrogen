@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use hydrogen_i18n::I18n;
 use serenity::{
     all::{ChannelId, CommandInteraction, Guild, GuildId, UserId},
     builder::{CreateCommand, CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
@@ -11,8 +12,8 @@ use tokio::sync::Mutex;
 use tracing::warn;
 
 use crate::{
-    i18n::HydrogenI18n, HydrogenCommandListener, HydrogenContext, HYDROGEN_BUG_URL,
-    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    HydrogenCommandListener, HydrogenContext, HYDROGEN_BUG_URL, HYDROGEN_ERROR_COLOR,
+    HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct JoinCommand;
@@ -270,11 +271,11 @@ impl JoinCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for JoinCommand {
-    fn register(&self, i18n: HydrogenI18n) -> CreateCommand {
+    fn register(&self, i18n: Arc<I18n>) -> CreateCommand {
         let mut command = CreateCommand::new("join");
 
-        command = i18n.translate_application_command_name("join", "name", command);
-        command = i18n.translate_application_command_description("join", "description", command);
+        command = i18n.serenity_command_name("join", "name", command);
+        command = i18n.serenity_command_description("join", "description", command);
 
         command
             .description("Make me join your voice chat without playing anything.")

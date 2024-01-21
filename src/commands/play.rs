@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use hydrogen_i18n::I18n;
 use serenity::{
     all::{ChannelId, CommandInteraction, CommandOptionType, Guild, GuildId, UserId},
     builder::{
@@ -14,8 +15,8 @@ use tokio::sync::Mutex;
 use tracing::warn;
 
 use crate::{
-    i18n::HydrogenI18n, player::HydrogenPlayCommand, HydrogenCommandListener, HydrogenContext,
-    HYDROGEN_BUG_URL, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    player::HydrogenPlayCommand, HydrogenCommandListener, HydrogenContext, HYDROGEN_BUG_URL,
+    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
 };
 
 pub struct PlayCommand;
@@ -496,11 +497,11 @@ impl PlayCommand {
 
 #[async_trait]
 impl HydrogenCommandListener for PlayCommand {
-    fn register<'a, 'b>(&'a self, i18n: HydrogenI18n) -> CreateCommand {
+    fn register<'a, 'b>(&'a self, i18n: Arc<I18n>) -> CreateCommand {
         let mut command = CreateCommand::new("play");
 
-        command = i18n.translate_application_command_name("play", "name", command);
-        command = i18n.translate_application_command_description("play", "description", command);
+        command = i18n.serenity_command_name("play", "name", command);
+        command = i18n.serenity_command_description("play", "description", command);
 
         command
             .description(
@@ -515,8 +516,8 @@ impl HydrogenCommandListener for PlayCommand {
                 .required(true);
 
                 option =
-                    i18n.translate_application_command_option_name("play", "query_name", option);
-                option = i18n.translate_application_command_option_description(
+                    i18n.serenity_command_option_name("play", "query_name", option);
+                option = i18n.serenity_command_option_description(
                     "play",
                     "query_description",
                     option,
