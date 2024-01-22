@@ -1,14 +1,18 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
-use commands::play::PlayCommand;
+use components::{
+    loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent, skip::SkipComponent,
+    stop::StopComponent,
+};
+use handler::register_commands;
 use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
 use serenity::{
     all::{
-        Client, Command, CommandId, CommandInteraction, ComponentInteraction, GatewayIntents,
-        Interaction, Ready, VoiceServerUpdateEvent, VoiceState,
+        Client, CommandId, CommandInteraction, ComponentInteraction, GatewayIntents, Interaction,
+        Ready, VoiceServerUpdateEvent, VoiceState,
     },
     builder::CreateCommand,
     client::{Context, EventHandler},
@@ -20,19 +24,15 @@ use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
 };
 
-use crate::{
-    commands::{join::JoinCommand, seek::SeekCommand},
-    components::{
-        loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent,
-        skip::SkipComponent, stop::StopComponent,
-    },
-};
+use crate::handler::handle_command;
 
 mod commands;
 mod components;
+mod handler;
 mod lavalink;
 mod manager;
 mod player;
+mod utils;
 
 pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
 pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
@@ -60,7 +60,6 @@ struct HydrogenContext {
 struct HydrogenHandler {
     context: HydrogenContext,
     lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
-    commands: Arc<HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>>,
     components: Arc<HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>>>,
 }
 
@@ -100,25 +99,20 @@ impl EventHandler for HydrogenHandler {
         *self.context.manager.write().await = Some(manager.clone());
         debug!("(ready): HydrogenManager initialized");
 
-        let mut commands_id = self.context.commands_id.write().await;
-        for (name, command) in self.commands.iter() {
-            debug!("(ready): registering command: {}", name);
-            match Command::create_global_command(
-                ctx.http.clone(),
-                command.register(self.context.i18n.clone()),
-            )
-            .await
-            {
-                Ok(v) => {
-                    commands_id.insert(name.clone(), v.id);
-                }
-                Err(e) => {
-                    error!("(ready): cannot register the command '{}': {}", name, e);
-                }
+        if !register_commands(
+            Some(&self.context.i18n),
+            &ctx.http,
+            &self.context.commands_id,
+        )
+        .await
+        {
+            warn!("(ready): cannot register commands, retrying without translations...");
+
+            if !register_commands(None, &ctx.http, &self.context.commands_id).await {
+                error!("(ready): cannot register commands");
+                panic!("cannot register commands");
             }
         }
-        drop(commands_id);
-        debug!("(ready): commands registered");
 
         for i in 0..self.lavalink_nodes.len() {
             if let Some(node) = self.lavalink_nodes.get(i) {
@@ -151,17 +145,11 @@ impl EventHandler for HydrogenHandler {
 
         match interaction {
             Interaction::Command(command) => {
-                let command_name = command.data.name.clone();
-
-                if let Some(listener) = self.commands.get(&command_name) {
-                    listener.execute(self.context.clone(), ctx, command).await;
-                } else {
-                    warn!("(interaction_create): command not found: {}", command_name);
-                }
+                handle_command(&self.context, &ctx, &command).await;
 
                 info!(
                     "(interaction_create): command '{}' executed in {}ms",
-                    command_name,
+                    command.data.name,
                     timer.elapsed().as_millis()
                 );
             }
@@ -311,16 +299,6 @@ async fn main() {
             manager: Arc::new(RwLock::new(None)),
             commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n: Arc::new(i18n),
-        },
-        commands: {
-            let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =
-                HashMap::new();
-
-            commands.insert("play".to_owned(), Box::new(PlayCommand));
-            commands.insert("join".to_owned(), Box::new(JoinCommand));
-            commands.insert("seek".to_owned(), Box::new(SeekCommand));
-
-            Arc::new(commands)
         },
         components: {
             let mut components: HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>> =
