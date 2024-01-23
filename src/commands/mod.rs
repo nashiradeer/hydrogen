@@ -3,3 +3,4 @@
 //! This module contains all the commands from Hydrogen.
 
 pub mod join;
+pub mod seek;

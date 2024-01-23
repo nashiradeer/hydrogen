@@ -1,524 +1,246 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
+//! Hydrogen // Commands // Seek
+//!
+//! '/seek' command registration and execution.
+//!
 use hydrogen_i18n::I18n;
 use serenity::{
-    all::{ChannelId, CommandInteraction, CommandOptionType, Guild, GuildId, UserId},
-    builder::{
-        CreateCommand, CreateCommandOption, CreateEmbed, CreateEmbedFooter, EditInteractionResponse,
-    },
-    cache::CacheRef,
+    all::{CommandInteraction, CommandOptionType},
+    builder::{CreateCommand, CreateCommandOption},
     client::Context,
 };
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::{
-    HydrogenCommandListener, HydrogenContext, HYDROGEN_BUG_URL, HYDROGEN_ERROR_COLOR,
-    HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    handler::{Response, Result},
+    utils::{error_message, get_str_option, progress_bar, time_to_string, MusicCommonData},
+    HydrogenContext, HYDROGEN_BUG_URL,
 };
 
-pub struct SeekCommand;
+/// Executes the `/seek` command.
+pub async fn execute(
+    hydrogen: &HydrogenContext,
+    context: &Context,
+    interaction: &CommandInteraction,
+) -> Result {
+    // Get the title of the embed.
+    let title = hydrogen
+        .i18n
+        .translate(&interaction.locale, "seek", "embed_title");
 
-impl SeekCommand {
-    #[inline]
-    fn get_channel_id(
-        guild: CacheRef<'_, GuildId, Guild>,
-        user_id: UserId,
-    ) -> Result<ChannelId, Result<(), String>> {
-        Ok(guild
-            .voice_states
-            .get(&user_id)
-            .ok_or(Err("cannot get the author's VoiceState".to_owned()))?
-            .channel_id
-            .ok_or(Err(
-                "cannot get the ChannelId from the author's VoiceState".to_owned()
-            ))?)
-    }
+    // Get the time option value.
+    let Some(time) = get_str_option(interaction, 0) else {
+        warn!("cannot get the 'time' option");
 
-    #[inline]
-    fn parse_time(time: &str) -> Result<i32, String> {
-        if let Some(time) = time.strip_suffix("m") {
-            let minutes = time
-                .parse::<u16>()
-                .map_err(|_| "cannot parse the number with minute suffix".to_owned())?
-                * 60
-                * 1000;
-            return Ok(minutes.into());
-        }
+        return Err(Response::Generic {
+            title,
+            description: hydrogen
+                .i18n
+                .translate(&interaction.locale, "error", "unknown")
+                .replace("{url}", HYDROGEN_BUG_URL),
+        });
+    };
 
-        if let Some(time) = time.strip_suffix("h") {
-            let hours = time
-                .parse::<u16>()
-                .map_err(|_| "cannot parse the number with hour suffix".to_owned())?
-                * 60
-                * 60
-                * 1000;
-            return Ok(hours.into());
-        }
+    // Get the common data used by music commands and components.
+    let Some(data) = MusicCommonData::new(&hydrogen, &context, &interaction).await else {
+        error!("cannot get common music data");
 
-        let components: Result<Vec<_>, _> = time
-            .split(":")
-            .map(|i| {
-                i.parse::<u16>()
-                    .map_err(|_| "cannot parse the numbers from the colon syntax".to_owned())
-            })
-            .collect();
+        return Err(Response::Generic {
+            title,
+            description: hydrogen
+                .i18n
+                .translate(&interaction.locale, "error", "unknown")
+                .replace("{url}", HYDROGEN_BUG_URL),
+        });
+    };
 
-        let components = components?;
-
-        if components.len() == 0 {
-            return Err("cannot parse time using any of the syntaxes supported".to_owned());
-        } else if components.len() == 1 {
-            let seconds = i32::from(components[0])
-                .checked_mul(1000)
-                .ok_or("conversion to milliseconds overflowed".to_owned())?;
-            return Ok(seconds);
-        } else if components.len() == 2 {
-            let mut seconds = i32::from(components[1])
-                .checked_mul(1000)
-                .ok_or("colon (mm:ss) syntax: sum seconds overflowed".to_owned())?;
-
-            seconds = seconds
-                .checked_add(
-                    i32::from(components[0])
-                        .checked_mul(60)
-                        .ok_or(
-                            "colon (mm:ss) syntax: conversion minutes to seconds overflowed"
-                                .to_owned(),
-                        )?
-                        .checked_mul(1000)
-                        .ok_or(
-                            "colon (mm:ss) syntax: conversion minutes to milliseconds overflowed"
-                                .to_owned(),
-                        )?,
-                )
-                .ok_or("colon (mm:ss) syntax: sum minutes overflowed".to_owned())?;
-
-            return Ok(seconds);
-        }
-
-        let mut seconds = i32::from(components[2])
-            .checked_mul(1000)
-            .ok_or("colon (hh::mm:ss) syntax: sum seconds overflowed".to_owned())?;
-
-        seconds = seconds
-            .checked_add(
-                i32::from(components[1])
-                    .checked_mul(60)
-                    .ok_or(
-                        "colon (hh:mm:ss) syntax: conversion minutes to seconds overflowed"
-                            .to_owned(),
-                    )?
-                    .checked_mul(1000)
-                    .ok_or(
-                        "colon (hh:mm:ss) syntax: conversion minutes to milliseconds overflowed"
-                            .to_owned(),
-                    )?,
-            )
-            .ok_or("colon (hh:mm:ss) syntax: sum minutes overflowed".to_owned())?;
-
-        seconds = seconds
-            .checked_add(
-                i32::from(components[0])
-                    .checked_mul(60)
-                    .ok_or(
-                        "colon (hh:mm:ss) syntax: conversion hours to minutes overflowed"
-                            .to_owned(),
-                    )?
-                    .checked_mul(60)
-                    .ok_or(
-                        "colon (hh:mm:ss) syntax: conversion hours to seconds overflowed"
-                            .to_owned(),
-                    )?
-                    .checked_mul(1000)
-                    .ok_or(
-                        "colon (hh:mm:ss) syntax: conversion hours to milliseconds overflowed"
-                            .to_owned(),
-                    )?,
-            )
-            .ok_or("colon (hh:mm:ss) syntax: sum hours overflowed".to_owned())?;
-        Ok(seconds)
-    }
-
-    fn time_to_string(seconds: i32) -> String {
-        if seconds < 60 {
-            return format!("00:{:02}", seconds);
-        } else if seconds < 60 * 60 {
-            let time = seconds as f32;
-            let minutes = (time / 60.0).floor();
-            let seconds = time - minutes * 60.0;
-            return format!("{:02}:{:02}", minutes as u32, seconds as u32);
-        }
-
-        let time = seconds as f32;
-        let hours = (time / 60.0 / 60.0).floor();
-        let minutes = (time - hours * 60.0 * 60.0).floor();
-        let seconds = time - minutes * 60.0 - hours * 60.0 * 60.0;
-        return format!(
-            "{:02}:{:02}:{:02}",
-            hours as u32, minutes as u32, seconds as u32
+    // Get the user's voice channel ID.
+    let Some(voice_channel_id) = data.get_connected_channel(interaction.user.id) else {
+        warn!(
+            "cannot get the voice channel ID of the user {} in the guild {}",
+            interaction.user.id, data.guild_id
         );
-    }
 
-    fn progress_bar(current: i32, total: i32) -> String {
-        let item_total = 30usize;
-        let item_count = (current as f32 / (total as f32 / item_total as f32)).round();
-        let bar = "▓".repeat(item_count as usize);
-        format!("╣{:░<width$.width$}╠", bar, width = item_total)
-    }
+        return Err(Response::Generic {
+            title,
+            description: error_message(
+                &hydrogen.i18n,
+                &interaction.locale,
+                &hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "error", "unknown_voice_state")
+                    .replace("{url}", HYDROGEN_BUG_URL),
+            ),
+        });
+    };
 
-    async fn _execute(
-        &self,
-        hydrogen: HydrogenContext,
-        context: Context,
-        interaction: CommandInteraction,
-    ) -> Result<(), String> {
-        interaction
-            .defer_ephemeral(&context.http)
-            .await
-            .map_err(|e| format!("cannot defer the interaction response: {}", e))?;
+    // Get the player's voice channel ID.
+    if let Some(my_channel_id) = data.manager.get_voice_channel_id(data.guild_id).await {
+        // Checks if the user is in the same voice channel as the bot.
+        if my_channel_id == voice_channel_id.into() {
+            // Try to parse the suffix syntax.
+            let seek_time = match hydrogen.time_parsers.suffix_syntax(time) {
+                Some(v) => v,
+                // Try to parse the semicolon syntax.
+                None => match hydrogen.time_parsers.semicolon_syntax(time) {
+                    Some(v) => v,
+                    None => {
+                        warn!("cannot parse the time syntax: {}", time);
 
-        let time = interaction
-            .data
-            .options
-            .get(0)
-            .ok_or("cannot get the required 'time' option".to_owned())?
-            .value
-            .clone()
-            .as_str()
-            .ok_or("required 'time' option isn't a &str".to_owned())?
-            .to_owned();
-        let manager = hydrogen
-            .manager
-            .read()
-            .await
-            .clone()
-            .ok_or("Hydrogen's PlayerManager not initialized".to_owned())?;
-        let guild_id = interaction
-            .guild_id
-            .ok_or("cannot get the interaction's GuildId".to_owned())?;
-        let guild = context
-            .cache
-            .guild(guild_id)
-            .ok_or("cannot get the guild from the cache".to_owned())?;
-
-        let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
-            Ok(v) => v,
-            Err(e) => {
-                if let Err(e) = interaction
-                    .edit_response(
-                        &context.http,
-                        EditInteractionResponse::new().embed(
-                            CreateEmbed::new()
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "seek",
-                                    "embed_title",
-                                ))
-                                .description(format!(
-                                    "{}\n\n{}",
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "unknown_voice_state",
-                                    ),
-                                    hydrogen
-                                        .i18n
-                                        .translate(&interaction.locale, "error", "not_intentional",)
-                                        .replace("{url}", HYDROGEN_BUG_URL)
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(
-                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "generic",
-                                        "embed_footer",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL),
-                                ),
-                        ),
-                    )
-                    .await
-                {
-                    warn!("cannot send a response to the interaction: {:?}", e);
-                }
-                return e;
-            }
-        };
-
-        if let Some(my_channel_id) = manager.get_voice_channel_id(guild_id).await {
-            if my_channel_id == voice_channel_id.into() {
-                let seek_time = match Self::parse_time(&time) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        if let Err(e) = interaction
-                            .edit_response(
-                                &context.http,
-                                EditInteractionResponse::new().embed(
-                                    CreateEmbed::new()
-                                        .title(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "seek",
-                                            "embed_title",
-                                        ))
-                                        .description(format!(
-                                            "{}\n\n{}",
-                                            hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "seek",
-                                                "invalid_syntax",
-                                            ),
-                                            hydrogen
-                                                .i18n
-                                                .translate(
-                                                    &interaction.locale,
-                                                    "error",
-                                                    "not_intentional",
-                                                )
-                                                .replace("{url}", HYDROGEN_BUG_URL)
-                                        ))
-                                        .color(HYDROGEN_ERROR_COLOR)
-                                        .footer(
-                                            CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "generic",
-                                                "embed_footer",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL),
-                                        ),
-                                ),
-                            )
-                            .await
-                        {
-                            warn!("cannot send a response to the interaction: {:?}", e);
-                        }
-
-                        return Err(format!("cannot parse the 'time' option: {}", e));
-                    }
-                };
-
-                let seek_result = match manager.seek(guild_id, seek_time).await {
-                    Ok(Some(v)) => v,
-                    Ok(None) => {
-                        if let Err(e) = interaction
-                            .edit_response(
-                                &context.http,
-                                EditInteractionResponse::new().embed(
-                                    CreateEmbed::new()
-                                        .title(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "seek",
-                                            "embed_title",
-                                        ))
-                                        .description(format!(
-                                            "{}\n\n{}",
-                                            hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "error",
-                                                "empty_queue",
-                                            ),
-                                            hydrogen
-                                                .i18n
-                                                .translate(
-                                                    &interaction.locale,
-                                                    "error",
-                                                    "not_intentional",
-                                                )
-                                                .replace("{url}", HYDROGEN_BUG_URL)
-                                        ))
-                                        .color(HYDROGEN_ERROR_COLOR)
-                                        .footer(
-                                            CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "generic",
-                                                "embed_footer",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL),
-                                        ),
-                                ),
-                            )
-                            .await
-                        {
-                            warn!("cannot send a response to the interaction: {:?}", e);
-                        }
-
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        return Err(format!("cannot seek time in the player: {}", e));
-                    }
-                };
-
-                let current_time = Self::time_to_string(seek_result.position / 1000);
-                let total_time = Self::time_to_string(seek_result.total / 1000);
-                let progress_bar = Self::progress_bar(seek_result.position, seek_result.total);
-
-                let translation_message;
-                if let Some(uri) = seek_result.track.uri {
-                    translation_message = hydrogen
-                        .i18n
-                        .translate(&interaction.locale, "seek", "seeking_url")
-                        .replace("{name}", &seek_result.track.title)
-                        .replace("{author}", &seek_result.track.author)
-                        .replace("{url}", &uri)
-                        .replace("{current}", &current_time)
-                        .replace("{total}", &total_time)
-                        .replace("{progress}", &progress_bar);
-                } else {
-                    translation_message = hydrogen
-                        .i18n
-                        .translate(&interaction.locale, "seek", "seeking")
-                        .replace("{name}", &seek_result.track.title)
-                        .replace("{author}", &seek_result.track.author)
-                        .replace("{current}", &current_time)
-                        .replace("{total}", &total_time)
-                        .replace("{progress}", &progress_bar);
-                }
-
-                if let Err(e) = interaction
-                    .edit_response(
-                        &context.http,
-                        EditInteractionResponse::new().embed(
-                            CreateEmbed::new()
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "seek",
-                                    "embed_title",
-                                ))
-                                .description(translation_message)
-                                .color(HYDROGEN_PRIMARY_COLOR)
-                                .footer(
-                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "generic",
-                                        "embed_footer",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL),
-                                ),
-                        ),
-                    )
-                    .await
-                {
-                    warn!("cannot send a response to the interaction: {:?}", e);
-                }
-            } else {
-                if let Err(e) = interaction
-                    .edit_response(
-                        &context.http,
-                        EditInteractionResponse::new().embed(
-                            CreateEmbed::new()
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "seek",
-                                    "embed_title",
-                                ))
-                                .description(format!(
-                                    "{}\n\n{}",
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_in_voice_chat",
-                                    ),
-                                    hydrogen
-                                        .i18n
-                                        .translate(&interaction.locale, "error", "not_intentional",)
-                                        .replace("{url}", HYDROGEN_BUG_URL)
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(
-                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "generic",
-                                        "embed_footer",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL),
-                                ),
-                        ),
-                    )
-                    .await
-                {
-                    warn!("cannot send a response to the interaction: {:?}", e);
-                }
-            }
-        } else {
-            if let Err(e) = interaction
-                .edit_response(
-                    &context.http,
-                    EditInteractionResponse::new().embed(
-                        CreateEmbed::new()
-                            .title(hydrogen.i18n.translate(
+                        return Err(Response::Generic {
+                            title,
+                            description: error_message(
+                                &hydrogen.i18n,
                                 &interaction.locale,
-                                "seek",
-                                "embed_title",
-                            ))
-                            .description(format!(
-                                "{}\n\n{}",
-                                hydrogen.i18n.translate(
+                                &hydrogen.i18n.translate(
                                     &interaction.locale,
                                     "error",
-                                    "player_not_exists",
+                                    "invalid_syntax",
                                 ),
-                                hydrogen
-                                    .i18n
-                                    .translate(&interaction.locale, "error", "not_intentional",)
-                                    .replace("{url}", HYDROGEN_BUG_URL)
-                            ))
-                            .color(HYDROGEN_ERROR_COLOR)
-                            .footer(
-                                CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "embed",
-                                    "footer_text",
-                                ))
-                                .icon_url(HYDROGEN_LOGO_URL),
                             ),
-                    ),
-                )
-                .await
-            {
-                warn!("cannot send a response to the interaction: {:?}", e);
-            }
-        }
+                        });
+                    }
+                },
+            };
 
-        Ok(())
+            // Convert the seek time to a i32 for the player.
+            // TODO: Remove this when the player supports u32.
+            let converted_seek_time = match seek_time.try_into() {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("cannot convert the seek time to a i32: {}", e);
+
+                    return Err(Response::Generic {
+                        title,
+                        description: hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "error", "unknown")
+                            .replace("{url}", HYDROGEN_BUG_URL),
+                    });
+                }
+            };
+
+            // Seek the player.
+            let seek_result = match data.manager.seek(data.guild_id, converted_seek_time).await {
+                Ok(Some(v)) => v,
+                Ok(None) => {
+                    // The queue is empty.
+                    warn!("guild {} has a empty queue", data.guild_id);
+
+                    return Err(Response::Generic {
+                        title,
+                        description: error_message(
+                            &hydrogen.i18n,
+                            &interaction.locale,
+                            &hydrogen
+                                .i18n
+                                .translate(&interaction.locale, "error", "empty_queue"),
+                        ),
+                    });
+                }
+                Err(e) => {
+                    // An error occurred.
+                    error!(
+                        "cannot seek time the player in the guild {}: {}",
+                        data.guild_id, e
+                    );
+
+                    return Err(Response::Generic {
+                        title,
+                        description: hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "error", "unknown")
+                            .replace("{url}", HYDROGEN_BUG_URL),
+                    });
+                }
+            };
+
+            // Get the current time, total time and progress bar.
+            let current_time = time_to_string(seek_result.position / 1000);
+            let total_time = time_to_string(seek_result.total / 1000);
+            let progress_bar = progress_bar(seek_result.position, seek_result.total);
+
+            // Get the translation message.
+            let translation_message = if let Some(uri) = seek_result.track.uri {
+                hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "seek", "seeking_url")
+                    .replace("{name}", &seek_result.track.title)
+                    .replace("{author}", &seek_result.track.author)
+                    .replace("{url}", &uri)
+                    .replace("{current}", &current_time)
+                    .replace("{total}", &total_time)
+                    .replace("{progress}", &progress_bar)
+            } else {
+                hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "seek", "seeking")
+                    .replace("{name}", &seek_result.track.title)
+                    .replace("{author}", &seek_result.track.author)
+                    .replace("{current}", &current_time)
+                    .replace("{total}", &total_time)
+                    .replace("{progress}", &progress_bar)
+            };
+
+            Ok(Response::Generic {
+                title,
+                description: translation_message,
+            })
+        } else {
+            // The user is not in the same voice channel as the bot.
+            Err(Response::Generic {
+                title,
+                description: error_message(
+                    &hydrogen.i18n,
+                    &interaction.locale,
+                    &hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "error", "not_in_voice_chat"),
+                ),
+            })
+        }
+    } else {
+        // The player doesn't exists.
+        Err(Response::Generic {
+            title,
+            description: error_message(
+                &hydrogen.i18n,
+                &interaction.locale,
+                &hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "error", "player_not_exists"),
+            ),
+        })
     }
 }
 
-#[async_trait]
-impl HydrogenCommandListener for SeekCommand {
-    fn register(&self, i18n: Arc<I18n>) -> CreateCommand {
-        let mut command = CreateCommand::new("seek");
+/// Registers the `/seek` command.
+///
+/// If `i18n` is `None`, the translation will be ignored.
+pub fn register(i18n: Option<&I18n>) -> CreateCommand {
+    let mut command = CreateCommand::new("seek");
 
+    if let Some(i18n) = i18n {
         command = i18n.serenity_command_name("seek", "name", command);
         command = i18n.serenity_command_description("seek", "description", command);
+    }
 
-        command
-            .description("Seek for the time in the current music playing.")
-            .add_option({
-                let mut option = CreateCommandOption::new(
-                    CommandOptionType::String,
-                    "time",
-                    "Time in seconds or a supported syntax.",
-                )
-                .required(true);
+    command
+        .description("Seek for the time in the current music playing.")
+        .add_option({
+            let mut option = CreateCommandOption::new(
+                CommandOptionType::String,
+                "time",
+                "Time in seconds or a supported syntax.",
+            )
+            .required(true);
 
+            if let Some(i18n) = i18n {
                 option = i18n.serenity_command_option_name("seek", "time_name", option);
                 option =
                     i18n.serenity_command_option_description("seek", "time_description", option);
+            }
 
-                option
-            })
-            .dm_permission(false)
-    }
-
-    async fn execute(
-        &self,
-        hydrogen: HydrogenContext,
-        context: Context,
-        interaction: CommandInteraction,
-    ) {
-        if let Err(e) = self._execute(hydrogen, context, interaction).await {
-            warn!("{}", e);
-        }
-    }
+            option
+        })
+        .dm_permission(false)
 }
