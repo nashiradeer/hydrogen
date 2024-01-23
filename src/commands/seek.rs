@@ -1,7 +1,7 @@
 //! Hydrogen // Commands // Seek
 //!
 //! '/seek' command registration and execution.
-//!
+
 use hydrogen_i18n::I18n;
 use serenity::{
     all::{CommandInteraction, CommandOptionType},
