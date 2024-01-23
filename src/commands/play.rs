@@ -26,7 +26,7 @@ pub async fn execute(
     // Get the title of the embed.
     let title = hydrogen
         .i18n
-        .translate(&interaction.locale, "seek", "embed_title");
+        .translate(&interaction.locale, "play", "embed_title");
 
     // Get the time option value.
     let Some(query) = get_str_option(interaction, 0) else {
