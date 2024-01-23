@@ -9,6 +9,8 @@
 ### Changed
 
 - Replace internal i18n with 'hydrogen-i18n'.
+- New command register and handler.
+- New component handler.
 
 ## [0.0.1-alpha.3] - 2023-01-08
 

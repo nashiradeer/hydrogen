@@ -1,16 +1,16 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
-use commands::play::PlayCommand;
+use handler::register_commands;
 use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
+use parsers::TimeParser;
 use serenity::{
     all::{
-        Client, Command, CommandId, CommandInteraction, ComponentInteraction, GatewayIntents,
-        Interaction, Ready, VoiceServerUpdateEvent, VoiceState,
+        Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Ready,
+        VoiceServerUpdateEvent, VoiceState,
     },
-    builder::CreateCommand,
     client::{Context, EventHandler},
 };
 use songbird::SerenityInit;
@@ -20,19 +20,16 @@ use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
 };
 
-use crate::{
-    commands::{join::JoinCommand, seek::SeekCommand},
-    components::{
-        loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent,
-        skip::SkipComponent, stop::StopComponent,
-    },
-};
+use crate::handler::{handle_command, handle_component};
 
 mod commands;
 mod components;
+mod handler;
 mod lavalink;
 mod manager;
+mod parsers;
 mod player;
+mod utils;
 
 pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
 pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
@@ -53,6 +50,10 @@ pub static HYDROGEN_DEFAULT_LANGUAGE: &str = include_str!("../assets/langs/en-US
 struct HydrogenContext {
     pub i18n: Arc<I18n>,
     pub manager: Arc<RwLock<Option<HydrogenManager>>>,
+
+    /// Parsers used to parse different time syntaxes.
+    pub time_parsers: Arc<TimeParser>,
+
     pub commands_id: Arc<RwLock<HashMap<String, CommandId>>>,
 }
 
@@ -60,20 +61,6 @@ struct HydrogenContext {
 struct HydrogenHandler {
     context: HydrogenContext,
     lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
-    commands: Arc<HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>>>,
-    components: Arc<HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>>>,
-}
-
-#[async_trait]
-trait HydrogenCommandListener {
-    fn register(&self, i18n: Arc<I18n>) -> CreateCommand;
-
-    async fn execute(
-        &self,
-        hydrogen_context: HydrogenContext,
-        context: Context,
-        interaction: CommandInteraction,
-    );
 }
 
 #[async_trait]
@@ -100,25 +87,20 @@ impl EventHandler for HydrogenHandler {
         *self.context.manager.write().await = Some(manager.clone());
         debug!("(ready): HydrogenManager initialized");
 
-        let mut commands_id = self.context.commands_id.write().await;
-        for (name, command) in self.commands.iter() {
-            debug!("(ready): registering command: {}", name);
-            match Command::create_global_command(
-                ctx.http.clone(),
-                command.register(self.context.i18n.clone()),
-            )
-            .await
-            {
-                Ok(v) => {
-                    commands_id.insert(name.clone(), v.id);
-                }
-                Err(e) => {
-                    error!("(ready): cannot register the command '{}': {}", name, e);
-                }
+        if !register_commands(
+            Some(&self.context.i18n),
+            &ctx.http,
+            &self.context.commands_id,
+        )
+        .await
+        {
+            warn!("(ready): cannot register commands, retrying without translations...");
+
+            if !register_commands(None, &ctx.http, &self.context.commands_id).await {
+                error!("(ready): cannot register commands");
+                panic!("cannot register commands");
             }
         }
-        drop(commands_id);
-        debug!("(ready): commands registered");
 
         for i in 0..self.lavalink_nodes.len() {
             if let Some(node) = self.lavalink_nodes.get(i) {
@@ -151,35 +133,20 @@ impl EventHandler for HydrogenHandler {
 
         match interaction {
             Interaction::Command(command) => {
-                let command_name = command.data.name.clone();
-
-                if let Some(listener) = self.commands.get(&command_name) {
-                    listener.execute(self.context.clone(), ctx, command).await;
-                } else {
-                    warn!("(interaction_create): command not found: {}", command_name);
-                }
+                handle_command(&self.context, &ctx, &command).await;
 
                 info!(
                     "(interaction_create): command '{}' executed in {}ms",
-                    command_name,
+                    command.data.name,
                     timer.elapsed().as_millis()
                 );
             }
             Interaction::Component(component) => {
-                let component_name = component.data.custom_id.clone();
-
-                if let Some(listener) = self.components.get(&component_name) {
-                    listener.execute(self.context.clone(), ctx, component).await;
-                } else {
-                    warn!(
-                        "(interaction_create): component not found: {}",
-                        component_name
-                    );
-                }
+                handle_component(&self.context, &ctx, &component).await;
 
                 info!(
                     "(interaction_create): component '{}' executed in {}ms",
-                    component_name,
+                    component.data.custom_id,
                     timer.elapsed().as_millis()
                 );
             }
@@ -305,34 +272,22 @@ async fn main() {
         Arc::new(lavalink_nodes)
     };
 
+    // Initialize time parsers.
+    let time_parsers = Arc::new(match TimeParser::new() {
+        Ok(v) => v,
+        Err(e) => {
+            error!("cannot initialize time parsers: {}", e);
+            panic!("cannot initialize time parsers");
+        }
+    });
+
     // Initialize HydrogenHandler.
     let app = HydrogenHandler {
         context: HydrogenContext {
             manager: Arc::new(RwLock::new(None)),
             commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n: Arc::new(i18n),
-        },
-        commands: {
-            let mut commands: HashMap<String, Box<dyn HydrogenCommandListener + Sync + Send>> =
-                HashMap::new();
-
-            commands.insert("play".to_owned(), Box::new(PlayCommand));
-            commands.insert("join".to_owned(), Box::new(JoinCommand));
-            commands.insert("seek".to_owned(), Box::new(SeekCommand));
-
-            Arc::new(commands)
-        },
-        components: {
-            let mut components: HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>> =
-                HashMap::new();
-
-            components.insert("stop".to_owned(), Box::new(StopComponent));
-            components.insert("loop".to_owned(), Box::new(LoopComponent));
-            components.insert("pause".to_owned(), Box::new(PauseComponent));
-            components.insert("skip".to_owned(), Box::new(SkipComponent));
-            components.insert("prev".to_owned(), Box::new(PrevComponent));
-
-            Arc::new(components)
+            time_parsers,
         },
         lavalink_nodes,
     };

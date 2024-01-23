@@ -1,332 +1,148 @@
-use async_trait::async_trait;
-use serenity::{
-    all::{ChannelId, ComponentInteraction, Guild, GuildId, UserId},
-    builder::{CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
-    cache::CacheRef,
-    client::Context,
-};
-use tracing::warn;
+//! Hydrogen // Components // Prev
+//!
+//! 'prev' component execution.
+
+use serenity::{all::ComponentInteraction, client::Context};
+use tracing::{error, warn};
 
 use crate::{
-    player::HydrogenMusic, HydrogenComponentListener, HydrogenContext, HYDROGEN_BUG_URL,
-    HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    handler::{Response, Result},
+    player::HydrogenMusic,
+    utils::{error_message, MusicCommonData},
+    HydrogenContext, HYDROGEN_BUG_URL,
 };
 
-pub struct PrevComponent;
+/// Executes the `prev` command.
+pub async fn execute(
+    hydrogen: &HydrogenContext,
+    context: &Context,
+    interaction: &ComponentInteraction,
+) -> Result {
+    // Get the translation for the command's title.
+    let title = hydrogen
+        .i18n
+        .translate(&interaction.locale, "prev", "embed_title");
 
-impl PrevComponent {
-    #[inline]
-    fn get_channel_id(
-        guild: CacheRef<'_, GuildId, Guild>,
-        user_id: UserId,
-    ) -> Result<ChannelId, Result<(), String>> {
-        Ok(guild
-            .voice_states
-            .get(&user_id)
-            .ok_or(Err("cannot get the author's VoiceState".to_owned()))?
-            .channel_id
-            .ok_or(Err(
-                "cannot get the ChannelId from the author's VoiceState".to_owned()
-            ))?)
-    }
+    // Get the common data used by music commands and components.
+    let Some(data) = MusicCommonData::new(&hydrogen, &context, interaction.guild_id).await else {
+        error!("cannot get common music data");
 
-    #[inline]
-    fn get_message<'a>(
-        track: HydrogenMusic,
-        hydrogen: &'a HydrogenContext,
-        interaction: &'a ComponentInteraction,
-    ) -> String {
-        if let Some(uri) = track.uri {
-            return hydrogen
+        return Err(Response::Generic {
+            title,
+            description: hydrogen
                 .i18n
-                .translate(&interaction.locale, "prev", "returning_url")
-                .replace("{name}", &track.title)
-                .replace("{author}", &track.author)
-                .replace("{url}", &uri);
-        } else {
-            return hydrogen
-                .i18n
-                .translate(&interaction.locale, "prev", "returning")
-                .replace("${name}", &track.title)
-                .replace("${author}", &track.author);
-        }
-    }
+                .translate(&interaction.locale, "error", "unknown")
+                .replace("{url}", HYDROGEN_BUG_URL),
+        });
+    };
 
-    async fn _execute(
-        &self,
-        hydrogen: HydrogenContext,
-        context: Context,
-        interaction: ComponentInteraction,
-    ) -> Result<(), String> {
-        interaction
-            .defer_ephemeral(&context.http)
-            .await
-            .map_err(|e| format!("cannot defer the interaction response: {}", e))?;
+    // Get the user's voice channel ID.
+    let Some(voice_channel_id) = data.get_connected_channel(interaction.user.id) else {
+        warn!(
+            "cannot get the voice channel ID of the user {} in the guild {}",
+            interaction.user.id, data.guild_id
+        );
 
-        let manager = hydrogen
-            .manager
-            .read()
-            .await
-            .clone()
-            .ok_or("Hydrogen's PlayerManager not initialized".to_owned())?;
-        let guild_id = interaction
-            .guild_id
-            .ok_or("cannot get the interaction's GuildId".to_owned())?;
-        let guild = context
-            .cache
-            .guild(guild_id)
-            .ok_or("cannot get the guild from the cache".to_owned())?;
+        return Err(Response::Generic {
+            title,
+            description: error_message(
+                &hydrogen.i18n,
+                &interaction.locale,
+                &hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "error", "unknown_voice_state"),
+            ),
+        });
+    };
 
-        let voice_channel_id = match Self::get_channel_id(guild, interaction.user.id) {
-            Ok(v) => v,
-            Err(e) => {
-                if let Err(e) = interaction
-                    .edit_response(
-                        &context.http,
-                        EditInteractionResponse::new().embed(
-                            CreateEmbed::new()
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "prev",
-                                    "embed_title",
-                                ))
-                                .description(format!(
-                                    "{}\n\n{}",
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "unknown_voice_state",
-                                    ),
-                                    hydrogen
-                                        .i18n
-                                        .translate(&interaction.locale, "error", "not_intentional",)
-                                        .replace("{url}", HYDROGEN_BUG_URL)
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(
-                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "generic",
-                                        "embed_footer",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL),
-                                ),
-                        ),
-                    )
-                    .await
-                {
-                    warn!("cannot send a response to the interaction: {:?}", e);
+    // Get the voice channel ID of the bot.
+    if let Some(my_channel_id) = data.manager.get_voice_channel_id(data.guild_id).await {
+        if my_channel_id == voice_channel_id.into() {
+            // Go to the previous track.
+            let music = match data.manager.prev(data.guild_id).await {
+                Ok(v) => v,
+                Err(e) => {
+                    error!(
+                        "cannot go to the previous track in the guild {}: {}",
+                        data.guild_id, e
+                    );
+
+                    return Err(Response::Generic {
+                        title,
+                        description: hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "error", "unknown")
+                            .replace("{url}", HYDROGEN_BUG_URL),
+                    });
                 }
-                return e;
-            }
-        };
+            };
 
-        if let Some(my_channel_id) = manager.get_voice_channel_id(guild_id).await {
-            if my_channel_id == voice_channel_id.into() {
-                let music = match manager.prev(guild_id).await {
-                    Ok(v) => v,
-                    Err(e) => {
-                        if let Err(e) = interaction
-                            .edit_response(
-                                &context.http,
-                                EditInteractionResponse::new().embed(
-                                    CreateEmbed::new()
-                                        .title(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "prev",
-                                            "embed_title",
-                                        ))
-                                        .description(
-                                            hydrogen
-                                                .i18n
-                                                .translate(&interaction.locale, "error", "unknown")
-                                                .replace("{url}", HYDROGEN_BUG_URL),
-                                        )
-                                        .color(HYDROGEN_ERROR_COLOR)
-                                        .footer(
-                                            CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                                &interaction.locale,
-                                                "generic",
-                                                "embed_footer",
-                                            ))
-                                            .icon_url(HYDROGEN_LOGO_URL),
-                                        ),
-                                ),
-                            )
-                            .await
-                        {
-                            warn!("cannot send a response to the interaction: {:?}", e);
-                        }
+            // Get the music.
+            let Some(music) = music else {
+                warn!("guild {} has a empty queue", data.guild_id);
 
-                        return Err(format!("cannot return to the previous song: {}", e));
-                    }
-                };
-
-                let Some(music) = music else {
-                    if let Err(e) = interaction
-                        .edit_response(
-                            &context.http,
-                            EditInteractionResponse::new().embed(
-                                CreateEmbed::new()
-                                    .title(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "prev",
-                                        "embed_title",
-                                    ))
-                                    .description(format!(
-                                        "{}\n\n{}",
-                                        hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "error",
-                                            "empty_queue",
-                                        ),
-                                        hydrogen
-                                            .i18n
-                                            .translate(
-                                                &interaction.locale,
-                                                "error",
-                                                "not_intentional",
-                                            )
-                                            .replace("{url}", HYDROGEN_BUG_URL)
-                                    ))
-                                    .color(HYDROGEN_ERROR_COLOR)
-                                    .footer(
-                                        CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                            &interaction.locale,
-                                            "generic",
-                                            "embed_footer",
-                                        ))
-                                        .icon_url(HYDROGEN_LOGO_URL),
-                                    ),
-                            ),
-                        )
-                        .await
-                    {
-                        warn!("cannot send a response to the interaction: {:?}", e);
-                    }
-
-                    return Ok(());
-                };
-
-                if let Err(e) = interaction
-                    .edit_response(
-                        &context.http,
-                        EditInteractionResponse::new().embed(
-                            CreateEmbed::new()
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "prev",
-                                    "embed_title",
-                                ))
-                                .description(Self::get_message(music, &hydrogen, &interaction))
-                                .color(HYDROGEN_PRIMARY_COLOR)
-                                .footer(
-                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "generic",
-                                        "embed_footer",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL),
-                                ),
-                        ),
-                    )
-                    .await
-                {
-                    warn!("cannot send a response to the interaction: {:?}", e);
-                }
-            } else {
-                if let Err(e) = interaction
-                    .edit_response(
-                        &context.http,
-                        EditInteractionResponse::new().embed(
-                            CreateEmbed::new()
-                                .title(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "prev",
-                                    "embed_title",
-                                ))
-                                .description(format!(
-                                    "{}\n\n{}",
-                                    hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "error",
-                                        "not_in_voice_chat",
-                                    ),
-                                    hydrogen
-                                        .i18n
-                                        .translate(&interaction.locale, "error", "not_intentional",)
-                                        .replace("{url}", HYDROGEN_BUG_URL)
-                                ))
-                                .color(HYDROGEN_ERROR_COLOR)
-                                .footer(
-                                    CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                        &interaction.locale,
-                                        "generic",
-                                        "embed_footer",
-                                    ))
-                                    .icon_url(HYDROGEN_LOGO_URL),
-                                ),
-                        ),
-                    )
-                    .await
-                {
-                    warn!("cannot send a response to the interaction: {:?}", e);
-                }
-            }
-        } else {
-            if let Err(e) = interaction
-                .edit_response(
-                    &context.http,
-                    EditInteractionResponse::new().embed(
-                        CreateEmbed::new()
-                            .title(hydrogen.i18n.translate(
-                                &interaction.locale,
-                                "prev",
-                                "embed_title",
-                            ))
-                            .description(format!(
-                                "{}\n\n{}",
-                                hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "error",
-                                    "player_not_exists",
-                                ),
-                                hydrogen
-                                    .i18n
-                                    .translate(&interaction.locale, "error", "not_intentional",)
-                                    .replace("{url}", HYDROGEN_BUG_URL)
-                            ))
-                            .color(HYDROGEN_ERROR_COLOR)
-                            .footer(
-                                CreateEmbedFooter::new(hydrogen.i18n.translate(
-                                    &interaction.locale,
-                                    "generic",
-                                    "embed_footer",
-                                ))
-                                .icon_url(HYDROGEN_LOGO_URL),
-                            ),
+                return Err(Response::Generic {
+                    title,
+                    description: error_message(
+                        &hydrogen.i18n,
+                        &interaction.locale,
+                        &hydrogen
+                            .i18n
+                            .translate(&interaction.locale, "error", "empty_queue"),
                     ),
-                )
-                .await
-            {
-                warn!("cannot send a response to the interaction: {:?}", e);
-            }
-        }
+                });
+            };
 
-        Ok(())
+            Ok(Response::Generic {
+                title,
+                description: get_message(music, &hydrogen, &interaction),
+            })
+        } else {
+            // Not in the same voice channel as the bot.
+            Err(Response::Generic {
+                title,
+                description: error_message(
+                    &hydrogen.i18n,
+                    &interaction.locale,
+                    &hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "error", "not_in_voice_chat"),
+                ),
+            })
+        }
+    } else {
+        // Player doesn't exist.
+        Err(Response::Generic {
+            title,
+            description: error_message(
+                &hydrogen.i18n,
+                &interaction.locale,
+                &hydrogen
+                    .i18n
+                    .translate(&interaction.locale, "error", "player_not_exists"),
+            ),
+        })
     }
 }
 
-#[async_trait]
-impl HydrogenComponentListener for PrevComponent {
-    async fn execute(
-        &self,
-        hydrogen: HydrogenContext,
-        context: Context,
-        interaction: ComponentInteraction,
-    ) {
-        if let Err(e) = self._execute(hydrogen, context, interaction).await {
-            warn!("{}", e);
-        }
+/// Get the message to send to the user.
+fn get_message(
+    track: HydrogenMusic,
+    hydrogen: &HydrogenContext,
+    interaction: &ComponentInteraction,
+) -> String {
+    if let Some(uri) = track.uri {
+        return hydrogen
+            .i18n
+            .translate(&interaction.locale, "prev", "returning_url")
+            .replace("{name}", &track.title)
+            .replace("{author}", &track.author)
+            .replace("{url}", &uri);
+    } else {
+        return hydrogen
+            .i18n
+            .translate(&interaction.locale, "prev", "returning")
+            .replace("${name}", &track.title)
+            .replace("${author}", &track.author);
     }
 }
