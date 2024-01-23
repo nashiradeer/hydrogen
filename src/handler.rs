@@ -15,7 +15,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
 use crate::{
-    commands, HydrogenContext, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL, HYDROGEN_PRIMARY_COLOR,
+    commands, components, HydrogenContext, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL,
+    HYDROGEN_PRIMARY_COLOR,
 };
 
 /// Type returned by commands and components to indicate how to respond to the interaction.
@@ -87,6 +88,7 @@ pub async fn handle_component(
 
     // Execute the component.
     let response = match component.data.custom_id.as_str() {
+        "loop" => components::loop_switch::execute(&hydrogen, &context, &component).await,
         _ => {
             error!(
                 "(handle_component): unknown component: {}",
