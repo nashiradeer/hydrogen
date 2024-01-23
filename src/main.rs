@@ -12,10 +12,9 @@ use manager::HydrogenManager;
 use parsers::TimeParser;
 use serenity::{
     all::{
-        Client, CommandId, CommandInteraction, ComponentInteraction, GatewayIntents, Interaction,
-        Ready, VoiceServerUpdateEvent, VoiceState,
+        Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Ready,
+        VoiceServerUpdateEvent, VoiceState,
     },
-    builder::CreateCommand,
     client::{Context, EventHandler},
 };
 use songbird::SerenityInit;
@@ -67,18 +66,6 @@ struct HydrogenHandler {
     context: HydrogenContext,
     lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
     components: Arc<HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>>>,
-}
-
-#[async_trait]
-trait HydrogenCommandListener {
-    fn register(&self, i18n: Arc<I18n>) -> CreateCommand;
-
-    async fn execute(
-        &self,
-        hydrogen_context: HydrogenContext,
-        context: Context,
-        interaction: CommandInteraction,
-    );
 }
 
 #[async_trait]
