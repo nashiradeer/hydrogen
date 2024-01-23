@@ -1,5 +1,3 @@
-pub mod loop_switch;
-pub mod pause;
-pub mod prev;
-pub mod skip;
-pub mod stop;
+//! Hydrogen // Components
+//!
+//! This module contains all the components from Hydrogen.

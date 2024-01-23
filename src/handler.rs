@@ -6,7 +6,7 @@ use std::{collections::HashMap, result};
 
 use hydrogen_i18n::I18n;
 use serenity::{
-    all::{Command, CommandId, CommandInteraction},
+    all::{Command, CommandId, CommandInteraction, ComponentInteraction},
     builder::{CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
     client::Context,
     http::Http,
@@ -70,6 +70,49 @@ pub async fn handle_command(
     // Edit the response with the embed.
     if let Err(e) = command.edit_response(&context.http, message).await {
         error!("(handle_command): cannot respond to the interaction: {}", e);
+    }
+}
+
+/// Handles a component interaction.
+pub async fn handle_component(
+    hydrogen: &HydrogenContext,
+    context: &Context,
+    component: &ComponentInteraction,
+) {
+    // Defer the interaction to avoid the "This interaction failed" message.
+    if let Err(e) = component.defer_ephemeral(&context.http).await {
+        error!("(handle_component): failed to defer interaction: {}", e);
+        return;
+    }
+
+    // Execute the component.
+    let response = match component.data.custom_id.as_str() {
+        _ => {
+            error!(
+                "(handle_component): unknown component: {}",
+                component.data.custom_id
+            );
+            return;
+        }
+    };
+
+    // Get the footer's text.
+    let footer_text = hydrogen
+        .i18n
+        .translate(&component.locale, "generic", "embed_footer");
+
+    // Create the embed.
+    let message = match response {
+        Ok(response) => create_embed(response, HYDROGEN_PRIMARY_COLOR, &footer_text),
+        Err(response) => create_embed(response, HYDROGEN_ERROR_COLOR, &footer_text),
+    };
+
+    // Edit the response with the embed.
+    if let Err(e) = component.edit_response(&context.http, message).await {
+        error!(
+            "(handle_component): cannot respond to the interaction: {}",
+            e
+        );
     }
 }
 

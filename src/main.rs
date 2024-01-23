@@ -1,10 +1,6 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
-use components::{
-    loop_switch::LoopComponent, pause::PauseComponent, prev::PrevComponent, skip::SkipComponent,
-    stop::StopComponent,
-};
 use handler::register_commands;
 use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
@@ -24,7 +20,7 @@ use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
 };
 
-use crate::handler::handle_command;
+use crate::handler::{handle_command, handle_component};
 
 mod commands;
 mod components;
@@ -65,7 +61,6 @@ struct HydrogenContext {
 struct HydrogenHandler {
     context: HydrogenContext,
     lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
-    components: Arc<HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>>>,
 }
 
 #[async_trait]
@@ -147,20 +142,11 @@ impl EventHandler for HydrogenHandler {
                 );
             }
             Interaction::Component(component) => {
-                let component_name = component.data.custom_id.clone();
-
-                if let Some(listener) = self.components.get(&component_name) {
-                    listener.execute(self.context.clone(), ctx, component).await;
-                } else {
-                    warn!(
-                        "(interaction_create): component not found: {}",
-                        component_name
-                    );
-                }
+                handle_component(&self.context, &ctx, &component).await;
 
                 info!(
                     "(interaction_create): component '{}' executed in {}ms",
-                    component_name,
+                    component.data.custom_id,
                     timer.elapsed().as_millis()
                 );
             }
@@ -302,18 +288,6 @@ async fn main() {
             commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n: Arc::new(i18n),
             time_parsers,
-        },
-        components: {
-            let mut components: HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>> =
-                HashMap::new();
-
-            components.insert("stop".to_owned(), Box::new(StopComponent));
-            components.insert("loop".to_owned(), Box::new(LoopComponent));
-            components.insert("pause".to_owned(), Box::new(PauseComponent));
-            components.insert("skip".to_owned(), Box::new(SkipComponent));
-            components.insert("prev".to_owned(), Box::new(PrevComponent));
-
-            Arc::new(components)
         },
         lavalink_nodes,
     };
