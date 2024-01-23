@@ -9,6 +9,7 @@ use handler::register_commands;
 use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
+use parsers::TimeParser;
 use serenity::{
     all::{
         Client, CommandId, CommandInteraction, ComponentInteraction, GatewayIntents, Interaction,
@@ -31,6 +32,7 @@ mod components;
 mod handler;
 mod lavalink;
 mod manager;
+mod parsers;
 mod player;
 mod utils;
 
@@ -53,6 +55,10 @@ pub static HYDROGEN_DEFAULT_LANGUAGE: &str = include_str!("../assets/langs/en-US
 struct HydrogenContext {
     pub i18n: Arc<I18n>,
     pub manager: Arc<RwLock<Option<HydrogenManager>>>,
+
+    /// Parsers used to parse different time syntaxes.
+    pub time_parsers: Arc<TimeParser>,
+
     pub commands_id: Arc<RwLock<HashMap<String, CommandId>>>,
 }
 
@@ -293,12 +299,22 @@ async fn main() {
         Arc::new(lavalink_nodes)
     };
 
+    // Initialize time parsers.
+    let time_parsers = Arc::new(match TimeParser::new() {
+        Ok(v) => v,
+        Err(e) => {
+            error!("cannot initialize time parsers: {}", e);
+            panic!("cannot initialize time parsers");
+        }
+    });
+
     // Initialize HydrogenHandler.
     let app = HydrogenHandler {
         context: HydrogenContext {
             manager: Arc::new(RwLock::new(None)),
             commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n: Arc::new(i18n),
+            time_parsers,
         },
         components: {
             let mut components: HashMap<String, Box<dyn HydrogenComponentListener + Sync + Send>> =
