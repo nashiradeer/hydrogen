@@ -34,7 +34,7 @@ impl MusicCommonData {
     pub async fn new(
         hydrogen: &HydrogenContext,
         context: &Context,
-        interaction: &CommandInteraction,
+        guild_id: Option<GuildId>,
     ) -> Option<Self> {
         let Some(manager) = hydrogen.manager.read().await.clone() else {
             error!("cannot get the manager");
@@ -46,11 +46,10 @@ impl MusicCommonData {
             return None;
         };
 
-        let Some(guild_id) = interaction.guild_id else {
+        let Some(guild_id) = guild_id else {
             warn!("cannot get the guild ID");
             return None;
         };
-
         let Some(guild) = context.cache.guild(guild_id) else {
             warn!("cannot get the guild {} from the cache", guild_id);
             return None;
