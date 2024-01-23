@@ -49,6 +49,7 @@ pub async fn handle_command(
     let response = match command.data.name.as_str() {
         "join" => commands::join::execute(&hydrogen, &context, &command).await,
         "seek" => commands::seek::execute(&hydrogen, &context, &command).await,
+        "play" => commands::play::execute(&hydrogen, &context, &command).await,
         _ => {
             error!("(handle_command): unknown command: {}", command.data.name);
             return;
@@ -98,6 +99,7 @@ pub async fn register_commands(
     let commands = [
         commands::join::register(i18n),
         commands::seek::register(i18n),
+        commands::play::register(i18n),
     ];
 
     // Register the commands.
