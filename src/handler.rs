@@ -92,6 +92,7 @@ pub async fn handle_component(
         "pause" => components::pause::execute(&hydrogen, &context, &component).await,
         "prev" => components::prev::execute(&hydrogen, &context, &component).await,
         "skip" => components::skip::execute(&hydrogen, &context, &component).await,
+        "stop" => components::stop::execute(&hydrogen, &context, &component).await,
         _ => {
             error!(
                 "(handle_component): unknown component: {}",
