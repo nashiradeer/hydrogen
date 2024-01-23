@@ -21,7 +21,7 @@ pub async fn execute(
     // Get the translation for the command's title.
     let title = hydrogen
         .i18n
-        .translate(&interaction.locale, "join", "embed_title");
+        .translate(&interaction.locale, "loop", "embed_title");
 
     // Get the common data used by music commands and components.
     let Some(data) = MusicCommonData::new(&hydrogen, &context, interaction.guild_id).await else {
