@@ -4,7 +4,7 @@
 
 use hydrogen_i18n::I18n;
 use serenity::{all::CommandInteraction, builder::CreateCommand, client::Context};
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::{
     handler::{Response, Result},
@@ -25,6 +25,8 @@ pub async fn execute(
 
     // Get the common data used by music commands and components.
     let Some(data) = MusicCommonData::new(&hydrogen, &context, &interaction).await else {
+        error!("cannot get common music data");
+
         return Err(Response::Generic {
             title,
             description: hydrogen
