@@ -89,6 +89,7 @@ pub async fn handle_component(
     // Execute the component.
     let response = match component.data.custom_id.as_str() {
         "loop" => components::loop_switch::execute(&hydrogen, &context, &component).await,
+        "pause" => components::pause::execute(&hydrogen, &context, &component).await,
         _ => {
             error!(
                 "(handle_component): unknown component: {}",
