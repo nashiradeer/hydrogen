@@ -59,7 +59,10 @@ pub async fn execute(
         if my_channel_id == voice_channel_id.into() {
             // Destroy the player.
             if let Err(e) = data.manager.destroy(data.guild_id).await {
-                error!("cannot destroy the player: {}", e);
+                error!(
+                    "cannot destroy the player in the guild {}: {}",
+                    data.guild_id, e
+                );
 
                 return Err(Response::Generic {
                     title,

@@ -79,7 +79,7 @@ pub async fn execute(
 
             // Get the music.
             let Some(music) = music else {
-                warn!("the queue is empty in the guild {}", data.guild_id);
+                warn!("guild {} has a empty queue", data.guild_id);
 
                 return Err(Response::Generic {
                     title,

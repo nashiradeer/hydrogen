@@ -30,7 +30,7 @@ pub async fn execute(
 
     // Get the time option value.
     let Some(query) = get_str_option(interaction, 0) else {
-        warn!("cannot get the 'query' option");
+        error!("cannot get the 'query' option");
 
         return Err(Response::Generic {
             title,
@@ -145,6 +145,7 @@ pub async fn execute(
     if let Some(connection_info) = call.lock().await.current_connection() {
         if let Some(channel_id) = connection_info.channel_id {
             if channel_id != voice_channel_id.into() {
+                // Not in the same voice channel as the bot.
                 return Err(Response::Generic {
                     title,
                     description: error_message(
@@ -152,7 +153,7 @@ pub async fn execute(
                         &interaction.locale,
                         &hydrogen
                             .i18n
-                            .translate(&interaction.locale, "error", "player_exists"),
+                            .translate(&interaction.locale, "error", "not_in_voice_chat"),
                     ),
                 });
             }
@@ -177,7 +178,10 @@ pub async fn execute(
     {
         Ok(e) => e,
         Err(e) => {
-            warn!("cannot play the music: {}", e);
+            error!(
+                "cannot play the music in the guild {}: {}",
+                data.guild_id, e
+            );
 
             return Err(Response::Generic {
                 title,

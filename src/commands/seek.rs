@@ -29,7 +29,7 @@ pub async fn execute(
 
     // Get the time option value.
     let Some(time) = get_str_option(interaction, 0) else {
-        warn!("cannot get the 'time' option");
+        error!("cannot get the 'time' option");
 
         return Err(Response::Generic {
             title,
@@ -93,7 +93,7 @@ pub async fn execute(
                                 &interaction.locale,
                                 &hydrogen.i18n.translate(
                                     &interaction.locale,
-                                    "error",
+                                    "seek",
                                     "invalid_syntax",
                                 ),
                             ),

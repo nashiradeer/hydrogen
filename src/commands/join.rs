@@ -110,7 +110,7 @@ pub async fn execute(
         )
         .await
     {
-        warn!(
+        error!(
             "cannot initialize the player in the guild {}: {}",
             data.guild_id, e
         );

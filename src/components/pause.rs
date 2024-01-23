@@ -62,7 +62,7 @@ pub async fn execute(
 
             // Pause or resume the player.
             if let Err(e) = data.manager.set_paused(data.guild_id, paused).await {
-                warn!(
+                error!(
                     "cannot resume/pause the player in the guild {}: {}",
                     data.guild_id, e
                 );
