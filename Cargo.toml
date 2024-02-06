@@ -17,6 +17,7 @@ builtin-language = []
 
 [dependencies]
 async-trait = "0.1.68"
+dashmap = "5.5.3"
 futures = "0.3.28"
 rand = "0.8.5"
 regex = "1.10.3"

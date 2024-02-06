@@ -506,6 +506,7 @@ version = "0.0.1-alpha.4"
 dependencies = [
  "async-trait",
  "async-tungstenite",
+ "dashmap",
  "futures",
  "hydrogen-i18n",
  "rand",
