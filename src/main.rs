@@ -1,7 +1,8 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
-use handler::register_commands;
+use dashmap::DashMap;
+use handler::{register_commands, AutoRemoverKey};
 use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
@@ -14,7 +15,7 @@ use serenity::{
     client::{Context, EventHandler},
 };
 use songbird::SerenityInit;
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, task::JoinHandle};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
@@ -55,6 +56,9 @@ struct HydrogenContext {
     pub time_parsers: Arc<TimeParser>,
 
     pub commands_id: Arc<RwLock<HashMap<String, CommandId>>>,
+
+    /// The responses from the components.
+    pub components_responses: Arc<DashMap<AutoRemoverKey, (JoinHandle<()>, ComponentInteraction)>>,
 }
 
 #[derive(Clone)]
@@ -287,6 +291,7 @@ async fn main() {
             manager: Arc::new(RwLock::new(None)),
             commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n: Arc::new(i18n),
+            components_responses: Arc::new(DashMap::new()),
             time_parsers,
         },
         lavalink_nodes,

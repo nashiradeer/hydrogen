@@ -2,17 +2,18 @@
 //!
 //! Command and component handler for Hydrogen. Created to decrease the repeated code and heap allocations from the original handler.
 
-use std::{collections::HashMap, result};
+use std::{collections::HashMap, result, sync::Arc, time::Duration};
 
+use dashmap::DashMap;
 use hydrogen_i18n::I18n;
 use serenity::{
-    all::{Command, CommandId, CommandInteraction, ComponentInteraction},
+    all::{ChannelId, Command, CommandId, CommandInteraction, ComponentInteraction, UserId},
     builder::{CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
     client::Context,
-    http::Http,
+    http::{CacheHttp, Http},
 };
-use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tokio::{spawn, sync::RwLock, task::JoinHandle, time::sleep};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     commands, components, HydrogenContext, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL,
@@ -33,6 +34,9 @@ pub enum Response {
 
 /// Command' and component's function return type.
 pub type Result = result::Result<Response, Response>;
+
+/// Type used to monitor the responses sent by the bot.
+pub type AutoRemoverKey = (ChannelId, UserId);
 
 /// Handles a command interaction.
 pub async fn handle_command(
@@ -114,11 +118,42 @@ pub async fn handle_component(
     };
 
     // Edit the response with the embed.
-    if let Err(e) = component.edit_response(&context.http, message).await {
-        error!(
-            "(handle_component): cannot respond to the interaction: {}",
-            e
-        );
+    match component.edit_response(&context.http, message).await {
+        Ok(v) => {
+            // Clone the objects to send them to the autoremover.
+            let responses = hydrogen.components_responses.clone();
+
+            // Create the autoremover key.
+            let auto_remover_key = (v.channel_id, component.user.id);
+
+            // Spawn the autoremover.
+            let auto_remover = spawn(async move {
+                autoremover(auto_remover_key, responses).await;
+            });
+
+            // Store the new message in the cache.
+            if let Some((auto_remover, old_component)) = hydrogen
+                .components_responses
+                .insert(auto_remover_key, (auto_remover, component.clone()))
+            {
+                // Abort the handler.
+                auto_remover.abort();
+
+                // Delete the old message.
+                if let Err(e) = old_component.delete_response(context.http()).await {
+                    warn!(
+                        "(handle_component): cannot delete the message {:?}: {}",
+                        auto_remover_key, e
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            error!(
+                "(handle_component): cannot respond to the interaction: {}",
+                e
+            );
+        }
     }
 }
 
@@ -173,4 +208,14 @@ pub async fn register_commands(
             false
         }
     }
+}
+
+/// Removes the response after a certain time.
+async fn autoremover(
+    key: AutoRemoverKey,
+    responses: Arc<DashMap<AutoRemoverKey, (JoinHandle<()>, ComponentInteraction)>>,
+) {
+    sleep(Duration::from_secs(10)).await;
+    debug!("(autoremover): removing response {:?} from cache...", key);
+    responses.remove(&key);
 }
