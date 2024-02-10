@@ -164,15 +164,22 @@ impl EventHandler for HydrogenHandler {
 
         let option_manager = self.context.manager.read().await.clone();
         if let Some(manager) = option_manager {
-            if let Err(e) = manager.update_voice_state(old, new).await {
-                warn!("(voice_state_update): cannot update the HydrogenManager's player voice state: {}", e);
+            match manager.update_voice_state(old, new).await {
+                Ok(updated) => {
+                    if updated {
+                        info!(
+                            "(voice_state_update): processed in {}ms...",
+                            timer.elapsed().as_millis()
+                        );
+                    } else {
+                        debug!("(voice_state_update): ignored");
+                    }
+                }
+                Err(e) => {
+                    warn!("(voice_state_update): cannot update the HydrogenManager's player voice state: {}", e);
+                }
             }
         }
-
-        info!(
-            "(voice_state_update): processed in {}ms",
-            timer.elapsed().as_millis()
-        );
     }
 
     async fn voice_server_update(&self, _: Context, voice_server: VoiceServerUpdateEvent) {
@@ -181,15 +188,22 @@ impl EventHandler for HydrogenHandler {
 
         let option_manager = self.context.manager.read().await.clone();
         if let Some(manager) = option_manager {
-            if let Err(e) = manager.update_voice_server(voice_server).await {
-                warn!("(voice_server_update): cannot update HydrogenManager's player voice server: {}", e);
+            match manager.update_voice_server(voice_server).await {
+                Ok(updated) => {
+                    if updated {
+                        info!(
+                            "(voice_server_update): processed in {}ms...",
+                            timer.elapsed().as_millis()
+                        );
+                    } else {
+                        debug!("(voice_server_update): ignored");
+                    }
+                }
+                Err(e) => {
+                    warn!("(voice_server_update): cannot update HydrogenManager's player voice server: {}", e);
+                }
             }
         }
-
-        info!(
-            "(voice_server_update): processed in {}ms...",
-            timer.elapsed().as_millis()
-        );
     }
 }
 

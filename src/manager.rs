@@ -267,14 +267,14 @@ impl HydrogenManager {
         &self,
         old_voice_state: Option<VoiceState>,
         voice_state: VoiceState,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let players = self.player.read().await;
 
         let guild_id = voice_state
             .guild_id
             .ok_or(HydrogenManagerError::GuildIdMissing)?;
         let Some(player) = players.get(&guild_id) else {
-            return Ok(());
+            return Ok(false);
         };
 
         {
@@ -293,7 +293,7 @@ impl HydrogenManager {
 
                             self.destroy(guild_id).await?;
 
-                            return Ok(());
+                            return Ok(true);
                         }
                     }
                 }
@@ -338,17 +338,17 @@ impl HydrogenManager {
             }
         }
 
-        Ok(())
+        Ok(true)
     }
 
-    pub async fn update_voice_server(&self, voice_server: VoiceServerUpdateEvent) -> Result<()> {
+    pub async fn update_voice_server(&self, voice_server: VoiceServerUpdateEvent) -> Result<bool> {
         let players = self.player.read().await;
 
         let guild_id = voice_server
             .guild_id
             .ok_or(HydrogenManagerError::GuildIdMissing)?;
         let Some(player) = players.get(&guild_id) else {
-            return Ok(());
+            return Ok(false);
         };
 
         {
@@ -366,7 +366,7 @@ impl HydrogenManager {
             .await
             .map_err(|e| HydrogenManagerError::Player(e))?;
 
-        Ok(())
+        Ok(true)
     }
 
     pub async fn destroy(&self, guild_id: GuildId) -> Result<()> {

@@ -387,6 +387,8 @@ impl HydrogenPlayer {
             }
 
             self.index.store(index, Ordering::Relaxed);
+            self.paused.store(false, Ordering::Relaxed);
+
             playing = self.start_playing().await?;
             if playing {
                 this_play_track = self.queue.read().await.get(index).cloned();
