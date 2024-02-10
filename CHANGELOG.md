@@ -9,7 +9,9 @@
 
 ### Changed
 
+- Decrease update_voice_server and update_voice_state logs spamming, ignoring them when nothing has been occurred.
 - Replace internal i18n with 'hydrogen-i18n'.
+- Resume when Player::play() is called when Lavalink is playing nothing.
 - New command register and handler.
 - New component handler.
 
