@@ -35,6 +35,7 @@ mod lavalink;
 mod manager;
 mod parsers;
 mod player;
+mod roll;
 mod utils;
 
 pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
