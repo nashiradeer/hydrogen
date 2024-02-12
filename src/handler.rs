@@ -55,6 +55,7 @@ pub async fn handle_command(
         "join" => commands::join::execute(&hydrogen, &context, &command).await,
         "seek" => commands::seek::execute(&hydrogen, &context, &command).await,
         "play" => commands::play::execute(&hydrogen, &context, &command).await,
+        "about" => commands::about::execute(&hydrogen, &context, &command).await,
         _ => {
             error!("(handle_command): unknown command: {}", command.data.name);
             return;
@@ -184,6 +185,7 @@ pub async fn register_commands(
         commands::join::register(i18n),
         commands::seek::register(i18n),
         commands::play::register(i18n),
+        commands::about::register(i18n),
     ];
 
     // Register the commands.

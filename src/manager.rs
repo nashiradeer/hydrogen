@@ -731,6 +731,11 @@ impl HydrogenManager {
         self.update_now_playing(guild_id).await;
         Ok(())
     }
+
+    /// Returns the number of players.
+    pub async fn count_players(&self) -> usize {
+        self.player.read().await.len()
+    }
 }
 
 #[async_trait]
