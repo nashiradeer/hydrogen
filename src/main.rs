@@ -9,13 +9,18 @@ use manager::HydrogenManager;
 use parsers::TimeParser;
 use serenity::{
     all::{
-        Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Ready,
+        Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Ready, ShardId,
         VoiceServerUpdateEvent, VoiceState,
     },
     client::{Context, EventHandler},
+    gateway::ShardRunnerInfo,
+    prelude::TypeMapKey,
 };
 use songbird::SerenityInit;
-use tokio::{sync::RwLock, task::JoinHandle};
+use tokio::{
+    sync::{Mutex, RwLock},
+    task::JoinHandle,
+};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::{
     fmt::layer, layer::SubscriberExt, registry, util::SubscriberInitExt, EnvFilter,
@@ -42,6 +47,15 @@ pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 pub static HYDROGEN_LOGO_URL: &str =
     "https://raw.githubusercontent.com/nashiradeer/hydrogen/main/icon.png";
 pub static HYDROGEN_BUG_URL: &str = "https://github.com/nashiradeer/hydrogen/issues";
+
+/// Hydrogen version.
+pub static HYDROGEN_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Hydrogen repository URL.
+pub static HYDROGEN_REPOSITORY_URL: &str = "https://github.com/nashiradeer/hydrogen";
+
+/// Hydrogen's project name.
+pub static HYDROGEN_NAME: &str = "Hydrogen";
 
 #[cfg(feature = "builtin-language")]
 /// Default language file already loaded in the binary.
@@ -75,6 +89,13 @@ trait HydrogenComponentListener {
         context: Context,
         interaction: ComponentInteraction,
     );
+}
+
+/// A key for the shard manager runners in the TypeMap.
+pub struct ShardManagerRunners;
+
+impl TypeMapKey for ShardManagerRunners {
+    type Value = Arc<Mutex<HashMap<ShardId, ShardRunnerInfo>>>;
 }
 
 #[async_trait]
@@ -311,15 +332,20 @@ async fn main() {
         lavalink_nodes,
     };
 
-    Client::builder(
+    let mut client = Client::builder(
         env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"),
         GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES,
     )
     .event_handler(app)
     .register_songbird()
     .await
-    .expect("cannot initialize client")
-    .start()
-    .await
-    .expect("cannot start client");
+    .expect("cannot initialize client");
+
+    client
+        .data
+        .write()
+        .await
+        .insert::<ShardManagerRunners>(client.shard_manager.runners.clone());
+
+    client.start().await.expect("cannot start client");
 }

@@ -79,5 +79,20 @@
         "invalid_syntax": "Invalid time time syntax. You can use numbers as seconds or suffix them with `m` to be minutes or `h` to be hours. You can also use `00:00` or `00:00:00` to set the hours.",
         "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
         "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    },
+    "about": {
+        "name": "about",
+        "description": "Show information about the bot and its software.",
+        "embed_title": "About this bot",
+        "software": "Software",
+        "statistics": "Statistics",
+        "software_name": "**Name:** {value}",
+        "version": "**Version:** {value}",
+        "bug_report": "**Bug Report:** [GitHub]({value})",
+        "source_code": "**Source Code:** [GitHub]({value})",
+        "shards": "**Shards cached:** {value}",
+        "guilds": "**Guilds cached:** {value}",
+        "players": "**Players:** {value}",
+        "latency": "**Gateway's Latency:** {value}ms"
     }
 }
