@@ -69,6 +69,64 @@ pub enum Dice {
     Sided(u8),
 }
 
+/// Represents the different types of modifiers that can be applied to a roll.
+#[derive(Debug, Clone)]
+pub enum Modifier {
+    /// Adds a value to the roll.
+    Add(i32),
+
+    /// Subtracts a value from the roll.
+    Subtract(i32),
+
+    /// Multiplies the roll by a value.
+    Multiply(i32),
+
+    /// Divides the roll by a value.
+    Divide(i32),
+}
+
+impl Modifier {
+    /// Applies the modifier to the given value.
+    pub fn apply(&self, value: i32) -> i32 {
+        match self {
+            Self::Add(v) => value + v,
+            Self::Subtract(v) => value - v,
+            Self::Multiply(v) => value * v,
+            Self::Divide(v) => value / v,
+        }
+    }
+
+    /// Unifies two modifiers into a single modifier.
+    pub fn unify(&self, other: Modifier) -> Modifier {
+        match self {
+            Self::Add(me) => match other {
+                Self::Add(you) => Self::Add(me + you),
+                Self::Subtract(you) => Self::Add(me - you),
+                Self::Multiply(you) => Self::Add(me * you),
+                Self::Divide(you) => Self::Add(me / you),
+            },
+            Self::Subtract(me) => match other {
+                Self::Add(you) => Self::Subtract(me + you),
+                Self::Subtract(you) => Self::Subtract(me - you),
+                Self::Multiply(you) => Self::Subtract(me * you),
+                Self::Divide(you) => Self::Subtract(me / you),
+            },
+            Self::Multiply(me) => match other {
+                Self::Add(you) => Self::Multiply(me + you),
+                Self::Subtract(you) => Self::Multiply(me - you),
+                Self::Multiply(you) => Self::Multiply(me * you),
+                Self::Divide(you) => Self::Multiply(me / you),
+            },
+            Self::Divide(me) => match other {
+                Self::Add(you) => Self::Divide(me + you),
+                Self::Subtract(you) => Self::Divide(me - you),
+                Self::Multiply(you) => Self::Divide(me * you),
+                Self::Divide(you) => Self::Divide(me / you),
+            },
+        }
+    }
+}
+
 /// The parameters for a roll.
 #[derive(Debug, Clone)]
 pub struct Params {
@@ -79,7 +137,7 @@ pub struct Params {
     pub dice: Dice,
 
     /// The modifier to add to the roll.
-    pub modifier: i32,
+    pub modifier: Modifier,
 
     /// The number of times to repeat the roll.
     pub repeat: u8,
@@ -87,7 +145,7 @@ pub struct Params {
 
 impl Params {
     /// Creates a new set of roll parameters.
-    pub fn new(dice_count: u8, dice: Dice, modifier: i32, repeat: u8) -> Self {
+    pub fn new(dice_count: u8, dice: Dice, modifier: Modifier, repeat: u8) -> Self {
         Self {
             dice_count,
             dice,
@@ -136,7 +194,7 @@ impl Params {
 
 impl Default for Params {
     fn default() -> Self {
-        Self::new(1, Dice::Sided(6), 0, 1)
+        Self::new(1, Dice::Sided(6), Modifier::Add(0), 1)
     }
 }
 
@@ -193,10 +251,10 @@ impl Default for Engine<ThreadRng> {
 /// Results of a roll.
 pub enum Roll {
     /// Results of a roll of fate dice.
-    Fate(Vec<Vec<i8>>, i32),
+    Fate(Vec<Vec<i8>>, Modifier),
 
     /// Results of a roll of standard dice.
-    Sided(Vec<Vec<u8>>, i32),
+    Sided(Vec<Vec<u8>>, Modifier),
 }
 
 impl ToString for Roll {
@@ -216,7 +274,7 @@ impl ToString for Roll {
                             })
                             .collect::<Vec<_>>()
                             .join(", "),
-                        roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>() + modifier
+                        modifier.apply(roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>())
                     ));
                 }
                 result
@@ -231,7 +289,7 @@ impl ToString for Roll {
                             .map(|r| r.to_string())
                             .collect::<Vec<_>>()
                             .join(", "),
-                        roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>() + modifier
+                        modifier.apply(roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>())
                     ));
                 }
                 result

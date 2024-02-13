@@ -4,6 +4,8 @@
 
 use regex::Regex;
 
+use crate::roll::{Dice, Modifier, Params};
+
 /// Holds the parsers used to parse different  time syntaxes.
 pub struct TimeParser {
     /// Regex parser for the suffix syntax.
@@ -69,5 +71,75 @@ impl TimeParser {
         let seconds = captures.get(6)?.as_str().parse::<u32>().ok()?;
 
         Some(hours_minutes + (seconds * 1000))
+    }
+}
+
+/// Holds the parser for the roll syntax.
+pub struct RollParser {
+    /// Regex parser for the roll syntax.
+    roll_parser: Regex,
+
+    /// Regex parser for the modifier syntax.
+    modifier_parser: Regex,
+}
+
+impl RollParser {
+    /// Creates a new instance of the roll parser.
+    pub fn new() -> Result<Self, regex::Error> {
+        Ok(Self {
+            roll_parser: Regex::new(
+                r"^(?:(\d{1,2})#)?(\d{1,2})?d(\d{1,2}|[fF])((?:[+\-*\/]\d{1,2}){0,3})$",
+            )?,
+            modifier_parser: Regex::new(r"([+\-*\/])(\d{1,2})")?,
+        })
+    }
+
+    /// Parses the modifier syntax, returning the modifier.
+    pub fn evaluate_modifier(&self, data: &str) -> Option<Modifier> {
+        self.modifier_parser
+            .captures_iter(data)
+            .map(|x| {
+                (
+                    x.get(1).unwrap().as_str(),
+                    x.get(2).unwrap().as_str().parse::<i32>().unwrap(),
+                )
+            })
+            .map(|(op, value)| match op {
+                "+" => Modifier::Add(value),
+                "-" => Modifier::Subtract(value),
+                "*" => Modifier::Multiply(value),
+                "/" => Modifier::Divide(value),
+                _ => unreachable!(),
+            })
+            .reduce(|acc, x| acc.unify(x))
+    }
+
+    /// Evaluates the roll syntax, returning the parameters.
+    pub fn evaluate(&self, data: &str) -> Option<Params> {
+        let mut params = Params::default();
+
+        let captures = self.roll_parser.captures(data)?;
+
+        if let Some(repeat) = captures.get(1).map(|x| x.as_str().parse::<u8>().unwrap()) {
+            params.repeat = repeat;
+        }
+
+        if let Some(dice_count) = captures.get(2).map(|x| x.as_str().parse::<u8>().unwrap()) {
+            params.dice_count = dice_count;
+        }
+
+        if let Some(dice_sides) = captures.get(3).map(|x| x.as_str()) {
+            if dice_sides.to_lowercase() == "f" {
+                params.dice = Dice::Fate;
+            } else {
+                params.dice = Dice::Sided(dice_sides.parse::<u8>().unwrap());
+            }
+        }
+
+        if let Some(modifier) = captures.get(4).map(|x| x.as_str()) {
+            params.modifier = self.evaluate_modifier(modifier)?;
+        }
+
+        Some(params)
     }
 }
