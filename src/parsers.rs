@@ -88,9 +88,9 @@ impl RollParser {
     pub fn new() -> Result<Self, regex::Error> {
         Ok(Self {
             roll_parser: Regex::new(
-                r"^(?:(\d{1,2})#)?(\d{1,2})?d([fF]|\d{1,2})((?:[+\-*\/]\d{1,2}){0,3})$",
+                r"(?: |^)(?:(10|[1-9])#)?(50|0?[1-9]|[1-4]\d)?d(100|[fF]|0?[2-9]|[1-9]\d)((?:[+\-*\/]\d{1,3}|){0,3})(?:$| )",
             )?,
-            modifier_parser: Regex::new(r"([+\-*\/])(\d{1,2})")?,
+            modifier_parser: Regex::new(r"([+\-*\/])(\d{1,3})")?,
         })
     }
 
