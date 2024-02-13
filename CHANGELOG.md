@@ -4,6 +4,7 @@
 
 ### Added
 
+- Create '/about' command.
 - New default 'builtin-language' feature to include 'assets/langs/en-US.json' in the binary as default language.
 - Old component message auto remover.
 
