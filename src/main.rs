@@ -247,10 +247,6 @@ impl EventHandler for HydrogenHandler {
                         "(message): cannot roll for user {}: {}",
                         message.author.id, e
                     );
-
-                    if let Err(e) = message.reply_ping(ctx, format!("Roll Failed: {}", e)).await {
-                        error!("(message): cannot send roll error: {}", e);
-                    }
                 }
             };
 
