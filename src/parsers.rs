@@ -88,7 +88,7 @@ impl RollParser {
     pub fn new() -> Result<Self, regex::Error> {
         Ok(Self {
             roll_parser: Regex::new(
-                r"^(?:(\d{1,2})#)?(\d{1,2})?d(\d{1,2}|[fF])((?:[+\-*\/]\d{1,2}){0,3})$",
+                r"^(?:(\d{1,2})#)?(\d{1,2})?d([fF]|\d{1,2})((?:[+\-*\/]\d{1,2}){0,3})$",
             )?,
             modifier_parser: Regex::new(r"([+\-*\/])(\d{1,2})")?,
         })
@@ -136,8 +136,12 @@ impl RollParser {
             }
         }
 
-        if let Some(modifier) = captures.get(4).map(|x| x.as_str()) {
-            params.modifier = self.evaluate_modifier(modifier)?;
+        if let Some(modifier) = captures
+            .get(4)
+            .map(|x| self.evaluate_modifier(x.as_str()))
+            .flatten()
+        {
+            params.modifier = modifier;
         }
 
         Some(params)

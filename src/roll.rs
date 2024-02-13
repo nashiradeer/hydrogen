@@ -7,7 +7,7 @@ use std::{
     result,
 };
 
-use rand::{rngs::ThreadRng, thread_rng, Rng, RngCore};
+use rand::{thread_rng, Rng};
 
 /// Errors that can occur when preparing a roll.
 #[derive(Debug)]
@@ -190,61 +190,43 @@ impl Params {
 
         Ok(())
     }
-}
-
-impl Default for Params {
-    fn default() -> Self {
-        Self::new(1, Dice::Sided(6), Modifier::Add(0), 1)
-    }
-}
-
-/// Prepares a roll to be made.
-pub struct Engine<T: RngCore> {
-    /// The random number generator to use.
-    rng: T,
-}
-
-impl<T: RngCore> Engine<T> {
-    /// Prepares a new roll with the given parameters and random number generator.
-    pub fn new(rng: T) -> Result<Self> {
-        Ok(Self { rng })
-    }
 
     /// Rolls the dice with the given parameters.
-    pub fn roll(&mut self, params: Params) -> Result<Roll> {
-        params.validate()?;
+    pub fn roll(&self) -> Result<Roll> {
+        self.validate()?;
+        let mut rng = thread_rng();
 
-        match params.dice {
+        match self.dice {
             Dice::Fate => {
                 let mut rolls = Vec::new();
-                for _ in 0..params.repeat {
+                for _ in 0..self.repeat {
                     let mut roll = Vec::new();
-                    for _ in 0..params.dice_count {
-                        roll.push(self.rng.gen_range(-1..=1));
+                    for _ in 0..self.dice_count {
+                        roll.push(rng.gen_range(-1..=1));
                     }
                     rolls.push(roll);
                 }
-                Ok(Roll::Fate(rolls, params.modifier))
+                Ok(Roll::Fate(rolls, self.modifier.clone()))
             }
 
             Dice::Sided(sides) => {
                 let mut rolls = Vec::new();
-                for _ in 0..params.repeat {
+                for _ in 0..self.repeat {
                     let mut roll = Vec::new();
-                    for _ in 0..params.dice_count {
-                        roll.push(self.rng.gen_range(1..=sides));
+                    for _ in 0..self.dice_count {
+                        roll.push(rng.gen_range(1..=sides));
                     }
                     rolls.push(roll);
                 }
-                Ok(Roll::Sided(rolls, params.modifier))
+                Ok(Roll::Sided(rolls, self.modifier.clone()))
             }
         }
     }
 }
 
-impl Default for Engine<ThreadRng> {
+impl Default for Params {
     fn default() -> Self {
-        Self::new(thread_rng()).unwrap()
+        Self::new(1, Dice::Sided(6), Modifier::Add(0), 1)
     }
 }
 
@@ -263,8 +245,10 @@ impl ToString for Roll {
             Self::Fate(rolls, modifier) => {
                 let mut result = String::new();
                 for roll in rolls {
+                    let total = roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>();
+
                     result.push_str(&format!(
-                        "[{}]: {}",
+                        "[{}]: {} = {}\n",
                         roll.iter()
                             .map(|r| match r {
                                 -1 => "-",
@@ -274,7 +258,8 @@ impl ToString for Roll {
                             })
                             .collect::<Vec<_>>()
                             .join(", "),
-                        modifier.apply(roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>())
+                        total,
+                        modifier.apply(total)
                     ));
                 }
                 result
@@ -283,13 +268,16 @@ impl ToString for Roll {
             Self::Sided(rolls, modifier) => {
                 let mut result = String::new();
                 for roll in rolls {
+                    let total = roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>();
+
                     result.push_str(&format!(
-                        "[{}]: {}",
+                        "[{}]: {} = {}\n",
                         roll.iter()
                             .map(|r| r.to_string())
                             .collect::<Vec<_>>()
                             .join(", "),
-                        modifier.apply(roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>())
+                        total,
+                        modifier.apply(total)
                     ));
                 }
                 result
