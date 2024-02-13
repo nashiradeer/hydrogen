@@ -183,7 +183,7 @@ impl Params {
             return Err(Error::InvalidRepetition);
         }
 
-        let repeat_limit = 50;
+        let repeat_limit = 10;
         if self.repeat > repeat_limit {
             return Err(Error::TooManyRepetitions(repeat_limit));
         }
