@@ -4,6 +4,7 @@
 
 use std::{
     fmt::{self, Display, Formatter},
+    ops::RangeInclusive,
     result,
 };
 
@@ -12,46 +13,32 @@ use rand::{thread_rng, Rng};
 /// Errors that can occur when preparing a roll.
 #[derive(Debug)]
 pub enum Error {
-    /// The number of dice is invalid (probably zero).
-    InvalidDiceCount,
+    /// The number of dice is invalid.
+    InvalidDiceCount(u8, RangeInclusive<u8>),
 
-    /// The number of dice is too high, the number represents the maximum allowed.
-    TooManyDice(u8),
+    /// The number of sides is invalid.
+    InvalidDiceSides(u8, RangeInclusive<u8>),
 
-    /// The number of sides is invalid (probably zero).
-    InvalidSides,
-
-    /// The number of sides is too high, the number represents the maximum allowed.
-    TooManySides(u8),
-
-    /// The number of repetitions is invalid (probably zero).
-    InvalidRepetition,
-
-    /// The number of repetitions is too high, the number represents the maximum allowed.
-    TooManyRepetitions(u8),
+    /// The number of repetitions is invalid.
+    InvalidRepetition(u8, RangeInclusive<u8>),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            Error::InvalidDiceCount => write!(f, "The number of dice is invalid."),
-            Error::TooManyDice(limit) => write!(
-                f,
-                "The number of dice is too high, the maximum is {}.",
-                limit
-            ),
-            Error::InvalidSides => write!(f, "The number of sides is invalid."),
-            Error::TooManySides(limit) => write!(
-                f,
-                "The number of sides is too high, the maximum is {}.",
-                limit
-            ),
-            Error::InvalidRepetition => write!(f, "The number of repetitions is invalid."),
-            Error::TooManyRepetitions(limit) => write!(
-                f,
-                "The number of repetitions is too high, the maximum is {}.",
-                limit
-            ),
+            Error::InvalidDiceCount(count, range) => {
+                write!(f, "Invalid dice count: {}. Expected: {:?}", count, range)
+            }
+            Error::InvalidDiceSides(sides, range) => {
+                write!(f, "Invalid dice sides: {}. Expected: {:?}", sides, range)
+            }
+            Error::InvalidRepetition(repeat, range) => {
+                write!(
+                    f,
+                    "Invalid repetition count: {}. Expected: {:?}",
+                    repeat, range
+                )
+            }
         }
     }
 }
@@ -62,7 +49,7 @@ pub type Result<T> = result::Result<T, Error>;
 /// Represents the different types of dice that can be rolled.
 #[derive(Debug, Clone)]
 pub enum Dice {
-    /// Fate dice, which can be either -1, 0, or 1.
+    /// Fate dice, which can be either -, 0, or +.
     Fate,
 
     /// A standard dice with a number of sides.
@@ -96,33 +83,13 @@ impl Modifier {
         }
     }
 
-    /// Unifies two modifiers into a single modifier.
-    pub fn unify(&self, other: Modifier) -> Modifier {
+    /// Unifies two modifiers applying the second to the first.
+    pub fn unify(self, other: Modifier) -> Modifier {
         match self {
-            Self::Add(me) => match other {
-                Self::Add(you) => Self::Add(me + you),
-                Self::Subtract(you) => Self::Add(me - you),
-                Self::Multiply(you) => Self::Add(me * you),
-                Self::Divide(you) => Self::Add(me / you),
-            },
-            Self::Subtract(me) => match other {
-                Self::Add(you) => Self::Subtract(me + you),
-                Self::Subtract(you) => Self::Subtract(me - you),
-                Self::Multiply(you) => Self::Subtract(me * you),
-                Self::Divide(you) => Self::Subtract(me / you),
-            },
-            Self::Multiply(me) => match other {
-                Self::Add(you) => Self::Multiply(me + you),
-                Self::Subtract(you) => Self::Multiply(me - you),
-                Self::Multiply(you) => Self::Multiply(me * you),
-                Self::Divide(you) => Self::Multiply(me / you),
-            },
-            Self::Divide(me) => match other {
-                Self::Add(you) => Self::Divide(me + you),
-                Self::Subtract(you) => Self::Divide(me - you),
-                Self::Multiply(you) => Self::Divide(me * you),
-                Self::Divide(you) => Self::Divide(me / you),
-            },
+            Self::Add(me) => Self::Add(other.apply(me)),
+            Self::Subtract(me) => Self::Subtract(other.apply(me)),
+            Self::Multiply(me) => Self::Multiply(other.apply(me)),
+            Self::Divide(me) => Self::Divide(other.apply(me)),
         }
     }
 }
@@ -157,35 +124,23 @@ impl Params {
     /// Validates the parameters.
     pub fn validate(&self) -> Result<()> {
         // Check for the dice count.
-        if self.dice_count == 0 {
-            return Err(Error::InvalidDiceCount);
-        }
-
-        let dice_count_limit = 50;
-        if self.dice_count > dice_count_limit {
-            return Err(Error::TooManyDice(dice_count_limit));
+        let dice_count_range = 0..=50;
+        if !dice_count_range.contains(&self.dice_count) {
+            return Err(Error::InvalidDiceCount(self.dice_count, dice_count_range));
         }
 
         // Check for the dice sides.
         if let Dice::Sided(sides) = self.dice {
-            if sides <= 1 {
-                return Err(Error::InvalidSides);
-            }
-
-            let sides_limit = 100;
-            if sides > sides_limit {
-                return Err(Error::TooManySides(sides_limit));
+            let dice_sides_range = 1..=100;
+            if !dice_sides_range.contains(&sides) {
+                return Err(Error::InvalidDiceSides(sides, dice_sides_range));
             }
         }
 
         // Check for the repetition count.
-        if self.repeat == 0 {
-            return Err(Error::InvalidRepetition);
-        }
-
-        let repeat_limit = 10;
-        if self.repeat > repeat_limit {
-            return Err(Error::TooManyRepetitions(repeat_limit));
+        let repetition_range = 1..=50;
+        if !repetition_range.contains(&self.repeat) {
+            return Err(Error::InvalidRepetition(self.repeat, repetition_range));
         }
 
         Ok(())
@@ -199,25 +154,33 @@ impl Params {
         match self.dice {
             Dice::Fate => {
                 let mut rolls = Vec::new();
+
                 for _ in 0..self.repeat {
                     let mut roll = Vec::new();
+
                     for _ in 0..self.dice_count {
                         roll.push(rng.gen_range(-1..=1));
                     }
+
                     rolls.push(roll);
                 }
+
                 Ok(Roll::Fate(rolls, self.modifier.clone()))
             }
 
             Dice::Sided(sides) => {
                 let mut rolls = Vec::new();
+
                 for _ in 0..self.repeat {
                     let mut roll = Vec::new();
+
                     for _ in 0..self.dice_count {
                         roll.push(rng.gen_range(1..=sides));
                     }
+
                     rolls.push(roll);
                 }
+
                 Ok(Roll::Sided(rolls, self.modifier.clone()))
             }
         }
