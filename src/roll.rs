@@ -47,9 +47,9 @@ impl Display for Error {
 pub type Result<T> = result::Result<T, Error>;
 
 /// Represents the different types of dice that can be rolled.
-#[derive(Debug, Clone)]
-pub enum Dice {
-    /// Fate dice, which can be either -, 0, or +.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiceType {
+    /// Fate dice, which can be either -, 0, or +, see [FateDice].
     Fate,
 
     /// A standard dice with a number of sides.
@@ -101,7 +101,7 @@ pub struct Params {
     pub dice_count: u8,
 
     /// The type of dice to roll.
-    pub dice: Dice,
+    pub dice_type: DiceType,
 
     /// The modifier to add to the roll.
     pub modifier: Modifier,
@@ -112,10 +112,10 @@ pub struct Params {
 
 impl Params {
     /// Creates a new set of roll parameters.
-    pub fn new(dice_count: u8, dice: Dice, modifier: Modifier, repeat: u8) -> Self {
+    pub fn new(dice_count: u8, dice_type: DiceType, modifier: Modifier, repeat: u8) -> Self {
         Self {
             dice_count,
-            dice,
+            dice_type,
             modifier,
             repeat,
         }
@@ -130,7 +130,7 @@ impl Params {
         }
 
         // Check for the dice sides.
-        if let Dice::Sided(sides) = self.dice {
+        if let DiceType::Sided(sides) = self.dice_type {
             let dice_sides_range = 1..=100;
             if !dice_sides_range.contains(&sides) {
                 return Err(Error::InvalidDiceSides(sides, dice_sides_range));
@@ -151,8 +151,8 @@ impl Params {
         self.validate()?;
         let mut rng = thread_rng();
 
-        match self.dice {
-            Dice::Fate => {
+        match self.dice_type {
+            DiceType::Fate => {
                 let mut rolls = Vec::new();
 
                 for _ in 0..self.repeat {
@@ -168,7 +168,7 @@ impl Params {
                 Ok(Roll::Fate(rolls, self.modifier.clone()))
             }
 
-            Dice::Sided(sides) => {
+            DiceType::Sided(sides) => {
                 let mut rolls = Vec::new();
 
                 for _ in 0..self.repeat {
@@ -189,62 +189,102 @@ impl Params {
 
 impl Default for Params {
     fn default() -> Self {
-        Self::new(1, Dice::Sided(6), Modifier::Add(0), 1)
+        Self::new(1, DiceType::Sided(6), Modifier::Add(0), 1)
+    }
+}
+
+/// Represents different types of dice results.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dice {
+    /// The result of a roll of fate dice.
+    Fate(FateDice),
+
+    /// The result of a roll of standard dice.
+    Sided(u8),
+}
+
+impl From<Dice> for i32 {
+    fn from(dice: Dice) -> i32 {
+        match dice {
+            Dice::Fate(fate) => i32::from(i8::from(fate)),
+            Dice::Sided(value) => i32::from(value),
+        }
+    }
+}
+
+impl ToString for Dice {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Fate(fate) => fate.to_string(),
+            Self::Sided(value) => value.to_string(),
+        }
     }
 }
 
 /// Results of a roll.
-pub enum Roll {
-    /// Results of a roll of fate dice.
-    Fate(Vec<Vec<i8>>, Modifier),
-
-    /// Results of a roll of standard dice.
-    Sided(Vec<Vec<u8>>, Modifier),
-}
+pub struct Roll(Vec<Vec<Dice>>, Modifier);
 
 impl ToString for Roll {
     fn to_string(&self) -> String {
+        let mut result = String::new();
+
+        for roll in self.0 {
+            let total = roll.iter().cloned().map(|v| i32::from(v)).sum();
+
+            result.push_str(&format!(
+                "[{}]: {} = {}\n",
+                roll.iter()
+                    .map(|r| r.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                total,
+                self.1.apply(total)
+            ));
+        }
+
+        result
+    }
+}
+
+/// Represents a fate dice with its possible values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FateDice {
+    /// Negative (-).
+    Minus,
+    /// Neutral (0).
+    Zero,
+    /// Positive (+).
+    Plus,
+}
+
+impl FateDice {
+    /// Converts a number to a fate dice.
+    pub fn try_from(i: i8) -> Option<Self> {
+        match i {
+            -1 => Some(Self::Minus),
+            0 => Some(Self::Zero),
+            1 => Some(Self::Plus),
+            _ => None,
+        }
+    }
+}
+
+impl ToString for FateDice {
+    fn to_string(&self) -> String {
         match self {
-            Self::Fate(rolls, modifier) => {
-                let mut result = String::new();
-                for roll in rolls {
-                    let total = roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>();
+            Self::Minus => "-".to_string(),
+            Self::Zero => "0".to_string(),
+            Self::Plus => "+".to_string(),
+        }
+    }
+}
 
-                    result.push_str(&format!(
-                        "[{}]: {} = {}\n",
-                        roll.iter()
-                            .map(|r| match r {
-                                -1 => "-",
-                                0 => "0",
-                                1 => "+",
-                                _ => unreachable!(),
-                            })
-                            .collect::<Vec<_>>()
-                            .join(", "),
-                        total,
-                        modifier.apply(total)
-                    ));
-                }
-                result
-            }
-
-            Self::Sided(rolls, modifier) => {
-                let mut result = String::new();
-                for roll in rolls {
-                    let total = roll.iter().cloned().map(|v| i32::from(v)).sum::<i32>();
-
-                    result.push_str(&format!(
-                        "[{}]: {} = {}\n",
-                        roll.iter()
-                            .map(|r| r.to_string())
-                            .collect::<Vec<_>>()
-                            .join(", "),
-                        total,
-                        modifier.apply(total)
-                    ));
-                }
-                result
-            }
+impl From<FateDice> for i8 {
+    fn from(fate: FateDice) -> i8 {
+        match fate {
+            FateDice::Minus => -1,
+            FateDice::Zero => 0,
+            FateDice::Plus => 1,
         }
     }
 }
