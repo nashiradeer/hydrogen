@@ -232,9 +232,17 @@ impl EventHandler for HydrogenHandler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
+        // Start the execution timer.
         let timer = Instant::now();
         debug!("(message): processing...");
 
+        // Ignore messages from bots.
+        if message.author.bot {
+            debug!("(message): message from bot, ignored");
+            return;
+        }
+
+        // Send message to the roll parser.
         if let Some(params) = self.context.roll_parser.evaluate(&message.content) {
             match params.roll() {
                 Ok(result) => {
