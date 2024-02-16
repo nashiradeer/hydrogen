@@ -6,11 +6,11 @@ use handler::{register_commands, AutoRemoverKey};
 use hydrogen_i18n::I18n;
 use lavalink::LavalinkNodeInfo;
 use manager::HydrogenManager;
-use parsers::TimeParser;
+use parsers::{RollParser, TimeParser};
 use serenity::{
     all::{
-        Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Ready, ShardId,
-        VoiceServerUpdateEvent, VoiceState,
+        Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Message, Ready,
+        ShardId, VoiceServerUpdateEvent, VoiceState,
     },
     client::{Context, EventHandler},
     gateway::ShardRunnerInfo,
@@ -35,6 +35,7 @@ mod lavalink;
 mod manager;
 mod parsers;
 mod player;
+mod roll;
 mod utils;
 
 pub const HYDROGEN_PRIMARY_COLOR: i32 = 0x5865f2;
@@ -68,6 +69,9 @@ struct HydrogenContext {
 
     /// Parsers used to parse different time syntaxes.
     pub time_parsers: Arc<TimeParser>,
+
+    /// Parser used to parse rolls.
+    pub roll_parser: Arc<RollParser>,
 
     pub commands_id: Arc<RwLock<HashMap<String, CommandId>>>,
 
@@ -226,6 +230,39 @@ impl EventHandler for HydrogenHandler {
             }
         }
     }
+
+    async fn message(&self, ctx: Context, message: Message) {
+        // Start the execution timer.
+        let timer = Instant::now();
+        debug!("(message): processing...");
+
+        // Ignore messages from bots.
+        if message.author.bot {
+            debug!("(message): message from bot, ignored");
+            return;
+        }
+
+        // Send message to the roll parser.
+        if let Some(params) = self.context.roll_parser.evaluate(&message.content) {
+            match params.roll() {
+                Ok(result) => {
+                    if let Err(e) = message.reply_ping(ctx, result.to_string()).await {
+                        error!("(message): cannot send roll result: {}", e);
+                    }
+                }
+                Err(e) => {
+                    warn!(
+                        "(message): cannot roll for user {}: {}",
+                        message.author.id, e
+                    );
+                }
+            };
+
+            info!("(message): processed in {}ms", timer.elapsed().as_millis());
+        } else {
+            debug!("(message): ignored");
+        }
+    }
 }
 
 #[cfg(not(feature = "builtin-language"))]
@@ -320,6 +357,14 @@ async fn main() {
         }
     });
 
+    let roll_parser = Arc::new(match RollParser::new() {
+        Ok(v) => v,
+        Err(e) => {
+            error!("cannot initialize roll parser: {}", e);
+            panic!("cannot initialize roll parser");
+        }
+    });
+
     // Initialize HydrogenHandler.
     let app = HydrogenHandler {
         context: HydrogenContext {
@@ -328,13 +373,17 @@ async fn main() {
             i18n: Arc::new(i18n),
             components_responses: Arc::new(DashMap::new()),
             time_parsers,
+            roll_parser,
         },
         lavalink_nodes,
     };
 
     let mut client = Client::builder(
         env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"),
-        GatewayIntents::GUILDS | GatewayIntents::GUILD_VOICE_STATES,
+        GatewayIntents::GUILDS
+            | GatewayIntents::GUILD_VOICE_STATES
+            | GatewayIntents::MESSAGE_CONTENT
+            | GatewayIntents::GUILD_MESSAGES,
     )
     .event_handler(app)
     .register_songbird()

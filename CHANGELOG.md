@@ -4,7 +4,11 @@
 
 ### Added
 
+- Create a message handler to roll dices.
+- Create a roll engine.
+- Create a roll syntax parser.
 - Create '/about' command.
+- Create '/roll' command.
 - New default 'builtin-language' feature to include 'assets/langs/en-US.json' in the binary as default language.
 - Old component message auto remover.
 
