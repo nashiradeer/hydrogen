@@ -94,5 +94,22 @@
         "guilds": "**Guilds cached:** {value}",
         "players": "**Players:** {value}",
         "latency": "**Gateway's Latency:** {value}ms"
+    },
+    "roll": {
+        "name": "roll",
+        "description": "Roll a dice.",
+        "embed_title": "Rolling a dice",
+        "dice_sides_name": "sides",
+        "dice_sides_description": "The amount of sides the dice will have.",
+        "dice_count_name": "dice_count",
+        "dice_count_description": "The amount of dices to roll.",
+        "repetitions_name": "repetitions",
+        "repetitions_description": "The amount of times to roll the dices.",
+        "modifier_name": "modifier",
+        "modifier_description": "The modifier to add to the roll. (Need to be modifier like +2 or -2)",
+        "fate_name": "fate",
+        "fate_description": "Roll a fate dice.",
+        "sided_name": "sided",
+        "sided_description": "Roll a dice with a specific number of sides."
     }
 }
