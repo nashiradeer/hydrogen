@@ -127,14 +127,14 @@ impl Params {
     /// Validates the parameters.
     pub fn validate(&self) -> Result<()> {
         // Check for the dice count.
-        let dice_count_range = 0..=50;
+        let dice_count_range = 1..=50;
         if !dice_count_range.contains(&self.dice_count) {
             return Err(Error::InvalidDiceCount(self.dice_count, dice_count_range));
         }
 
         // Check for the dice sides.
         if let DiceType::Sided(sides) = self.dice_type {
-            let dice_sides_range = 1..=100;
+            let dice_sides_range = 2..=100;
             if !dice_sides_range.contains(&sides) {
                 return Err(Error::InvalidDiceSides(sides, dice_sides_range));
             }
