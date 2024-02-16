@@ -4,7 +4,7 @@
 
 use regex::Regex;
 
-use crate::roll::{Dice, Modifier, Params};
+use crate::roll::{DiceType, Modifier, Params};
 
 /// Holds the parsers used to parse different  time syntaxes.
 pub struct TimeParser {
@@ -116,26 +116,32 @@ impl RollParser {
 
     /// Evaluates the roll syntax, returning the parameters.
     pub fn evaluate(&self, data: &str) -> Option<Params> {
+        // Default roll parameters.
         let mut params = Params::default();
 
+        // Parse the roll syntax.
         let captures = self.roll_parser.captures(data)?;
 
+        // If repeat is present, parse it.
         if let Some(repeat) = captures.get(1).map(|x| x.as_str().parse::<u8>().unwrap()) {
             params.repeat = repeat;
         }
 
+        // If dice count is present, parse it.
         if let Some(dice_count) = captures.get(2).map(|x| x.as_str().parse::<u8>().unwrap()) {
             params.dice_count = dice_count;
         }
 
+        // If dice sides is present, parse it.
         if let Some(dice_sides) = captures.get(3).map(|x| x.as_str()) {
             if dice_sides.to_lowercase() == "f" {
-                params.dice = Dice::Fate;
+                params.dice_type = DiceType::Fate;
             } else {
-                params.dice = Dice::Sided(dice_sides.parse::<u8>().unwrap());
+                params.dice_type = DiceType::Sided(dice_sides.parse::<u8>().unwrap());
             }
         }
 
+        // If modifier is present, parse it.
         if let Some(modifier) = captures
             .get(4)
             .map(|x| self.evaluate_modifier(x.as_str()))
