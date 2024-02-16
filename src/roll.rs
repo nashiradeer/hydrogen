@@ -3,6 +3,7 @@
 //! This module provides all the backend functionality for the roll command.
 
 use std::{
+    error,
     fmt::{self, Display, Formatter},
     ops::RangeInclusive,
     result,
@@ -43,6 +44,8 @@ impl Display for Error {
     }
 }
 
+impl error::Error for Error {}
+
 /// A result type for the roll module.
 pub type Result<T> = result::Result<T, Error>;
 
@@ -57,7 +60,7 @@ pub enum DiceType {
 }
 
 /// Represents the different types of modifiers that can be applied to a roll.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Modifier {
     /// Adds a value to the roll.
     Add(i32),
@@ -148,42 +151,39 @@ impl Params {
 
     /// Rolls the dice with the given parameters.
     pub fn roll(&self) -> Result<Roll> {
+        // Validate the parameters.
         self.validate()?;
+
+        // Create a random number generator.
         let mut rng = thread_rng();
 
-        match self.dice_type {
-            DiceType::Fate => {
-                let mut rolls = Vec::new();
+        // Create a vector to store the rolls.
+        let mut rolls = Vec::new();
 
-                for _ in 0..self.repeat {
-                    let mut roll = Vec::new();
+        // Generate the rolls for the given number of repetitions.
+        for _ in 0..self.repeat {
+            // Create a vector to store the repetition.
+            let mut roll = Vec::new();
 
-                    for _ in 0..self.dice_count {
-                        roll.push(rng.gen_range(-1..=1));
+            // Generate the rolls for the given number of dice.
+            for _ in 0..self.dice_count {
+                // Generate a random number for the dice.
+                let random = match self.dice_type {
+                    DiceType::Fate => {
+                        Dice::Fate(FateDice::try_from(rng.gen_range(-1..=1)).unwrap())
                     }
+                    DiceType::Sided(sides) => Dice::Sided(rng.gen_range(1..=sides)),
+                };
 
-                    rolls.push(roll);
-                }
-
-                Ok(Roll::Fate(rolls, self.modifier.clone()))
+                // Add the roll to the repetition.
+                roll.push(random);
             }
 
-            DiceType::Sided(sides) => {
-                let mut rolls = Vec::new();
-
-                for _ in 0..self.repeat {
-                    let mut roll = Vec::new();
-
-                    for _ in 0..self.dice_count {
-                        roll.push(rng.gen_range(1..=sides));
-                    }
-
-                    rolls.push(roll);
-                }
-
-                Ok(Roll::Sided(rolls, self.modifier.clone()))
-            }
+            // Add the repetition to the rolls.
+            rolls.push(roll);
         }
+
+        Ok(Roll(rolls, self.modifier))
     }
 }
 
@@ -222,15 +222,20 @@ impl ToString for Dice {
 }
 
 /// Results of a roll.
+#[derive(Debug, Clone)]
 pub struct Roll(Vec<Vec<Dice>>, Modifier);
 
 impl ToString for Roll {
     fn to_string(&self) -> String {
+        // Create a string to store the result.
         let mut result = String::new();
 
-        for roll in self.0 {
+        // Iterate over the repetitions.
+        for roll in self.0.iter() {
+            // Calculate the total of the roll in the repetition.
             let total = roll.iter().cloned().map(|v| i32::from(v)).sum();
 
+            // Add the result to the string, including the total with the modifier applied.
             result.push_str(&format!(
                 "[{}]: {} = {}\n",
                 roll.iter()
@@ -251,8 +256,10 @@ impl ToString for Roll {
 pub enum FateDice {
     /// Negative (-).
     Minus,
+
     /// Neutral (0).
     Zero,
+
     /// Positive (+).
     Plus,
 }
