@@ -19,8 +19,10 @@ impl TimeParser {
     /// Creates a new instance of the time parser.
     pub fn new() -> Result<Self, regex::Error> {
         Ok(Self {
-            suffix_parser: Regex::new(r"^((\d{1,3})[sS]?|(\d{1,3})[mM]|(\d{1,3})[hH])$")?,
-            semicolon_parser: Regex::new(r"^(((\d{1,3}):([0-5]\d)|(\d{1,3})):([0-5]\d))$")?,
+            suffix_parser: Regex::new(r"^(([0-9]{1,3})[sS]?|([0-9]{1,3})[mM]|([0-9]{1,3})[hH])$")?,
+            semicolon_parser: Regex::new(
+                r"^((([0-9]{1,3}):([0-5][0-9])|([0-9]{1,3})):([0-5][0-9]))$",
+            )?,
         })
     }
 
@@ -88,9 +90,9 @@ impl RollParser {
     pub fn new() -> Result<Self, regex::Error> {
         Ok(Self {
             roll_parser: Regex::new(
-                r"(?: |^)(?:(10|[1-9])#)?(50|0?[1-9]|[1-4]\d)?d(100|[fF]|0?[2-9]|[1-9]\d)((?:[+\-*\/]\d{1,3}|){0,3})(?:$| )",
+                r"(?: |^)(?:(10|[1-9])#)?(50|0?[1-9]|[1-4][0-9])?d(100|[fF]|0?[2-9]|[1-9][0-9])((?:[+\-*\/][0-9]{1,3}|){0,3})(?:$| )",
             )?,
-            modifier_parser: Regex::new(r"([+\-*\/])(\d{1,3})")?,
+            modifier_parser: Regex::new(r"([+\-*\/])([0-9]{1,3})")?,
         })
     }
 
