@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, process::exit, sync::Arc, time::Instant};
 
 use async_trait::async_trait;
+use config::load_configuration;
 use dashmap::DashMap;
 use handler::{register_commands, AutoRemoverKey};
 use hydrogen_i18n::I18n;
@@ -30,6 +31,7 @@ use crate::handler::{handle_command, handle_component};
 
 mod commands;
 mod components;
+mod config;
 mod handler;
 mod lavalink;
 mod manager;
@@ -295,13 +297,13 @@ async fn main() {
     // Initialize i18n with default language if can be parsed.
     let mut i18n = new_i18n();
 
-    // Load a possible new default language from HYDROGEN_DEFAULT_LANGUAGE environment variable.
-    let new_default_language = env::var("DEFAULT_LANGUAGE");
+    // Load configuration from file or environment.
+    let mut config = load_configuration().or_from_env();
 
-    // Load language files from HYDROGEN_LANGUAGE_PATH environment variable.
-    if let Ok(language_path) = env::var("LANGUAGE_PATH") {
+    // Load language files.
+    if let Some(language_path) = config.language_path {
         if let Err(e) =
-            i18n.from_dir_with_links(language_path, false, new_default_language.is_err())
+            i18n.from_dir_with_links(language_path, false, config.default_language.is_none())
         {
             warn!("cannot load language files: {}", e);
         } else {
@@ -310,43 +312,12 @@ async fn main() {
     }
 
     // Set a new default language if the environment variable is set.
-    if let Ok(default_language) = new_default_language {
+    if let Some(default_language) = config.default_language {
         if !i18n.set_default(&default_language, true) {
             error!("cannot set default language to '{}'", default_language);
         }
         // TODO: deduplicate loaded language when hydrogen_i18n supports it.
     }
-
-    // Initialize lavalink nodes.
-    let lavalink_nodes = {
-        let mut lavalink_nodes = Vec::new();
-        let lavalink_env =
-            env::var("LAVALINK").expect("you need to set LAVALINK environment variable");
-
-        for single_node in lavalink_env.split(";") {
-            let mut node_components = single_node.split(",");
-            let Some(host) = node_components.next() else {
-                break;
-            };
-
-            let password = node_components
-                .next()
-                .expect("lavalink node doesn't have a password set");
-            let tls = node_components.next().unwrap_or("");
-
-            lavalink_nodes.push(LavalinkNodeInfo {
-                host: host.to_owned(),
-                password: password.to_owned(),
-                tls: tls == "true" || tls == "enabled" || tls == "on",
-            });
-        }
-
-        if lavalink_nodes.len() == 0 {
-            panic!("at least one lavalink node is required to work");
-        }
-
-        Arc::new(lavalink_nodes)
-    };
 
     // Initialize time parsers.
     let time_parsers = Arc::new(match TimeParser::new() {
@@ -365,6 +336,9 @@ async fn main() {
         }
     });
 
+    // Get lavalink nodes.
+    let lavalink_nodes = config.lavalink.take().unwrap().into_iter().map(LavalinkNodeInfo::from).collect();
+
     // Initialize HydrogenHandler.
     let app = HydrogenHandler {
         context: HydrogenContext {
@@ -375,11 +349,11 @@ async fn main() {
             time_parsers,
             roll_parser,
         },
-        lavalink_nodes,
+        lavalink_nodes: Arc::new(lavalink_nodes),
     };
 
     let mut client = Client::builder(
-        env::var("DISCORD_TOKEN").expect("you need to set DISCORD_TOKEN environment variable"),
+        &config.discord_token.unwrap(),
         GatewayIntents::GUILDS
             | GatewayIntents::GUILD_VOICE_STATES
             | GatewayIntents::MESSAGE_CONTENT
