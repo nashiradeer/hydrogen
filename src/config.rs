@@ -83,26 +83,6 @@ impl Display for LoadFileError {
 
 impl error::Error for LoadFileError {}
 
-/// Error when trying to get or create the parent directory of a file.
-#[derive(Debug)]
-pub enum DirParentError {
-    NotDirectory,
-    CantCreateDirectory(io::Error),
-}
-
-impl Display for DirParentError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            Self::NotDirectory => write!(f, "The parent is not a directory"),
-            Self::CantCreateDirectory(err) => {
-                write!(f, "Can't create the parent directory: {}", err)
-            }
-        }
-    }
-}
-
-impl error::Error for DirParentError {}
-
 /// Get the default Lavalink address.
 fn default_lavalink_address() -> SocketAddr {
     SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 2333))
