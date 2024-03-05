@@ -15,5 +15,5 @@ RUN apk -U upgrade
 COPY --from=builder /app/target/release/hydrogen hydrogen
 COPY --from=builder /app/assets/langs lang/
 ENV RUST_LOG=hydrogen=info
-ENV LANGUAGE_PATH=/app/lang
+ENV HYDROGEN_LANGUAGE_PATH=/app/lang
 CMD ["/app/hydrogen"]
