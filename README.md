@@ -29,20 +29,28 @@ Only the methods listed below is officially supported and tested by Nashira Deer
 
 You can build Hydrogen using `docker build -t hydrogen:latest .` in a terminal with [Docker](https://docker.com) (Podman not supported) installed and running, before the build is completed you will have a ready to use Docker image available with "hydrogen:latest" name.
 
-If you don't want to build your own image, you can use our prebuilt image found on [Docker Hub](https://hub.docker.com/r/nashiradeer/hydrogen). To run it, you can see our example using [Docker Compose](https://github.com/nashiradeer/hydrogen/blob/main/compose.yaml).
+If you don't want to build your own image, you can use our prebuilt image found on [Docker Hub](https://hub.docker.com/r/nashiradeer/hydrogen). To run it, you can see our example using [Docker Compose](compose.yaml).
 
 ## Configuring
 
-To configure Hydrogen you will use the following environment variables:
+There's two ways to configure Hydrogen, using the config file or environment variables, remembering that the environment variable is only used if the equivalent field isn't present on the config file.
 
-- LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (optional)
-- DEFAULT_LANGUAGE: Sets a new default language to Hydrogen. (optional)
-- LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
-- DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
+### Config file
 
-You can see our example using [Docker Compose](https://github.com/nashiradeer/hydrogen/blob/main/compose.yaml).
+Hydrogen doesn't create the config file, so you need to download the example from [here](config.toml).
 
-### LAVALINK environment variable syntax
+When starting, Hydrogen searches for the config file in `$XDG_CONFIG_HOME/hydrogen/config.toml` (`/etc/hydrogen/config.toml` when `$XDG_CONFIG_HOME` is not set) on UNIX-like platforms or `%APPDATA%\Hydrogen\Config.toml` (`C:\ProgramData\Hydrogen\Config.toml` when `%APPDATA` is not set) on Windows, you can change the path using the command line argument `--config-file [path]` or the environment variable `HYDROGEN_CONFIG_FILE` (the environment variable is only considered if the command line argument is not set).
+
+### Environment Variables
+
+- HYDROGEN_DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
+- HYDROGEN_LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
+- HYDROGEN_DEFAULT_LANGUAGE: Sets a new default language to Hydrogen. (optional)
+- HYDROGEN_LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (optional)
+
+You can see our example using [Docker Compose](compose.yaml).
+
+#### HYDROGEN_LAVALINK syntax
 
 ```plain
 value           = single-node *(";" single-node)
@@ -51,8 +59,6 @@ host            = ip ":" port
 tls             = "true" / "enabled" / "on"
 ```
 
-*TLS parameter needs to be written in lower case.
-
 ## Credits
 
-Hydrogen is a Nashira Deer's project licensed under the [GNU General Public License v3](https://github.com/nashiradeer/hydrogen/blob/main/LICENSE.txt).
+Hydrogen is a Nashira Deer's project licensed under the [GNU General Public License v3](LICENSE.txt).
