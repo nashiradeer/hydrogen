@@ -31,6 +31,10 @@ package = "async-tungstenite"
 version = "0.24.0"
 features = ["tokio-runtime", "tokio-rustls-webpki-roots"]
 
+[dependencies.clap]
+version = "4.5.1"
+features = ["derive"]
+
 [dependencies.hydrogen-i18n]
 package = "hydrogen-i18n"
 version = "2.0.0"
