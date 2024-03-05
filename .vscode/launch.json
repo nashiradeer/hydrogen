@@ -16,37 +16,15 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "--config-file",
+                "${workspaceFolder}/dev/config.toml"
+            ],
             "cwd": "${workspaceFolder}",
             "env": {
-                "LANGUAGE_PATH": "${workspaceFolder}/assets/langs",
+                "HYDROGEN_LANGUAGE_PATH": "${workspaceFolder}/assets/langs",
                 "RUST_LOG": "hydrogen=debug"
-            },
-            "envFile": "${workspaceFolder}/.env"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=hydrogen",
-                    "--package=hydrogen"
-                ],
-                "filter": {
-                    "name": "hydrogen",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "LANGUAGE_PATH": "${workspaceFolder}/assets/langs",
-                "RUST_LOG": "hydrogen=debug"
-            },
-            "envFile": "${workspaceFolder}/.env"
+            }
         }
     ]
 }

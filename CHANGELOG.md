@@ -20,6 +20,10 @@
 - New command register and handler.
 - New component handler.
 
+### Fixed
+
+- Change from '\d' to '[0-9]' to avoid Regex match non-ASCII digits.
+
 ## [0.0.1-alpha.3] - 2023-01-08
 
 ### Added
