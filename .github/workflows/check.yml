@@ -1,4 +1,4 @@
-name: Check code
+name: Check
 
 on:
   push:
@@ -10,12 +10,12 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
     - name: Check
       run: cargo check --config 'build.rustflags = ["-Dwarnings"]' --all-features
-    - name: Run clippy
+    - name: Run Clippy
       run: cargo clippy --config 'build.rustflags = ["-Dwarnings"]' --all-features
