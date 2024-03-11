@@ -79,5 +79,37 @@
         "invalid_syntax": "Ungültige Zeitsyntax. Sie können Zahlen als Sekunden verwenden oder sie mit `m` für Minuten oder `h` für Stunden versehen. Sie können auch `00:00` oder `00:00:00` verwenden, um die Stunden festzulegen.",
         "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
         "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    },
+    "about": {
+        "name": "über",
+        "description": "Zeige Informationen über den Bot und seine Software.",
+        "embed_title": "Über diesen Bot",
+        "software": "Software",
+        "statistics": "Statistiken.",
+        "software_name": "**Name:** {value}",
+        "version": "**Version:** {value}",
+        "bug_report": "**Fehlerbericht:** [GitHub]({value})",
+        "source_code": "**Quellcode:** [GitHub]({value})",
+        "shards": "**Shards zwischengespeichert:** {value}",
+        "guilds": "**Guilds zwischengespeichert:** {value}",
+        "players": "**Players:** {value}",
+        "latency": "**Gateway-Verzögerung:** {value}ms"
+    },
+    "roll": {
+        "name": "roll",
+        "description": "Roll a dice.",
+        "embed_title": "Rolling a dice",
+        "dice_sides_name": "sides",
+        "dice_sides_description": "The amount of sides the dice will have.",
+        "dice_count_name": "dice_count",
+        "dice_count_description": "The amount of dices to roll.",
+        "repetitions_name": "repetitions",
+        "repetitions_description": "The amount of times to roll the dices.",
+        "modifier_name": "modifier",
+        "modifier_description": "The modifier to add to the roll. (Need to be modifier like +2 or -2)",
+        "fate_name": "fate",
+        "fate_description": "Roll a fate dice.",
+        "sided_name": "sided",
+        "sided_description": "Roll a dice with a specific number of sides."
     }
 }
