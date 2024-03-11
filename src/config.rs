@@ -215,9 +215,11 @@ pub fn load_configuration() -> Config {
         .unwrap_or(default_config_file());
 
     debug!("loading the configuration file: {:?}", config_file);
-    Config::from_file(config_file)
-        .inspect_err(|e| {
+    match Config::from_file(config_file) {
+        Ok(v) => v,
+        Err(e) => {
             warn!("failed to load the configuration file: {}", e);
-        })
-        .unwrap_or_default()
+            Config::default()
+        }
+    }
 }
