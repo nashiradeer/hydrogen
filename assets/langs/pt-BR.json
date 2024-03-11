@@ -96,20 +96,20 @@
         "latency": "**Latência do Gateway:** {value}ms"
     },
     "roll": {
-        "name": "roll",
-        "description": "Roll a dice.",
-        "embed_title": "Rolling a dice",
-        "dice_sides_name": "sides",
-        "dice_sides_description": "The amount of sides the dice will have.",
-        "dice_count_name": "dice_count",
-        "dice_count_description": "The amount of dices to roll.",
-        "repetitions_name": "repetitions",
-        "repetitions_description": "The amount of times to roll the dices.",
-        "modifier_name": "modifier",
-        "modifier_description": "The modifier to add to the roll. (Need to be modifier like +2 or -2)",
+        "name": "rolar",
+        "description": "Faz a rolagem de dados.",
+        "embed_title": "Rolando dados",
+        "dice_sides_name": "lados",
+        "dice_sides_description": "A quantidade de lados que o dado vai ter.",
+        "dice_count_name": "quantidade",
+        "dice_count_description": "A quantidade de dados a ser rolados.",
+        "repetitions_name": "repetições",
+        "repetitions_description": "Quantidade de vezes que os dados vão ser rolados.",
+        "modifier_name": "modificador",
+        "modifier_description": "Modificador a ser adicionado no dado. (Precisa ser algo como +2 ou -2)",
         "fate_name": "fate",
-        "fate_description": "Roll a fate dice.",
-        "sided_name": "sided",
-        "sided_description": "Roll a dice with a specific number of sides."
+        "fate_description": "Rola um dado fate.",
+        "sided_name": "lados",
+        "sided_description": "Rola um dado com um número específico de dados."
     }
 }
