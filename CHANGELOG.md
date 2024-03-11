@@ -4,6 +4,7 @@
 
 ### Added
 
+- Create a link from ES-419 (LATAM) to ES-ES.
 - Create a message handler to roll dices.
 - Create a roll engine.
 - Create a roll syntax parser.
