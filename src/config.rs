@@ -110,7 +110,7 @@ pub struct LavalinkConfig {
 impl From<&str> for LavalinkConfig {
     fn from(s: &str) -> Self {
         // Get the components from the string.
-        let mut components = s.split(",");
+        let mut components = s.split(',');
 
         // Get the address.
         let address = components
@@ -127,10 +127,7 @@ impl From<&str> for LavalinkConfig {
         // Check if TLS is enabled.
         let tls = components
             .next()
-            .map(|s| match s.to_lowercase().as_str() {
-                "true" | "yes" | "1" | "enabled" => true,
-                _ => false,
-            })
+            .map(|s| matches!(s.to_lowercase().as_str(), "true" | "yes" | "1" | "enabled"))
             .unwrap_or(false);
 
         Self {

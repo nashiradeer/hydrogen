@@ -24,7 +24,7 @@ pub async fn execute(
         .translate(&interaction.locale, "skip", "embed_title");
 
     // Get the common data used by music commands and components.
-    let Some(data) = MusicCommonData::new(&hydrogen, &context, interaction.guild_id).await else {
+    let Some(data) = MusicCommonData::new(hydrogen, context, interaction.guild_id).await else {
         error!("cannot get common music data");
 
         return Err(Response::Generic {
@@ -95,7 +95,7 @@ pub async fn execute(
 
             Ok(Response::Generic {
                 title,
-                description: get_message(music, &hydrogen, &interaction),
+                description: get_message(music, hydrogen, interaction),
             })
         } else {
             // Not in the same voice channel as the bot.
@@ -132,17 +132,17 @@ fn get_message(
     interaction: &ComponentInteraction,
 ) -> String {
     if let Some(uri) = track.uri {
-        return hydrogen
+        hydrogen
             .i18n
             .translate(&interaction.locale, "skip", "skipping_url")
             .replace("{name}", &track.title)
             .replace("{author}", &track.author)
-            .replace("{url}", &uri);
+            .replace("{url}", &uri)
     } else {
-        return hydrogen
+        hydrogen
             .i18n
             .translate(&interaction.locale, "skip", "skipping")
             .replace("{name}", &track.title)
-            .replace("{author}", &track.author);
+            .replace("{author}", &track.author)
     }
 }

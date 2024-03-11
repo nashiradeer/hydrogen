@@ -28,7 +28,7 @@ pub async fn execute(
         .translate(&interaction.locale, "roll", "embed_title");
 
     // Get the sub-command.
-    let sub_command = match interaction.data.options.get(0) {
+    let sub_command = match interaction.data.options.first() {
         Some(sub_command) => sub_command,
         None => {
             error!("cannot get the 'sub-command' option");
@@ -66,22 +66,20 @@ pub async fn execute(
             };
 
             // Get the dice count value, changing the default value if it's present.
-            if let Some(dice_count) = sub_command_data.get(0).map(|v| v.value.as_i64()).flatten() {
+            if let Some(dice_count) = sub_command_data.first().and_then(|v| v.value.as_i64()) {
                 params.dice_count = dice_count as u8;
             }
 
             // Get the repetitions value, changing the default value if it's present.
-            if let Some(repetitions) = sub_command_data.get(1).map(|v| v.value.as_i64()).flatten() {
+            if let Some(repetitions) = sub_command_data.get(1).and_then(|v| v.value.as_i64()) {
                 params.repeat = repetitions as u8;
             }
 
             // Get the modifier value, changing the default value if it's present.
             if let Some(modifier) = sub_command_data
                 .get(2)
-                .map(|v| v.value.as_str())
-                .flatten()
-                .map(|s| hydrogen.roll_parser.evaluate_modifier(s))
-                .flatten()
+                .and_then(|v| v.value.as_str())
+                .and_then(|s| hydrogen.roll_parser.evaluate_modifier(s))
             {
                 params.modifier = modifier;
             }
@@ -93,27 +91,25 @@ pub async fn execute(
             let mut params = Params::default();
 
             // Get the dice sides value, changing the default value if it's present.
-            if let Some(dice_sides) = sub_command_data.get(0).map(|v| v.value.as_i64()).flatten() {
+            if let Some(dice_sides) = sub_command_data.first().and_then(|v| v.value.as_i64()) {
                 params.dice_type = DiceType::Sided(dice_sides as u8);
             };
 
             // Get the dice count value, changing the default value if it's present.
-            if let Some(dice_count) = sub_command_data.get(1).map(|v| v.value.as_i64()).flatten() {
+            if let Some(dice_count) = sub_command_data.get(1).and_then(|v| v.value.as_i64()) {
                 params.dice_count = dice_count as u8;
             }
 
             // Get the repetitions value, changing the default value if it's present.
-            if let Some(repetitions) = sub_command_data.get(2).map(|v| v.value.as_i64()).flatten() {
+            if let Some(repetitions) = sub_command_data.get(2).and_then(|v| v.value.as_i64()) {
                 params.repeat = repetitions as u8;
             }
 
             // Get the modifier value, changing the default value if it's present.
             if let Some(modifier) = sub_command_data
                 .get(3)
-                .map(|v| v.value.as_str())
-                .flatten()
-                .map(|s| hydrogen.roll_parser.evaluate_modifier(s))
-                .flatten()
+                .and_then(|v| v.value.as_str())
+                .and_then(|s| hydrogen.roll_parser.evaluate_modifier(s))
             {
                 params.modifier = modifier;
             }

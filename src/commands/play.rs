@@ -42,7 +42,7 @@ pub async fn execute(
     };
 
     // Get the common data used by music commands and components.
-    let Some(data) = MusicCommonData::new(&hydrogen, &context, interaction.guild_id).await else {
+    let Some(data) = MusicCommonData::new(hydrogen, context, interaction.guild_id).await else {
         error!("cannot get common music data");
 
         return Err(Response::Generic {
@@ -169,7 +169,7 @@ pub async fn execute(
                 .guild_locale
                 .clone()
                 .unwrap_or(interaction.locale.clone()),
-            &query,
+            query,
             interaction.user.id,
             data.voice_manager.clone(),
             interaction.channel_id,
@@ -201,7 +201,7 @@ pub async fn execute(
         // Success.
         Ok(Response::Generic {
             title,
-            description: get_message(result, &hydrogen, &interaction),
+            description: get_message(result, hydrogen, interaction),
         })
     } else {
         // Error.
@@ -326,35 +326,33 @@ fn get_message(
                         .replace("{author}", &track.author)
                         .replace("{count}", &result.count.to_string());
                 }
+            } else if let Some(uri) = track.uri {
+                return format!(
+                    "{}\n\n{}",
+                    hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "play", "truncated_warn",),
+                    hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "play", "play_multi_url",)
+                        .replace("{name}", &track.title)
+                        .replace("{author}", &track.author)
+                        .replace("{url}", &uri)
+                        .replace("{count}", &result.count.to_string())
+                );
             } else {
-                if let Some(uri) = track.uri {
-                    return format!(
-                        "{}\n\n{}",
-                        hydrogen
-                            .i18n
-                            .translate(&interaction.locale, "play", "truncated_warn",),
-                        hydrogen
-                            .i18n
-                            .translate(&interaction.locale, "play", "play_multi_url",)
-                            .replace("{name}", &track.title)
-                            .replace("{author}", &track.author)
-                            .replace("{url}", &uri)
-                            .replace("{count}", &result.count.to_string())
-                    );
-                } else {
-                    return format!(
-                        "{}\n\n{}",
-                        hydrogen
-                            .i18n
-                            .translate(&interaction.locale, "play", "truncated_warn",),
-                        hydrogen
-                            .i18n
-                            .translate(&interaction.locale, "play", "play_multi")
-                            .replace("{name}", &track.title)
-                            .replace("{author}", &track.author)
-                            .replace("{count}", &result.count.to_string())
-                    );
-                }
+                return format!(
+                    "{}\n\n{}",
+                    hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "play", "truncated_warn",),
+                    hydrogen
+                        .i18n
+                        .translate(&interaction.locale, "play", "play_multi")
+                        .replace("{name}", &track.title)
+                        .replace("{author}", &track.author)
+                        .replace("{count}", &result.count.to_string())
+                );
             }
         }
     }

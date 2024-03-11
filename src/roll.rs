@@ -15,25 +15,25 @@ use rand::{thread_rng, Rng};
 #[derive(Debug)]
 pub enum Error {
     /// The number of dice is invalid.
-    InvalidDiceCount(u8, RangeInclusive<u8>),
+    DiceCount(u8, RangeInclusive<u8>),
 
     /// The number of sides is invalid.
-    InvalidDiceSides(u8, RangeInclusive<u8>),
+    DiceSides(u8, RangeInclusive<u8>),
 
     /// The number of repetitions is invalid.
-    InvalidRepetition(u8, RangeInclusive<u8>),
+    Repetition(u8, RangeInclusive<u8>),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            Error::InvalidDiceCount(count, range) => {
+            Error::DiceCount(count, range) => {
                 write!(f, "Invalid dice count: {}. Expected: {:?}", count, range)
             }
-            Error::InvalidDiceSides(sides, range) => {
+            Error::DiceSides(sides, range) => {
                 write!(f, "Invalid dice sides: {}. Expected: {:?}", sides, range)
             }
-            Error::InvalidRepetition(repeat, range) => {
+            Error::Repetition(repeat, range) => {
                 write!(
                     f,
                     "Invalid repetition count: {}. Expected: {:?}",
@@ -129,21 +129,21 @@ impl Params {
         // Check for the dice count.
         let dice_count_range = 1..=50;
         if !dice_count_range.contains(&self.dice_count) {
-            return Err(Error::InvalidDiceCount(self.dice_count, dice_count_range));
+            return Err(Error::DiceCount(self.dice_count, dice_count_range));
         }
 
         // Check for the dice sides.
         if let DiceType::Sided(sides) = self.dice_type {
             let dice_sides_range = 2..=100;
             if !dice_sides_range.contains(&sides) {
-                return Err(Error::InvalidDiceSides(sides, dice_sides_range));
+                return Err(Error::DiceSides(sides, dice_sides_range));
             }
         }
 
         // Check for the repetition count.
         let repetition_range = 1..=50;
         if !repetition_range.contains(&self.repeat) {
-            return Err(Error::InvalidRepetition(self.repeat, repetition_range));
+            return Err(Error::Repetition(self.repeat, repetition_range));
         }
 
         Ok(())
@@ -233,7 +233,7 @@ impl ToString for Roll {
         // Iterate over the repetitions.
         for roll in self.0.iter() {
             // Calculate the total of the roll in the repetition.
-            let total = roll.iter().cloned().map(|v| i32::from(v)).sum();
+            let total = roll.iter().cloned().map(i32::from).sum();
 
             // Add the result to the string, including the total with the modifier applied.
             result.push_str(&format!(

@@ -75,13 +75,13 @@ pub fn error_message(i18n: &I18n, locale: &str, error: &str) -> String {
     format!(
         "{}\n\n{}",
         error,
-        i18n.translate(&locale, "error", "not_intentional",)
+        i18n.translate(locale, "error", "not_intentional",)
             .replace("{url}", HYDROGEN_BUG_URL)
     )
 }
 
 /// Gets a string option from a command.
-pub fn get_str_option<'a>(command: &'a CommandInteraction, index: usize) -> Option<&'a str> {
+pub fn get_str_option(command: &CommandInteraction, index: usize) -> Option<&str> {
     command.data.options.get(index)?.value.as_str()
 }
 
@@ -100,10 +100,10 @@ pub fn time_to_string(seconds: i32) -> String {
     let hours = (time / 60.0 / 60.0).floor();
     let minutes = (time - hours * 60.0 * 60.0).floor();
     let seconds = time - minutes * 60.0 - hours * 60.0 * 60.0;
-    return format!(
+    format!(
         "{:02}:{:02}:{:02}",
         hours as u32, minutes as u32, seconds as u32
-    );
+    )
 }
 
 /// Creates a progress bar.

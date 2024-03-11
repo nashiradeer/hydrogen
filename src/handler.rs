@@ -52,11 +52,11 @@ pub async fn handle_command(
 
     // Execute the command.
     let response = match command.data.name.as_str() {
-        "join" => commands::join::execute(&hydrogen, &context, &command).await,
-        "seek" => commands::seek::execute(&hydrogen, &context, &command).await,
-        "play" => commands::play::execute(&hydrogen, &context, &command).await,
-        "about" => commands::about::execute(&hydrogen, &context, &command).await,
-        "roll" => commands::roll::execute(&hydrogen, &context, &command).await,
+        "join" => commands::join::execute(hydrogen, context, command).await,
+        "seek" => commands::seek::execute(hydrogen, context, command).await,
+        "play" => commands::play::execute(hydrogen, context, command).await,
+        "about" => commands::about::execute(hydrogen, context, command).await,
+        "roll" => commands::roll::execute(hydrogen, context, command).await,
         _ => {
             error!("(handle_command): unknown command: {}", command.data.name);
             return;
@@ -94,11 +94,11 @@ pub async fn handle_component(
 
     // Execute the component.
     let response = match component.data.custom_id.as_str() {
-        "loop" => components::loop_switch::execute(&hydrogen, &context, &component).await,
-        "pause" => components::pause::execute(&hydrogen, &context, &component).await,
-        "prev" => components::prev::execute(&hydrogen, &context, &component).await,
-        "skip" => components::skip::execute(&hydrogen, &context, &component).await,
-        "stop" => components::stop::execute(&hydrogen, &context, &component).await,
+        "loop" => components::loop_switch::execute(hydrogen, context, component).await,
+        "pause" => components::pause::execute(hydrogen, context, component).await,
+        "prev" => components::prev::execute(hydrogen, context, component).await,
+        "skip" => components::skip::execute(hydrogen, context, component).await,
+        "stop" => components::stop::execute(hydrogen, context, component).await,
         _ => {
             error!(
                 "(handle_component): unknown component: {}",
