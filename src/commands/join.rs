@@ -24,7 +24,7 @@ pub async fn execute(
         .translate(&interaction.locale, "join", "embed_title");
 
     // Get the common data used by music commands and components.
-    let Some(data) = MusicCommonData::new(&hydrogen, &context, interaction.guild_id).await else {
+    let Some(data) = MusicCommonData::new(hydrogen, context, interaction.guild_id).await else {
         error!("cannot get common music data");
 
         return Err(Response::Generic {

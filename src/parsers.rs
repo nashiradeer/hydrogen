@@ -146,8 +146,7 @@ impl RollParser {
         // If modifier is present, parse it.
         if let Some(modifier) = captures
             .get(4)
-            .map(|x| self.evaluate_modifier(x.as_str()))
-            .flatten()
+            .and_then(|x| self.evaluate_modifier(x.as_str()))
         {
             params.modifier = modifier;
         }

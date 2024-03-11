@@ -80,8 +80,7 @@ pub async fn execute(
             .lock()
             .await
             .get(&context.shard_id)
-            .map(|v| v.latency)
-            .flatten()
+            .and_then(|v| v.latency)
             .map(|v| v.as_millis())
         {
             Some(ping) => format!(

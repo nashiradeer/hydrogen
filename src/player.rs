@@ -93,9 +93,9 @@ impl HydrogenPlayerConnection {
     }
 }
 
-impl Into<LavalinkVoiceState> for HydrogenPlayerConnection {
-    fn into(self) -> LavalinkVoiceState {
-        LavalinkVoiceState::new(&self.token, &self.endpoint, &self.session_id)
+impl From<HydrogenPlayerConnection> for LavalinkVoiceState {
+    fn from(val: HydrogenPlayerConnection) -> Self {
+        LavalinkVoiceState::new(&val.token, &val.endpoint, &val.session_id)
     }
 }
 
@@ -202,7 +202,7 @@ impl HydrogenPlayer {
             self.lavalink
                 .update_player(self.guild_id.get(), true, &player)
                 .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                .map_err(HydrogenPlayerError::Lavalink)?;
         }
 
         self.paused.store(paused, Ordering::Relaxed);
@@ -305,14 +305,14 @@ impl HydrogenPlayer {
                 .lavalink
                 .track_load(music)
                 .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                .map_err(HydrogenPlayerError::Lavalink)?;
 
-            if musics.tracks.len() == 0 {
+            if musics.tracks.is_empty() {
                 musics = self
                     .lavalink
                     .track_load(&format!("{}{}", HYDROGEN_SEARCH_PREFIX, music))
                     .await
-                    .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                    .map_err(HydrogenPlayerError::Lavalink)?;
             }
 
             musics
@@ -321,7 +321,7 @@ impl HydrogenPlayer {
         let mut truncated = false;
         let starting_index = self.queue.read().await.len();
         if musics.load_type == LavalinkLoadResultType::SearchResult {
-            if let Some(music) = musics.tracks.get(0) {
+            if let Some(music) = musics.tracks.first() {
                 let queue_length = self.queue.read().await.len();
                 if queue_length < HYDROGEN_QUEUE_LIMIT {
                     self.queue
@@ -410,7 +410,7 @@ impl HydrogenPlayer {
             .lavalink
             .update_player(self.guild_id.get(), false, &update_player)
             .await
-            .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            .map_err(HydrogenPlayerError::Lavalink)?;
         if let Some(track) = player.track {
             if let Some(music) = self.now().await {
                 return Ok(Some(HydrogenSeekCommand {
@@ -440,7 +440,7 @@ impl HydrogenPlayer {
             self.lavalink
                 .update_player(self.guild_id.get(), false, &player)
                 .await
-                .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                .map_err(HydrogenPlayerError::Lavalink)?;
 
             return Ok(true);
         }
@@ -453,13 +453,13 @@ impl HydrogenPlayer {
             self.voice_manager
                 .leave(self.guild_id)
                 .await
-                .map_err(|e| HydrogenPlayerError::Join(e))?;
+                .map_err(HydrogenPlayerError::Join)?;
 
             if self.lavalink.connected().await == LavalinkConnection::Connected {
                 self.lavalink
                     .destroy_player(self.guild_id.get())
                     .await
-                    .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+                    .map_err(HydrogenPlayerError::Lavalink)?;
             }
         }
         self.destroyed.store(true, Ordering::Release);
@@ -475,7 +475,7 @@ impl HydrogenPlayer {
         self.lavalink
             .update_player(self.guild_id.get(), true, &player)
             .await
-            .map_err(|e| HydrogenPlayerError::Lavalink(e))?;
+            .map_err(HydrogenPlayerError::Lavalink)?;
 
         Ok(())
     }

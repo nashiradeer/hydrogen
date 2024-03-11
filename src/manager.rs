@@ -108,7 +108,7 @@ impl HydrogenManager {
         let user_id = self.cache.current_user().id.get();
         let lavalink = Lavalink::connect(node, user_id, self.clone())
             .await
-            .map_err(|e| HydrogenManagerError::Lavalink(e))?;
+            .map_err(HydrogenManagerError::Lavalink)?;
         lavalink_vector.push(lavalink);
         Ok(())
     }
@@ -194,20 +194,20 @@ impl HydrogenManager {
         };
 
         if let Some(player) = player_option {
-            return Ok(player
+            return player
                 .play(music, requester_id)
                 .await
-                .map_err(|e| HydrogenManagerError::Player(e))?);
+                .map_err(HydrogenManagerError::Player);
         }
 
         let player = self
             .init(guild_id, guild_locale, voice_manager, text_channel_id)
             .await?;
 
-        Ok(player
+        player
             .play(music, requester_id)
             .await
-            .map_err(|e| HydrogenManagerError::Player(e))?)
+            .map_err(HydrogenManagerError::Player)
     }
 
     pub async fn contains_player(&self, guild_id: GuildId) -> bool {
@@ -217,7 +217,7 @@ impl HydrogenManager {
     pub async fn get_voice_channel_id(&self, guild_id: GuildId) -> Option<songbird::id::ChannelId> {
         let players = self.player.read().await;
         let connection = players.get(&guild_id)?.connection.read().await;
-        connection.channel_id.clone()
+        connection.channel_id
     }
 
     pub async fn skip(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
@@ -227,10 +227,7 @@ impl HydrogenManager {
             .get(&guild_id)
             .ok_or(HydrogenManagerError::PlayerNotFound)?;
 
-        player
-            .skip()
-            .await
-            .map_err(|e| HydrogenManagerError::Player(e))
+        player.skip().await.map_err(HydrogenManagerError::Player)
     }
 
     pub async fn prev(&self, guild_id: GuildId) -> Result<Option<HydrogenMusic>> {
@@ -240,10 +237,7 @@ impl HydrogenManager {
             .get(&guild_id)
             .ok_or(HydrogenManagerError::PlayerNotFound)?;
 
-        player
-            .prev()
-            .await
-            .map_err(|e| HydrogenManagerError::Player(e))
+        player.prev().await.map_err(HydrogenManagerError::Player)
     }
 
     pub async fn seek(
@@ -260,7 +254,7 @@ impl HydrogenManager {
         player
             .seek(milliseconds)
             .await
-            .map_err(|e| HydrogenManagerError::Player(e))
+            .map_err(HydrogenManagerError::Player)
     }
 
     pub async fn update_voice_state(
@@ -278,23 +272,21 @@ impl HydrogenManager {
         };
 
         {
-            if old_voice_state.is_some() {
-                if voice_state.user_id == self.cache.current_user().id {
-                    if let Some(channel_id) = voice_state.channel_id {
-                        let mut connection = player.connection.write().await;
+            if old_voice_state.is_some() && voice_state.user_id == self.cache.current_user().id {
+                if let Some(channel_id) = voice_state.channel_id {
+                    let mut connection = player.connection.write().await;
 
-                        connection.session_id = voice_state.session_id;
+                    connection.session_id = voice_state.session_id;
 
-                        connection.channel_id = Some(channel_id.into());
-                    } else {
-                        let is_connected = player.connection.read().await.channel_id.is_some();
-                        if is_connected {
-                            drop(players);
+                    connection.channel_id = Some(channel_id.into());
+                } else {
+                    let is_connected = player.connection.read().await.channel_id.is_some();
+                    if is_connected {
+                        drop(players);
 
-                            self.destroy(guild_id).await?;
+                        self.destroy(guild_id).await?;
 
-                            return Ok(true);
-                        }
+                        return Ok(true);
                     }
                 }
             }
@@ -311,7 +303,7 @@ impl HydrogenManager {
             if channel.kind == ChannelType::Voice || channel.kind == ChannelType::Stage {
                 let members_count = channel
                     .members(self.cache.clone())
-                    .map_err(|e| HydrogenManagerError::Serenity(e))?
+                    .map_err(HydrogenManagerError::Serenity)?
                     .len();
 
                 if members_count <= 1 {
@@ -364,7 +356,7 @@ impl HydrogenManager {
         player
             .update_connection()
             .await
-            .map_err(|e| HydrogenManagerError::Player(e))?;
+            .map_err(HydrogenManagerError::Player)?;
 
         Ok(true)
     }
@@ -378,7 +370,7 @@ impl HydrogenManager {
             player
                 .destroy()
                 .await
-                .map_err(|e| HydrogenManagerError::Player(e))?;
+                .map_err(HydrogenManagerError::Player)?;
 
             if let Some(message) = messages.get(&guild_id) {
                 self.http
@@ -388,7 +380,7 @@ impl HydrogenManager {
                         Some("Message auto-deleted by timeout."),
                     )
                     .await
-                    .map_err(|e| HydrogenManagerError::Serenity(e))?;
+                    .map_err(HydrogenManagerError::Serenity)?;
             }
         }
 
@@ -407,24 +399,22 @@ impl HydrogenManager {
         let players = self.player.read().await;
         let mut destroy_handles = self.destroy_handle.write().await;
 
-        if players.get(&guild_id).is_some() {
-            if destroy_handles.get(&guild_id).is_none() {
-                let self_clone = self.clone();
-                let guild_id_clone = guild_id.clone();
-                destroy_handles.insert(
-                    guild_id,
-                    spawn(async move {
-                        sleep(duration).await;
+        if players.get(&guild_id).is_some() && destroy_handles.get(&guild_id).is_none() {
+            let self_clone = self.clone();
+            let guild_id_clone = guild_id;
+            destroy_handles.insert(
+                guild_id,
+                spawn(async move {
+                    sleep(duration).await;
 
-                        {
-                            let mut _destroy_handles = self_clone.destroy_handle.write().await;
-                            _destroy_handles.remove(&guild_id_clone);
-                        }
+                    {
+                        let mut _destroy_handles = self_clone.destroy_handle.write().await;
+                        _destroy_handles.remove(&guild_id_clone);
+                    }
 
-                        _ = self_clone.destroy(guild_id_clone).await;
-                    }),
-                );
-            }
+                    _ = self_clone.destroy(guild_id_clone).await;
+                }),
+            );
         }
     }
 
@@ -438,7 +428,7 @@ impl HydrogenManager {
     }
 
     async fn update_now_playing(&self, guild_id: GuildId) {
-        if let Some(player) = self.player.read().await.get(&guild_id.into()) {
+        if let Some(player) = self.player.read().await.get(&guild_id) {
             let mut player_state = HydrogenPlayerState::Playing;
 
             let (translated_message, requester) = match player.now().await {
@@ -478,7 +468,7 @@ impl HydrogenManager {
                 }
             }
 
-            if requester.is_none() && player.queue().await.len() == 0 {
+            if requester.is_none() && player.queue().await.is_empty() {
                 player_state = HydrogenPlayerState::Nothing;
             }
 
@@ -495,6 +485,8 @@ impl HydrogenManager {
         }
     }
 
+    // All this type will be refactored in the future.
+    #[allow(clippy::too_many_arguments)]
     async fn update_play_message(
         &self,
         guild_id: GuildId,
@@ -584,7 +576,6 @@ impl HydrogenManager {
             {
                 Ok(v) => {
                     messages.insert(guild_id, v.id);
-                    ()
                 }
                 Err(e) => warn!("cannot send a new music player message: {}", e),
             };
@@ -693,7 +684,7 @@ impl HydrogenManager {
             return player.loop_type().await;
         }
 
-        return LoopType::None;
+        LoopType::None
     }
 
     pub async fn set_loop_type(&self, guild_id: GuildId, loop_type: LoopType) {
@@ -714,7 +705,7 @@ impl HydrogenManager {
             return player.pause();
         }
 
-        return false;
+        false
     }
 
     pub async fn set_paused(&self, guild_id: GuildId, paused: bool) -> Result<()> {
@@ -724,7 +715,7 @@ impl HydrogenManager {
             player
                 .set_pause(paused)
                 .await
-                .map_err(|e| HydrogenManagerError::Player(e))?;
+                .map_err(HydrogenManagerError::Player)?;
         }
 
         drop(players);
