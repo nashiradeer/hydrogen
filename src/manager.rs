@@ -835,7 +835,7 @@ impl CacheHttp for HydrogenManager {
     }
 }
 
-async fn find_lavalink(nodes: &Vec<Lavalink>, lavalink: &Lavalink) -> Option<usize> {
+async fn find_lavalink(nodes: &[Lavalink], lavalink: &Lavalink) -> Option<usize> {
     for i in 0..nodes.len() {
         if let Some(node) = nodes.get(i) {
             if node.eq(lavalink).await {
