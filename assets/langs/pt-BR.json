@@ -79,5 +79,37 @@
         "invalid_syntax": "Sintaxe de tempo inválida. Você pode usar números como segundos ou sufixa-los com `m` para minutos ou `h` para horas. Você também pode usar `00:00` ou `00:00:00` para definir as horas.",
         "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
         "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    },
+    "about": {
+        "name": "sobre",
+        "description": "Mostra informação sobre o bot e seu software.",
+        "embed_title": "Sobre o bot",
+        "software": "Software",
+        "statistics": "Estatísticas",
+        "software_name": "**Nome:** {value}",
+        "version": "**Versão:** {value}",
+        "bug_report": "**Reporte bugs:** [GitHub]({value})",
+        "source_code": "**Código Fonte:** [GitHub]({value})",
+        "shards": "**Shards em cache:** {value}",
+        "guilds": "**Guildas em cache:** {value}",
+        "players": "**Tocadores de Música:** {value}",
+        "latency": "**Latência do Gateway:** {value}ms"
+    },
+    "roll": {
+        "name": "rolar",
+        "description": "Faz a rolagem de dados.",
+        "embed_title": "Rolando dados",
+        "dice_sides_name": "lados",
+        "dice_sides_description": "A quantidade de lados que o dado vai ter.",
+        "dice_count_name": "quantidade",
+        "dice_count_description": "A quantidade de dados a ser rolados.",
+        "repetitions_name": "repetições",
+        "repetitions_description": "Quantidade de vezes que os dados vão ser rolados.",
+        "modifier_name": "modificador",
+        "modifier_description": "Modificador a ser adicionado no dado. (Precisa ser algo como +2 ou -2)",
+        "fate_name": "fate",
+        "fate_description": "Rola um dado fate.",
+        "sided_name": "lados",
+        "sided_description": "Rola um dado com um número específico de dados."
     }
 }
