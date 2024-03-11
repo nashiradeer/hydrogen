@@ -97,19 +97,19 @@
     },
     "roll": {
         "name": "roll",
-        "description": "Roll a dice.",
-        "embed_title": "Rolling a dice",
-        "dice_sides_name": "sides",
-        "dice_sides_description": "The amount of sides the dice will have.",
-        "dice_count_name": "dice_count",
-        "dice_count_description": "The amount of dices to roll.",
-        "repetitions_name": "repetitions",
-        "repetitions_description": "The amount of times to roll the dices.",
-        "modifier_name": "modifier",
-        "modifier_description": "The modifier to add to the roll. (Need to be modifier like +2 or -2)",
+        "description": "Würfle einen Würfel.",
+        "embed_title": "Das Würfeln eines Würfels",
+        "dice_sides_name": "seiten",
+        "dice_sides_description": "Die Anzahl der Seiten, die der Würfel haben wird.",
+        "dice_count_name": "würfelanzahl",
+        "dice_count_description": "Die Anzahl der zu würfelnden Würfel.",
+        "repetitions_name": "wiederholungen",
+        "repetitions_description": "Die Anzahl der Male, die die Würfel geworfen werden sollen.",
+        "modifier_name": "modifikator",
+        "modifier_description": "Der Modifikator, der zum Wurf hinzugefügt werden soll. (Muss ein Modifikator wie +2 oder -2 sein)",
         "fate_name": "fate",
-        "fate_description": "Roll a fate dice.",
-        "sided_name": "sided",
-        "sided_description": "Roll a dice with a specific number of sides."
+        "fate_description": "Würfle einen Fate-Würfel.",
+        "sided_name": "seitig",
+        "sided_description": "Würfle einen Würfel mit einer bestimmten Anzahl von Seiten."
     }
 }
