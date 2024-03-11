@@ -79,5 +79,37 @@
         "invalid_syntax": "Sintaxis de tiempo no válida. Puedes usar números como segundos o añadirles el sufijo `m` para minutos o `h` para horas. También puedes usar `00:00` o `00:00:00` para establecer las horas.",
         "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
         "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    },
+    "about": {
+        "name": "sobre",
+        "description": "Mostrar información sobre el bot y su software.",
+        "embed_title": "Sobre este bot",
+        "software": "Software",
+        "statistics": "Estadísticas",
+        "software_name": "**Nombre:** {value}",
+        "version": "**Versión:** {value}",
+        "bug_report": "**Reporte de errores:** [GitHub]({value})",
+        "source_code": "**Código fuente:** [GitHub]({value})",
+        "shards": "**Shards en caché:** {value}",
+        "guilds": "**Gremios en caché:** {value}",
+        "players": "**Reproductores de música:** {value}",
+        "latency": "**Latencia de la puerta de enlace:** {value}ms"
+    },
+    "roll": {
+        "name": "tirar",
+        "description": "Tira un dado.",
+        "embed_title": "Tirando un dado.",
+        "dice_sides_name": "caras",
+        "dice_sides_description": "La cantidad de caras que tendrá el dado.",
+        "dice_count_name": "cantidad",
+        "dice_count_description": "La cantidad de dados a tirar.",
+        "repetitions_name": "repeticiones",
+        "repetitions_description": "La cantidad de veces que se lanzarán los dados.",
+        "modifier_name": "modificador",
+        "modifier_description": "El modificador para añadir al lanzamiento. (Debe ser un modificador como +2 o -2)",
+        "fate_name": "fate",
+        "fate_description": "Tira un dado de Fate.",
+        "sided_name": "caras",
+        "sided_description": "Tira un dado con un número específico de caras."
     }
 }
