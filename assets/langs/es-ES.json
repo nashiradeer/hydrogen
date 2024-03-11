@@ -96,20 +96,20 @@
         "latency": "**Latencia de la puerta de enlace:** {value}ms"
     },
     "roll": {
-        "name": "roll",
-        "description": "Roll a dice.",
-        "embed_title": "Rolling a dice",
-        "dice_sides_name": "sides",
-        "dice_sides_description": "The amount of sides the dice will have.",
-        "dice_count_name": "dice_count",
-        "dice_count_description": "The amount of dices to roll.",
-        "repetitions_name": "repetitions",
-        "repetitions_description": "The amount of times to roll the dices.",
-        "modifier_name": "modifier",
-        "modifier_description": "The modifier to add to the roll. (Need to be modifier like +2 or -2)",
+        "name": "tirar",
+        "description": "Tira un dado.",
+        "embed_title": "Tirando un dado.",
+        "dice_sides_name": "caras",
+        "dice_sides_description": "La cantidad de caras que tendrá el dado.",
+        "dice_count_name": "cantidad",
+        "dice_count_description": "La cantidad de dados a tirar.",
+        "repetitions_name": "repeticiones",
+        "repetitions_description": "La cantidad de veces que se lanzarán los dados.",
+        "modifier_name": "modificador",
+        "modifier_description": "El modificador para añadir al lanzamiento. (Debe ser un modificador como +2 o -2)",
         "fate_name": "fate",
-        "fate_description": "Roll a fate dice.",
-        "sided_name": "sided",
-        "sided_description": "Roll a dice with a specific number of sides."
+        "fate_description": "Tira un dado de Fate.",
+        "sided_name": "caras",
+        "sided_description": "Tira un dado con un número específico de caras."
     }
 }
