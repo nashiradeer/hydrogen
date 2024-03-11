@@ -79,5 +79,37 @@
         "invalid_syntax": "Ungültige Zeitsyntax. Sie können Zahlen als Sekunden verwenden oder sie mit `m` für Minuten oder `h` für Stunden versehen. Sie können auch `00:00` oder `00:00:00` verwenden, um die Stunden festzulegen.",
         "seeking": "**{name}**\n{author}\n``{current}/{total}``\n{progress}",
         "seeking_url": "[**{name}**]({url})\n{author}\n``{current}/{total}``\n{progress}"
+    },
+    "about": {
+        "name": "über",
+        "description": "Zeige Informationen über den Bot und seine Software.",
+        "embed_title": "Über diesen Bot",
+        "software": "Software",
+        "statistics": "Statistiken.",
+        "software_name": "**Name:** {value}",
+        "version": "**Version:** {value}",
+        "bug_report": "**Fehlerbericht:** [GitHub]({value})",
+        "source_code": "**Quellcode:** [GitHub]({value})",
+        "shards": "**Shards zwischengespeichert:** {value}",
+        "guilds": "**Guilds zwischengespeichert:** {value}",
+        "players": "**Players:** {value}",
+        "latency": "**Gateway-Verzögerung:** {value}ms"
+    },
+    "roll": {
+        "name": "roll",
+        "description": "Würfle einen Würfel.",
+        "embed_title": "Das Würfeln eines Würfels",
+        "dice_sides_name": "seiten",
+        "dice_sides_description": "Die Anzahl der Seiten, die der Würfel haben wird.",
+        "dice_count_name": "würfelanzahl",
+        "dice_count_description": "Die Anzahl der zu würfelnden Würfel.",
+        "repetitions_name": "wiederholungen",
+        "repetitions_description": "Die Anzahl der Male, die die Würfel geworfen werden sollen.",
+        "modifier_name": "modifikator",
+        "modifier_description": "Der Modifikator, der zum Wurf hinzugefügt werden soll. (Muss ein Modifikator wie +2 oder -2 sein)",
+        "fate_name": "fate",
+        "fate_description": "Würfle einen Fate-Würfel.",
+        "sided_name": "seitig",
+        "sided_description": "Würfle einen Würfel mit einer bestimmten Anzahl von Seiten."
     }
 }
