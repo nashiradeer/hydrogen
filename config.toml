@@ -3,6 +3,6 @@ default_language = "en-US"  # This line isn't required, and it's not recommended
 language_path = "/app/lang" # This line isn't required, and it's not recommended to add it unless you know what you're doing.
 
 [[lavalink]]
-address = "172.0.0.1:2333"
+address = "127.0.0.1:2333"
 password = "youshallnotpass"
 tls = false
