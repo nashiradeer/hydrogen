@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_VERSION: "1.75"
 
 jobs:
   check:
@@ -15,6 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install Rust ${{ env.RUST_VERSION }}
+      run: rustup install ${{ env.RUST_VERSION }}
+    - name: Set Rust  ${{ env.RUST_VERSION }} as default
+      run: rustup default ${{ env.RUST_VERSION }}
     - name: Check
       run: cargo check --config 'build.rustflags = ["-Dwarnings"]' --all-features
     - name: Run Clippy
