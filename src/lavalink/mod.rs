@@ -51,6 +51,8 @@ struct LavalinkInternalOp {
     pub op: LavalinkOpType,
 }
 
+// This module will be removed once the Hydrolink project is complete.
+#[allow(clippy::enum_variant_names)]
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 enum LavalinkEventType {
@@ -149,13 +151,13 @@ impl Lavalink {
                     "Authorization",
                     node.password
                         .parse()
-                        .or_else(|e| Err(LavalinkError::InvalidHeaderValue(e)))?,
+                        .map_err(LavalinkError::InvalidHeaderValue)?,
                 );
                 headers
             })
             .user_agent("hydrogen/0.0.1")
             .build()
-            .or_else(|e| Err(LavalinkError::Reqwest(e)))?;
+            .map_err(LavalinkError::Reqwest)?;
 
         let request = Request::builder()
             .header("Host", websocket_uri.clone())
@@ -168,11 +170,11 @@ impl Lavalink {
             .header("Client-Name", "hydrogen/0.0.1")
             .uri(websocket_uri)
             .body(())
-            .or_else(|e| Err(LavalinkError::Http(e)))?;
+            .map_err(LavalinkError::Http)?;
 
         let (mut sink, stream) = connect_async(request)
             .await
-            .or_else(|e| Err(LavalinkError::WebSocket(e)))?
+            .map_err(LavalinkError::WebSocket)?
             .0
             .split();
 
@@ -198,7 +200,7 @@ impl Lavalink {
                 Err(LavalinkError::NotConnected)
             }
             msg = &mut receiver => {
-                if let Err(_) = msg {
+                if msg.is_err() {
                     _ = sink.close().await;
                     return Err(LavalinkError::NotConnected);
                 }
@@ -229,15 +231,15 @@ impl Lavalink {
                 self.host,
                 self.session_id.read().await.clone(),
                 guild_id,
-                no_replace.to_string()
+                no_replace
             ))
             .json(&player)
             .send()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?
+            .map_err(LavalinkError::Reqwest)?
             .bytes()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?;
+            .map_err(LavalinkError::Reqwest)?;
 
         parse_response(&response)
     }
@@ -256,10 +258,10 @@ impl Lavalink {
             ))
             .send()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?
+            .map_err(LavalinkError::Reqwest)?
             .bytes()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?;
+            .map_err(LavalinkError::Reqwest)?;
 
         parse_response(&response)
     }
@@ -279,10 +281,10 @@ impl Lavalink {
             ))
             .send()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?
+            .map_err(LavalinkError::Reqwest)?
             .bytes()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?;
+            .map_err(LavalinkError::Reqwest)?;
 
         parse_response(&response)
     }
@@ -301,10 +303,10 @@ impl Lavalink {
             ))
             .send()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?
+            .map_err(LavalinkError::Reqwest)?
             .bytes()
             .await
-            .map_err(|e| LavalinkError::Reqwest(e))?;
+            .map_err(LavalinkError::Reqwest)?;
 
         Ok(())
     }
@@ -316,13 +318,15 @@ impl Lavalink {
     }
 }
 
+type LavalinkStream = SplitStream<
+    WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>,
+>;
+
 async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
     handler: H,
     origin: Lavalink,
     mut sender: Option<oneshot::Sender<()>>,
-    mut stream: SplitStream<
-        WebSocketStream<Stream<TokioAdapter<TcpStream>, TokioAdapter<TlsStream<TcpStream>>>>,
-    >,
+    mut stream: LavalinkStream,
 ) {
     while let Some(Ok(message)) = stream.next().await {
         if let Message::Text(message_str) = message {
@@ -339,7 +343,7 @@ async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
                             *origin.connected.write().await = LavalinkConnection::Connected;
 
                             if let Some(some_sender) = sender {
-                                if let Err(_) = some_sender.send(()) {
+                                if some_sender.send(()).is_err() {
                                     break;
                                 }
 
@@ -386,8 +390,8 @@ async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
 }
 
 fn parse_response<'a, T: Deserialize<'a>>(response: &'a [u8]) -> Result<T> {
-    serde_json::from_slice::<T>(&response).map_err(|_| {
-        match serde_json::from_slice::<LavalinkErrorResponse>(&response) {
+    serde_json::from_slice::<T>(response).map_err(|_| {
+        match serde_json::from_slice::<LavalinkErrorResponse>(response) {
             Ok(v) => LavalinkError::RestError(v),
             Err(e) => LavalinkError::InvalidResponse(e),
         }

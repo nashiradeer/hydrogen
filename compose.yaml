@@ -9,14 +9,17 @@ services:
     networks:
       - lavalink
   hydrogen:
-    image: nashiradeer/hydrogen:0.0.1-alpha.2
+    image: nashiradeer/hydrogen:0.0.1-alpha.4
     container_name: hydrogen
     restart: unless-stopped
     networks:
       - lavalink
     environment:
-      - DISCORD_TOKEN=
-      - LAVALINK=lavalink:2333,youshallnotpass
+      - HYDROGEN_DISCORD_TOKEN=
+      - HYDROGEN_LAVALINK=lavalink:2333,youshallnotpass,no
+      # The following environment variables isn't required and it's not recommended to add them unless you know what you're doing.
+      - HYDROGEN_DEFAULT_LANGUAGE=en-US
+      - HYDROGEN_LANGUAGE_PATH=/app/lang
     depends_on:
       - lavalink
 networks:

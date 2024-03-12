@@ -69,7 +69,7 @@ impl LavalinkUpdatePlayer {
     }
 
     pub fn encoded_track(&mut self, encoded_track: &str) -> &mut Self {
-        if self.identifier == None {
+        if self.identifier.is_none() {
             self.encoded_track = Some(Some(encoded_track.to_owned()));
         }
 
