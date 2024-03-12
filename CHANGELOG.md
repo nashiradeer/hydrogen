@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.0.1-alpha.5] - 2024-03-12
+
+### Fixed
+
+- LavalinkConfig not parsing hostname as address.
+
 ## [0.0.1-alpha.4] - 2024-03-12
 
 ### Added
