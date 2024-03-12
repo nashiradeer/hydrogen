@@ -5,7 +5,6 @@ use std::{
     fmt::{self, Display, Formatter},
     fs::read_to_string,
     io,
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     path::{Path, PathBuf},
 };
 
@@ -84,8 +83,8 @@ impl Display for LoadFileError {
 impl error::Error for LoadFileError {}
 
 /// Get the default Lavalink address.
-fn default_lavalink_address() -> SocketAddr {
-    SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 2333))
+fn default_lavalink_address() -> String {
+    "127.0.0.1:2333".to_owned()
 }
 
 /// The default password for Lavalink.
@@ -98,7 +97,7 @@ fn default_lavalink_password() -> String {
 pub struct LavalinkConfig {
     /// The address of the Lavalink server.
     #[serde(default = "default_lavalink_address")]
-    pub address: SocketAddr,
+    pub address: String,
     /// The password of the Lavalink server.
     #[serde(default = "default_lavalink_password")]
     pub password: String,
@@ -115,7 +114,7 @@ impl From<&str> for LavalinkConfig {
         // Get the address.
         let address = components
             .next()
-            .and_then(|s| s.parse().ok())
+            .map(|s| s.to_owned())
             .unwrap_or(default_lavalink_address());
 
         // Get the password.
@@ -141,7 +140,7 @@ impl From<&str> for LavalinkConfig {
 impl From<LavalinkConfig> for LavalinkNodeInfo {
     fn from(config: LavalinkConfig) -> Self {
         Self {
-            host: config.address.to_string(),
+            host: config.address,
             password: config.password,
             tls: config.tls,
         }
