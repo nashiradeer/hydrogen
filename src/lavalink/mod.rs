@@ -24,7 +24,7 @@ use tokio::{
     sync::{oneshot, RwLock},
     time::sleep,
 };
-use tokio_rustls::client::TlsStream;
+use tokio_native_tls::TlsStream;
 
 use crate::LAVALINK_CONNECTION_TIMEOUT;
 
