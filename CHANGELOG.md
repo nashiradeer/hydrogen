@@ -4,6 +4,10 @@
 
 ## [0.0.1-alpha.5] - 2024-03-12
 
+### Changed
+
+- Change 'rustls' to 'native-tls'. (Issue #38)
+
 ### Fixed
 
 - LavalinkConfig not parsing hostname as address.
