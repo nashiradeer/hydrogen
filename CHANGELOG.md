@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.0.1-alpha.4] - 2024-03-12
+
 ### Added
 
 - Create a link from ES-419 (LATAM) to ES-ES.
