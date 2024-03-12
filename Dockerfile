@@ -1,7 +1,7 @@
 FROM rust:1.75.0-alpine3.19 AS builder
 WORKDIR /app
 RUN apk -U upgrade
-RUN apk add libc-dev
+RUN apk add libc-dev openssl-dev openssl-libs-static
 COPY assets/ assets/
 COPY src/ src/
 COPY Cargo.toml Cargo.toml
