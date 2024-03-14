@@ -2,7 +2,7 @@
 
 ## Making contributions
 
-*TODO: Write about how contributions can be made and what is process used by Hydrogen.*
+*TODO: Write about how contributions can be made and what is the process used by Hydrogen.*
 
 ## Standards and conventions
 
