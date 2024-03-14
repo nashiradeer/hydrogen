@@ -39,7 +39,7 @@ The Hydrogen's Commit Standard is based on [Angular's Commit Message Guidelines]
 - roll
 - utils
 
-###### Scopes for docs
+##### Scopes for docs
 
 - changelog
 - contributing
