@@ -24,19 +24,7 @@ The Hydrogen's Commit Standard is based on [Angular's Commit Message Guidelines]
 
 #### Commit scopes
 
-##### Scopes for build
-
-- cargo
-- docker
-
-##### Scopes for docs
-
-- changelog
-- contributing
-- example
-- readme
-
-##### Scopes for feat, fix, and refactor
+Commit scopes describe what has been affected by the commit, below has a list of scopes used in this repository:
 
 - commands
 - components
@@ -44,16 +32,14 @@ The Hydrogen's Commit Standard is based on [Angular's Commit Message Guidelines]
 - config
 - handler
 - main
-- manager
-- player
-- parsers
+- parser
 - player
 - roll
 - utils
 
-##### Scopes for i18n
+If your commit is of type `i18n` you will use the file name without the extension (`pt-BR.json` becomes `pt-BR`) as the scope.
 
-You can use the file name without the extension (`pt-BR.json` becomes `pt-BR`) as the scope for the i18n type.
+You can omit the scope (example `feat: create new module for ...`) if your commit there's no scope documented or is from other types that not `feat`, `fix`, `i18n` and `refactor`.
 
 #### Commit subjects
 
