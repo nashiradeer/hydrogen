@@ -43,7 +43,7 @@ You can omit the scope (example `feat: create new module for ...`) if your commi
 
 #### Commit subjects
 
-A description containing what happened on this commit using the imperative, present tense ("change" not "changed" nor "changes") with the first letter lowercase, not ending with dot (.).
+A short description containing what happened on this commit using the imperative, present tense ("change" not "changed" nor "changes") with the first letter lowercase, not ending with dot (.).
 
 ### Branches
 
