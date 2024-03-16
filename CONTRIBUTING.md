@@ -1,8 +1,10 @@
 # Hydrogen // Contributing
 
-## Making contributions
+## How to make contributions?
 
-*TODO: Write about how contributions can be made and what is the process used by Hydrogen.*
+First create your own branch following the [Hydrogen's Branch Naming Convention](#branches) and commits using the [Hydrogen's Commit Standard](#commits), remembering that your branch needs to have only one change that change can affect more than one file and have more than one commit, but if your branch is related to how the commands is handled, you shouldn't fix a bug on the music player on the same branch.
+
+After create your changes on your branch, create a Pull Request, write a concise title in imperative, present tense (like `Change how commands are handled`) and describing what you have changed and why (if applicable), and a reviewer will approve, close or comment, and depending on the decision of the reviewer, your branch will be merged. Consider that if your Pull Request is approved this not means it will be merged, because this depends on what type (major, minor or patch) the next version will be, in this case you will need to wait before see your changes on the upstream.
 
 ## Standards and conventions
 
