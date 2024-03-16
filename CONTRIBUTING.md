@@ -6,6 +6,8 @@ First create your own branch following the [Hydrogen's Branch Naming Convention]
 
 After create your changes on your branch, create a Pull Request, write a concise title in imperative, present tense (like `Change how commands are handled`) and describing what you have changed and why (if applicable), and a reviewer will approve, close or comment, and depending on the decision of the reviewer, your branch will be merged. Consider that if your Pull Request is approved this not means it will be merged, because this depends on what type (major, minor or patch) the next version will be, in this case you will need to wait before see your changes on the upstream.
 
+Please, don't forget to log your changes in the [CHANGELOG.md file](CHANGELOG.md) following the [Keep a changelog v1.1.0](https://keepachangelog.com/en/1.1.0/) before making the Pull Request.
+
 ## Standards and conventions
 
 ### Commits
