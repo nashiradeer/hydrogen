@@ -2,9 +2,9 @@
 
 ## How to make contributions?
 
-First, create your branch following [Hydrogen's Branch Naming Convention](#branches) and commits using [Hydrogen's Commit Standard](#commits), remember that your branch needs to have only one change, this doesn't mean how many files are affected or commits have taken but about have been changed (if you are changing how commands are handled, you will not fix a bug in the music player for example).
+First, create your branch following [Hydrogen's Branch Naming Convention](#branches) and commits using [Hydrogen's Commit Standard](#commits), remember that your branch needs to have only one change, this doesn't mean how many commits or how many files were affected but what has been changed (if you are changing how commands are handled, you will not fix a bug in the music player for example).
 
-After finishing your changes on your branch, create a Pull Request to the `main` branch, write a concise title in imperative, present tense (like `Change how commands are handled`) and describing what you have changed and why (if applicable), and a reviewer will approve close or comment, and depending on the decision of the reviewer, your branch will be merged. Consider that if your Pull Request is approved this doesn't mean it will be merged, because this depends on what type (major, minor or patch) the next version will be, in this case, you will need to wait before seeing your changes on the upstream.
+After finishing your changes on your branch, create a Pull Request to the `main` branch, write a concise title in imperative, present tense (like `Change how commands are handled`) and describing what you have changed and why (if applicable), and a reviewer will approve, close or comment, and depending on the decision of the reviewer, your branch will be merged. Consider that if your Pull Request is approved this doesn't mean it will be merged, because this depends on what type (major, minor or patch) the next version will be, in this case, you will need to wait before seeing your changes on the upstream.
 
 Please, don't forget to log your changes in the [CHANGELOG.md file](CHANGELOG.md) following the [Keep a changelog v1.1.0](https://keepachangelog.com/en/1.1.0/) before making the Pull Request.
 
