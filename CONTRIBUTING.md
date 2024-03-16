@@ -24,6 +24,18 @@ The Hydrogen's Commit Standard is based on [Angular's Commit Message Guidelines]
 
 #### Commit scopes
 
+##### Scopes for build
+
+- cargo
+- docker
+
+##### Scopes for docs
+
+- changelog
+- contributing
+- example
+- readme
+
 ##### Scopes for feat, fix, and refactor
 
 - commands
@@ -38,18 +50,6 @@ The Hydrogen's Commit Standard is based on [Angular's Commit Message Guidelines]
 - player
 - roll
 - utils
-
-##### Scopes for docs
-
-- changelog
-- contributing
-- example
-- readme
-
-##### Scopes for build
-
-- cargo
-- docker
 
 ##### Scopes for i18n
 
