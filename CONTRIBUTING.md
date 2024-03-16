@@ -69,7 +69,7 @@ The [Hydrogen's Changelog file](CHANGELOG.md) and [GitHub Releases](https://gith
 
 If you want to contribute with translations, you can edit the files found on `assets/langs` path, they are named using the [Discord's language code](https://discord.com/developers/docs/reference#locales) with `.json` on the end. Just copy the `en-US.json` file and modify your content, remembering that the words involved in {} are variables replaced at runtime, so they should not be translated, you can use the `pt-BR.json`, `de.json` and `es-ES.json` files as example.
 
-To link a language to another you can create a file named with the [Discord's language code](https://discord.com/developers/docs/reference#locales) ending with `.link` (`es-419.link`) and with the content `_link:` followed with the language code to be linked (like `_link:es-ES`).
+To link a language to another, you can create a file named with the [Discord's language code](https://discord.com/developers/docs/reference#locales) ending with `.link` (`es-419.link`) and with the content `_link:` followed with the language code to be linked (like `_link:es-ES`).
 
 ## About 'Hydrogen Framework' project
 
