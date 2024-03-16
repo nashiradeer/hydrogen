@@ -47,7 +47,19 @@ A description containing what happened on this commit using the imperative, pres
 
 ### Branches
 
-*TODO: Write the Hydrogen's Branch Naming Convention based on <https://dev.to/varbsan/a-simplified-convention-for-naming-branches-and-commits-in-git-il4>*
+Hydrogen's Branch Naming Conventions is based on [Simplified Convention for Naming Branches](https://dev.to/varbsan/a-simplified-convention-for-naming-branches-and-commits-in-git-il4) and is similar to [Hydrogen's Commit Standard](#commits) and has the format `<type>/<description>`.
+
+#### Branch type
+
+- docs: Changes to the documentation files.
+- feat: A new feature or refactor on some existing feature.
+- fix: A bug fix.
+- i18n: Changes to the translation files.
+- chore: Changes to a non-documented things, like CI or build system files.
+
+#### Branch description
+
+A short description containing what will be changed on that branch using the imperative, present tense ("change" not "changed" nor "changes").
 
 ### Changelog
 
