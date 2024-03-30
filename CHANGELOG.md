@@ -1,6 +1,17 @@
 # Hydrogen // Changelog
 
-## [Unreleased]
+## [0.0.1-alpha.6] - 2024-03-30
+
+### Added
+
+- Create the Track Stuck event for Lavalink.
+- Create the Track Exception event for Lavalink.
+- Implement logging handlers for Track Stuck and Track Exception.
+
+### Changed
+
+- Change the default search provider from YouTube to SoundCloud.
+- Change the debug level from error to warn for errors during roll result send.
 
 ## [0.0.1-alpha.5] - 2024-03-12
 
@@ -23,6 +34,7 @@
 - Create '/about' command.
 - Create '/roll' command.
 - New default 'builtin-language' feature to include 'assets/langs/en-US.json' in the binary as default language.
+- New config parser.
 - Old component message auto remover.
 
 ### Changed
