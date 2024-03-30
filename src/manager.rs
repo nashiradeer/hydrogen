@@ -29,7 +29,10 @@ use tracing::{debug, error, info, warn};
 
 use crate::{
     lavalink::{
-        websocket::{LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackStartEvent},
+        websocket::{
+            LavalinkTrackEndEvent, LavalinkTrackEndReason, LavalinkTrackExceptionEvent,
+            LavalinkTrackStartEvent, LavalinkTrackStuckEvent,
+        },
         Lavalink, LavalinkError, LavalinkHandler, LavalinkNodeInfo,
     },
     player::{
@@ -802,25 +805,65 @@ impl LavalinkHandler for HydrogenManager {
         let timer = Instant::now();
         debug!("(track_end): processing...");
 
-        if message.reason == LavalinkTrackEndReason::Finished {
-            let guild_id = match message.guild_id.parse::<u64>() {
-                Ok(v) => v,
-                Err(e) => {
-                    warn!("(track_end): invalid GuildId: {}", e);
-                    return;
-                }
-            };
-            if let Some(player) = self.player.read().await.get(&guild_id.into()) {
-                if let Err(e) = player.next().await {
-                    warn!("(track_end): cannot go to the next music: {}", e);
-                }
+        match message.reason {
+            LavalinkTrackEndReason::Finished => {
+                let guild_id = match message.guild_id.parse::<u64>() {
+                    Ok(v) => v,
+                    Err(e) => {
+                        warn!("(track_end): invalid GuildId: {}", e);
+                        return;
+                    }
+                };
+                if let Some(player) = self.player.read().await.get(&guild_id.into()) {
+                    if let Err(e) = player.next().await {
+                        warn!("(track_end): cannot go to the next music: {}", e);
+                    }
 
-                self.update_now_playing(guild_id.into()).await;
+                    self.update_now_playing(guild_id.into()).await;
+                }
             }
+            LavalinkTrackEndReason::LoadFailed => {
+                error!("(track_end): load failed");
+            }
+            _ => {}
         }
 
         info!(
             "(track_end): processed in {}ms",
+            timer.elapsed().as_millis()
+        );
+    }
+
+    async fn lavalink_track_exception(&self, _: Lavalink, message: LavalinkTrackExceptionEvent) {
+        let timer = Instant::now();
+        debug!("(exception): processing...");
+
+        if let Some(exception_message) = message.exception.message {
+            error!(
+                "(exception): [{:?}]: {} - {}",
+                message.exception.severity, message.exception.cause, exception_message
+            );
+        } else {
+            error!(
+                "(exception): [{:?}]: {}",
+                message.exception.severity, message.exception.cause
+            );
+        }
+
+        info!(
+            "(exception): processed in {}ms",
+            timer.elapsed().as_millis()
+        );
+    }
+
+    async fn lavalink_track_stuck(&self, _: Lavalink, message: LavalinkTrackStuckEvent) {
+        let timer = Instant::now();
+        debug!("(track_stuck): processing...");
+
+        warn!("(track_stuck): track stuck for {}ms", message.threshold_ms);
+
+        info!(
+            "(track_stuck): processed in {}ms",
             timer.elapsed().as_millis()
         );
     }
