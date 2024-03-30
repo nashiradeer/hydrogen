@@ -249,7 +249,7 @@ impl EventHandler for HydrogenHandler {
             match params.roll() {
                 Ok(result) => {
                     if let Err(e) = message.reply_ping(ctx, result.to_string()).await {
-                        error!("(message): cannot send roll result: {}", e);
+                        warn!("(message): cannot send roll result: {}", e);
                     }
                 }
                 Err(e) => {
