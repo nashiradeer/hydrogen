@@ -30,7 +30,10 @@ use crate::LAVALINK_CONNECTION_TIMEOUT;
 
 use self::{
     rest::{LavalinkErrorResponse, LavalinkPlayer, LavalinkTrackLoading, LavalinkUpdatePlayer},
-    websocket::{LavalinkReadyEvent, LavalinkTrackEndEvent, LavalinkTrackStartEvent},
+    websocket::{
+        LavalinkReadyEvent, LavalinkTrackEndEvent, LavalinkTrackExceptionEvent,
+        LavalinkTrackStartEvent, LavalinkTrackStuckEvent,
+    },
 };
 
 pub mod rest;
@@ -76,6 +79,13 @@ pub trait LavalinkHandler {
     async fn lavalink_disconnect(&self, _node: Lavalink) {}
     async fn lavalink_track_start(&self, _node: Lavalink, _message: LavalinkTrackStartEvent) {}
     async fn lavalink_track_end(&self, _node: Lavalink, _message: LavalinkTrackEndEvent) {}
+    async fn lavalink_track_exception(
+        &self,
+        _node: Lavalink,
+        _message: LavalinkTrackExceptionEvent,
+    ) {
+    }
+    async fn lavalink_track_stuck(&self, _node: Lavalink, _message: LavalinkTrackStuckEvent) {}
 }
 
 #[derive(Debug)]
@@ -374,6 +384,31 @@ async fn read_socket<H: LavalinkHandler + Sync + Send + 'static>(
                                         serde_json::from_str::<LavalinkTrackEndEvent>(&message_str)
                                     {
                                         handler.lavalink_track_end(origin.clone(), track_end).await;
+                                    }
+                                }
+                                LavalinkEventType::TrackExceptionEvent => {
+                                    if let Ok(track_exception) =
+                                        serde_json::from_str::<LavalinkTrackExceptionEvent>(
+                                            &message_str,
+                                        )
+                                    {
+                                        handler
+                                            .lavalink_track_exception(
+                                                origin.clone(),
+                                                track_exception,
+                                            )
+                                            .await;
+                                    }
+                                }
+                                LavalinkEventType::TrackStuckEvent => {
+                                    if let Ok(track_stuck) =
+                                        serde_json::from_str::<LavalinkTrackStuckEvent>(
+                                            &message_str,
+                                        )
+                                    {
+                                        handler
+                                            .lavalink_track_stuck(origin.clone(), track_stuck)
+                                            .await;
                                     }
                                 }
                                 _ => (),

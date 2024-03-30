@@ -161,7 +161,7 @@ pub struct LavalinkException {
     pub cause: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LavalinkSeverity {
     Common,

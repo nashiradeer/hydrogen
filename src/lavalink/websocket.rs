@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use super::rest::LavalinkException;
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LavalinkReadyEvent {
@@ -30,4 +32,18 @@ pub enum LavalinkTrackEndReason {
     Stopped,
     Replaced,
     Cleanup,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LavalinkTrackExceptionEvent {
+    pub encoded_track: String,
+    pub exception: LavalinkException,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LavalinkTrackStuckEvent {
+    pub encoded_track: String,
+    pub threshold_ms: i32,
 }
