@@ -1,6 +1,6 @@
 # Nashira Deer // Hydrogen
 
-**Warning: Hydrogen still in the alpha development stage.**
+**Warning: Hydrogen is still in alpha development stage.**
 
 Open-source Dungeon Master helper with useful features and a music player for your sessions.
 
@@ -15,7 +15,7 @@ Manage RPG campaigns and role-play characters inside Discord without downloading
 
 ## Donating
 
-Independent if you are using public instance, or it owns instance, consider donating to make Hydrogen development possible. You can donate thought Nashira Deer's [PayPal](https://www.paypal.com/donate/?business=QQGMTC3FQAJF6&no_recurring=0&item_name=Thanks+for+donating+for+me%2C+this+helps+me+a+lot+to+continue+developing+and+maintaining+my+projects.&currency_code=USD) or [GitHub Sponsor](https://github.com/sponsors/nashiradeer).
+Whether you are using a public instance or your own, please consider donating to support Hydrogen's development. You can donate thought Nashira Deer's [PayPal](https://www.paypal.com/donate/?business=QQGMTC3FQAJF6&no_recurring=0&item_name=Thanks+for+donating+for+me%2C+this+helps+me+a+lot+to+continue+developing+and+maintaining+my+projects.&currency_code=USD) or [GitHub Sponsor](https://github.com/sponsors/nashiradeer).
 
 ## Official Public Instance
 
@@ -23,11 +23,11 @@ If you are interested in a public instance of Hydrogen, you can add our official
 
 ## Building/running
 
-Only the methods listed below is officially supported and tested by Nashira Deer, we don't recommend you using any other alternative to build Hydrogen as Hydrogen isn't developed to support it.
+Only the methods listed below are officially supported and tested by Nashira Deer. We don't recommend using any other alternatives to build Hydrogen, as it isn't developed to support them.
 
 ### Docker
 
-You can build Hydrogen using `docker build -t hydrogen:latest .` in a terminal with [Docker](https://docker.com) (Podman not supported) installed and running, before the build is completed you will have a ready to use Docker image available with "hydrogen:latest" name.
+You can build Hydrogen using `docker build -t hydrogen:latest .` in a terminal with [Docker](https://docker.com) (Podman not supported) installed and running, after the build is completed, you will have a Docker image ready for use, named "hydrogen:latest".
 
 If you don't want to build your own image, you can use our prebuilt image found on [Docker Hub](https://hub.docker.com/r/nashiradeer/hydrogen). To run it, you can see our example using [Docker Compose](compose.yaml).
 
@@ -43,7 +43,7 @@ When starting, Hydrogen searches for the config file in `$XDG_CONFIG_HOME/hydrog
 
 ### Environment Variables
 
-- HYDROGEN_DISCORD_TOKEN: Sets the token that will be used to access a Discord. (required)
+- HYDROGEN_DISCORD_TOKEN: Sets the token that will be used to access Discord. (required)
 - HYDROGEN_LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
 - HYDROGEN_DEFAULT_LANGUAGE: Sets a new default language to Hydrogen. (optional)
 - HYDROGEN_LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (optional)
@@ -61,4 +61,4 @@ tls             = "true" / "enabled" / "on"
 
 ## Credits
 
-Hydrogen is a Nashira Deer's project licensed under the [GNU General Public License v3](LICENSE.txt).
+Hydrogen is a project by Nashira Deer, licensed under [GNU General Public License v3](LICENSE.txt).
