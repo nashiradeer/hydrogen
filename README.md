@@ -19,6 +19,8 @@ Whether you are using a public instance or your own, please consider donating to
 
 ## Official Public Instance
 
+**Warning: The public instance of Hydrogen will end on 30 April 2024 at 15:00.**
+
 If you are interested in a public instance of Hydrogen, you can add our official instance, hosted by [Nashira Deer](https://github.com/nashiradeer), to your Discord server, by [clicking here](https://discord.com/api/oauth2/authorize?client_id=1128087591179268116&permissions=275417975808&scope=bot+applications.commands).
 
 ## Building/running
