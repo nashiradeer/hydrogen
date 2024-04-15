@@ -1,6 +1,6 @@
 # Nashira Deer // Hydrogen
 
-**Warning: Hydrogen is still in alpha development stage.**
+**Warning: Hydrogen is still in the alpha development stage.**
 
 Open-source Dungeon Master helper with useful features and a music player for your sessions.
 
@@ -15,11 +15,11 @@ Manage RPG campaigns and role-play characters inside Discord without downloading
 
 ## Donating
 
-Whether you are using a public instance or your own, please consider donating to support Hydrogen's development. You can donate thought Nashira Deer's [PayPal](https://www.paypal.com/donate/?business=QQGMTC3FQAJF6&no_recurring=0&item_name=Thanks+for+donating+for+me%2C+this+helps+me+a+lot+to+continue+developing+and+maintaining+my+projects.&currency_code=USD) or [GitHub Sponsor](https://github.com/sponsors/nashiradeer).
+Whether you are using a public instance or your own, please consider donating to support Hydrogen's development. You can donate through Nashira Deer's [PayPal](https://www.paypal.com/donate/?business=QQGMTC3FQAJF6&no_recurring=0&item_name=Thanks+for+donating+for+me%2C+this+helps+me+a+lot+to+continue+developing+and+maintaining+my+projects.&currency_code=USD) or [GitHub Sponsor](https://github.com/sponsors/nashiradeer).
 
 ## Official Public Instance
 
-If you are interested in a public instance of Hydrogen, you can add our official instance, hosted by [Nashira Deer](https://github.com/nashiradeer), to your Discord's server, [clicking here](https://discord.com/api/oauth2/authorize?client_id=1128087591179268116&permissions=275417975808&scope=bot+applications.commands).
+If you are interested in a public instance of Hydrogen, you can add our official instance, hosted by [Nashira Deer](https://github.com/nashiradeer), to your Discord server, by [clicking here](https://discord.com/api/oauth2/authorize?client_id=1128087591179268116&permissions=275417975808&scope=bot+applications.commands).
 
 ## Building/running
 
@@ -33,7 +33,7 @@ If you don't want to build your own image, you can use our prebuilt image found 
 
 ## Configuring
 
-There's two ways to configure Hydrogen, using the config file or environment variables, remembering that the environment variable is only used if the equivalent field isn't present on the config file.
+There are two ways to configure Hydrogen, using the config file or environment variables, remembering that the environment variable is only used if the equivalent field isn't present on the config file.
 
 ### Config file
 
