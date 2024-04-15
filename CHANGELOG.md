@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Change the default search provider from SoundCloud to YouTube.
 - Update CONTRIBUTING.md file
 
 ### Fixed
