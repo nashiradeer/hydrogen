@@ -1,5 +1,16 @@
 # Hydrogen // Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Update CONTRIBUTING.md file
+
+### Fixed
+
+- Fix typos in the English translations. (Thanks to @LemonyOwO)
+- Fix typos in the README.md. (Thanks to @LemonyOwO)
+
 ## [0.0.1-alpha.6] - 2024-03-30
 
 ### Added
