@@ -1,6 +1,6 @@
 # Hydrogen // Changelog
 
-## [Unreleased]
+## [0.0.1-alpha.7] - 2024-04-15
 
 ### Added
 
