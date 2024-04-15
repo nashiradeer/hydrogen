@@ -45,6 +45,9 @@ pub const HYDROGEN_ERROR_COLOR: i32 = 0xf04747;
 pub const HYDROGEN_EMPTY_CHAT_TIMEOUT: u64 = 10;
 pub const HYDROGEN_QUEUE_LIMIT: usize = 1000;
 pub const HYDROGEN_SEARCH_PREFIX: &str = "ytsearch:";
+pub const HYDROGEN_WARNING_TIMEOUT: u64 = 10;
+pub const HYDROGEN_WARNING_PROBABILITY: f64 = 0.1;
+pub const HYDROGEN_COLOR: i32 = 0x009b60;
 pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 
 pub static HYDROGEN_LOGO_URL: &str =
@@ -79,6 +82,8 @@ struct HydrogenContext {
 
     /// The responses from the components.
     pub components_responses: Arc<DashMap<AutoRemoverKey, (JoinHandle<()>, ComponentInteraction)>>,
+    /// Whether this is the public instance.
+    pub public_instance: bool,
 }
 
 #[derive(Clone)]
@@ -300,6 +305,10 @@ async fn main() {
     // Load configuration from file or environment.
     let mut config = load_configuration().or_from_env();
 
+    if config.public_instance.unwrap_or_default() {
+        warn!("you are running this instance as a public instance");
+    }
+
     // Load language files.
     if let Some(language_path) = config.language_path {
         if let Err(e) =
@@ -352,6 +361,7 @@ async fn main() {
             commands_id: Arc::new(RwLock::new(HashMap::new())),
             i18n: Arc::new(i18n),
             components_responses: Arc::new(DashMap::new()),
+            public_instance: config.public_instance.unwrap_or_default(),
             time_parsers,
             roll_parser,
         },

@@ -2,6 +2,11 @@
     "generic": {
         "embed_footer": "Hydrogen by Nashira Deer"
     },
+    "public_instance": {
+        "title": "Hydrogen public instance is ending!",
+        "ending": "It will be ending on {time}. But you can still use it by hosting your own instance. Check the [GitHub repository]({url}) for more information.",
+        "running_in": "Your command will be executed in {time}."
+    },
     "error": {
         "not_intentional": "If you believe this is an error, please report it [here]({url}).",
         "unknown": "An unknown error has happened! Please report it [here]({url}).",

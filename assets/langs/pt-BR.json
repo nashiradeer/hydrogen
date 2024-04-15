@@ -2,6 +2,11 @@
     "generic": {
         "embed_footer": "Hydrogen por Nashira Deer"
     },
+    "public_instance": {
+        "title": "A instância pública de Hydrogen está terminando!",
+        "ending": "Ela será terminada no dia {time}. Se você gostaria de continuar usando Hydrogen, você pode hospedar sua própria instância. Cheque o [repositório do GitHub]({url}) para mais informações.",
+        "running_in": "Seu comando será executado em {time}."
+    },
     "error": {
         "not_intentional": "Se você acredita que isso é um erro, por favor reporte [aqui]({url}).",
         "unknown": "Um erro estranho ocorreu! Por favor reporte [aqui]({url}).",

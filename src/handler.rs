@@ -2,12 +2,21 @@
 //!
 //! Command and component handler for Hydrogen. Created to decrease the repeated code and heap allocations from the original handler.
 
-use std::{collections::HashMap, result, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    result,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
 use dashmap::DashMap;
 use hydrogen_i18n::I18n;
+use rand::{thread_rng, Rng};
 use serenity::{
-    all::{ChannelId, Command, CommandId, CommandInteraction, ComponentInteraction, UserId},
+    all::{
+        ChannelId, Command, CommandId, CommandInteraction, ComponentInteraction,
+        CreateInteractionResponse, CreateInteractionResponseMessage, UserId,
+    },
     builder::{CreateEmbed, CreateEmbedFooter, EditInteractionResponse},
     client::Context,
     http::{CacheHttp, Http},
@@ -16,8 +25,9 @@ use tokio::{spawn, sync::RwLock, task::JoinHandle, time::sleep};
 use tracing::{debug, error, info, warn};
 
 use crate::{
-    commands, components, HydrogenContext, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL,
-    HYDROGEN_PRIMARY_COLOR,
+    commands, components, HydrogenContext, HYDROGEN_COLOR, HYDROGEN_ERROR_COLOR, HYDROGEN_LOGO_URL,
+    HYDROGEN_PRIMARY_COLOR, HYDROGEN_REPOSITORY_URL, HYDROGEN_WARNING_PROBABILITY,
+    HYDROGEN_WARNING_TIMEOUT,
 };
 
 /// Type returned by commands and components to indicate how to respond to the interaction.
@@ -44,10 +54,23 @@ pub async fn handle_command(
     context: &Context,
     command: &CommandInteraction,
 ) {
-    // Defer the interaction to avoid the "This interaction failed" message.
-    if let Err(e) = command.defer_ephemeral(&context.http).await {
-        error!("(handle_command): failed to defer interaction: {}", e);
-        return;
+    if thread_rng().gen_bool(HYDROGEN_WARNING_PROBABILITY) && hydrogen.public_instance {
+        // Send a message to the user.
+        if let Err(e) = command
+            .create_response(&context.http, hydrogen_end_message(command, &hydrogen.i18n))
+            .await
+        {
+            error!("(handle_command): cannot respond to the interaction: {}", e);
+            return;
+        }
+
+        sleep(Duration::from_secs(HYDROGEN_WARNING_TIMEOUT)).await;
+    } else {
+        // Defer the interaction to avoid the "This interaction failed" message.
+        if let Err(e) = command.defer_ephemeral(&context.http).await {
+            error!("(handle_command): failed to defer interaction: {}", e);
+            return;
+        }
     }
 
     // Execute the command.
@@ -222,4 +245,42 @@ async fn autoremover(
     sleep(Duration::from_secs(10)).await;
     debug!("(autoremover): removing response {:?} from cache...", key);
     responses.remove(&key);
+}
+
+fn hydrogen_end_message(command: &CommandInteraction, i18n: &I18n) -> CreateInteractionResponse {
+    CreateInteractionResponse::Message(
+        CreateInteractionResponseMessage::new()
+            .ephemeral(true)
+            .embed(
+                CreateEmbed::new()
+                    .title(i18n.translate(&command.locale, "public_instance", "title"))
+                    .description(format!(
+                        "{}\n\n{}",
+                        i18n.translate(&command.locale, "public_instance", "ending")
+                            .replace("{time}", "<t:1714489200>")
+                            .replace("{url}", HYDROGEN_REPOSITORY_URL),
+                        i18n.translate(&command.locale, "public_instance", "running_in")
+                            .replace(
+                                "{time}",
+                                &format!(
+                                    "<t:{}:R>",
+                                    (SystemTime::now()
+                                        + Duration::from_secs(HYDROGEN_WARNING_TIMEOUT + 2))
+                                    .duration_since(SystemTime::UNIX_EPOCH)
+                                    .unwrap()
+                                    .as_secs()
+                                )
+                            )
+                    ))
+                    .color(HYDROGEN_COLOR)
+                    .footer(
+                        CreateEmbedFooter::new(i18n.translate(
+                            &command.locale,
+                            "generic",
+                            "embed_footer",
+                        ))
+                        .icon_url(HYDROGEN_LOGO_URL),
+                    ),
+            ),
+    )
 }
