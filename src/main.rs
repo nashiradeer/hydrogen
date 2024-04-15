@@ -51,7 +51,7 @@ pub const HYDROGEN_COLOR: i32 = 0x009b60;
 pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 
 pub static HYDROGEN_LOGO_URL: &str =
-    "https://github.com/nashiradeer/hydrogen/blob/main/assets/icons/hydrogen-circular.png";
+    "https://raw.githubusercontent.com/nashiradeer/hydrogen/main/assets/icons/hydrogen-circular.png";
 pub static HYDROGEN_BUG_URL: &str = "https://github.com/nashiradeer/hydrogen/issues";
 
 /// Hydrogen version.

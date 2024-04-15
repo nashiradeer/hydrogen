@@ -7,6 +7,10 @@
 - Add a warning about the public instance ending.
 - Add Portuguese Brazil translation to the public instance warning.
 
+### Fixed
+
+- Fix the embed footer icon URL.
+
 ## [0.0.1-alpha.7] - 2024-04-15
 
 ### Added
