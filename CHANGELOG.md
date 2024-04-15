@@ -12,6 +12,7 @@
 - Change the default search provider from SoundCloud to YouTube.
 - Change use the local `Dockerfile` on the compose file instead of pulling the image.
 - Update CONTRIBUTING.md file
+- Update the embed footer icon to the new one.
 
 ### Fixed
 

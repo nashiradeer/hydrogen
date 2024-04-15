@@ -48,7 +48,7 @@ pub const HYDROGEN_SEARCH_PREFIX: &str = "ytsearch:";
 pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
 
 pub static HYDROGEN_LOGO_URL: &str =
-    "https://raw.githubusercontent.com/nashiradeer/hydrogen/main/icon.png";
+    "https://github.com/nashiradeer/hydrogen/blob/main/assets/icons/hydrogen-circular.png";
 pub static HYDROGEN_BUG_URL: &str = "https://github.com/nashiradeer/hydrogen/issues";
 
 /// Hydrogen version.
