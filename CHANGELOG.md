@@ -2,9 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- New project icon.
+
 ### Changed
 
 - Change the default search provider from SoundCloud to YouTube.
+- Change `lavalink-openj9` tag on the compose file to `v3-update-lp`.
+- Change use the local `Dockerfile` on the compose file instead of pulling the image.
 - Update CONTRIBUTING.md file
 
 ### Fixed

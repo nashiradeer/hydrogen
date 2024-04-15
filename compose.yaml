@@ -1,6 +1,6 @@
 services:
   lavalink:
-    image: nashiradeer/lavalink-openj9:3.7.10
+    image: nashiradeer/lavalink-openj9:v3-update-lp
     container_name: lavalink
     restart: unless-stopped
     environment:
@@ -9,7 +9,9 @@ services:
     networks:
       - lavalink
   hydrogen:
-    image: nashiradeer/hydrogen:0.0.1-alpha.4
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: hydrogen
     restart: unless-stopped
     networks:
