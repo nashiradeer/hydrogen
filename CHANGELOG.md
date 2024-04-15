@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add a config option to enable public instance-only features.
 - New project icon.
 
 ### Changed

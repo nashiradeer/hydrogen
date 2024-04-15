@@ -158,6 +158,8 @@ pub struct Config {
     pub lavalink: Option<Vec<LavalinkConfig>>,
     /// The token of the Discord bot.
     pub discord_token: Option<String>,
+    /// If the bot is running in the public instance.
+    pub public_instance: Option<bool>,
 }
 
 impl Config {
@@ -191,11 +193,19 @@ impl Config {
             .discord_token
             .or_else(|| env::var("HYDROGEN_DISCORD_TOKEN").ok());
 
+        // Get the public instance from the environment.
+        let public_instance = self.public_instance.or_else(|| {
+            env::var("HYDROGEN_PUBLIC_INSTANCE")
+                .ok()
+                .map(|s| matches!(s.to_lowercase().as_str(), "true" | "yes" | "1" | "enabled"))
+        });
+
         Self {
             default_language,
             language_path,
             lavalink,
             discord_token,
+            public_instance,
         }
     }
 }
