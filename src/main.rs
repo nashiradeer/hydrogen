@@ -134,7 +134,7 @@ impl EventHandler for HydrogenHandler {
 
             if !register_commands(None, &ctx.http, &self.context.commands_id).await {
                 error!("(ready): cannot register commands");
-                panic!("cannot register commands");
+                exit(1);
             }
         }
 
@@ -333,7 +333,7 @@ async fn main() {
         Ok(v) => v,
         Err(e) => {
             error!("cannot initialize time parsers: {}", e);
-            panic!("cannot initialize time parsers");
+            exit(1)
         }
     });
 
@@ -341,7 +341,7 @@ async fn main() {
         Ok(v) => v,
         Err(e) => {
             error!("cannot initialize roll parser: {}", e);
-            panic!("cannot initialize roll parser");
+            exit(1);
         }
     });
 

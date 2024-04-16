@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::Display,
+    process::exit,
     result,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -761,7 +762,8 @@ impl LavalinkHandler for HydrogenManager {
         }
 
         if lavalink_nodes.len() == 0 {
-            panic!("(disconnect): no lavalink nodes connected.");
+            error!("(disconnect): no lavalink nodes connected.");
+            exit(1);
         }
 
         let mut players = self.player.write().await;
