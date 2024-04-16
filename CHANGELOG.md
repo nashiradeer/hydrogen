@@ -10,6 +10,7 @@
 ### Fixed
 
 - Fix the embed footer icon URL.
+- Panic doesn't finalize the program. ([#42](https://github.com/nashiradeer/hydrogen/issues/42))
 
 ## [0.0.1-alpha.7] - 2024-04-15
 
