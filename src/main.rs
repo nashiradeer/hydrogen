@@ -11,7 +11,7 @@ use parsers::{RollParser, TimeParser};
 use serenity::{
     all::{
         Client, CommandId, ComponentInteraction, GatewayIntents, Interaction, Message, Ready,
-        ShardId, VoiceServerUpdateEvent, VoiceState,
+        ShardId, UserId, VoiceServerUpdateEvent, VoiceState,
     },
     client::{Context, EventHandler},
     gateway::ShardRunnerInfo,
@@ -49,6 +49,8 @@ pub const HYDROGEN_WARNING_TIMEOUT: u64 = 10;
 pub const HYDROGEN_WARNING_PROBABILITY: f64 = 0.1;
 pub const HYDROGEN_COLOR: i32 = 0x009b60;
 pub const LAVALINK_CONNECTION_TIMEOUT: u64 = 5000;
+/// The public instance ID.
+pub const HYDROGEN_PUBLIC_INSTANCE_ID: u64 = 1128087591179268116;
 
 pub static HYDROGEN_LOGO_URL: &str =
     "https://raw.githubusercontent.com/nashiradeer/hydrogen/main/assets/icons/hydrogen-circular.png";
@@ -66,6 +68,12 @@ pub static HYDROGEN_NAME: &str = "Hydrogen";
 #[cfg(feature = "builtin-language")]
 /// Default language file already loaded in the binary.
 pub static HYDROGEN_DEFAULT_LANGUAGE: &str = include_str!("../assets/langs/en-US.json");
+
+/// The public instance and other roll bots IDs.
+pub static OTHER_ROLL_BOTS: [u64; 1] = [
+    // Rollem bot ID.
+    240732567744151553,
+];
 
 #[derive(Clone)]
 struct HydrogenContext {
@@ -90,6 +98,10 @@ struct HydrogenContext {
 struct HydrogenHandler {
     context: HydrogenContext,
     lavalink_nodes: Arc<Vec<LavalinkNodeInfo>>,
+    /// Other roll bots IDs.
+    other_roll_bots: Vec<u64>,
+    /// If the bot should force enable auto-roll from messages.
+    force_roll: bool,
 }
 
 #[async_trait]
@@ -249,6 +261,27 @@ impl EventHandler for HydrogenHandler {
             return;
         }
 
+        // Ignore messages from other roll bots.
+        if !self.force_roll {
+            if let Some(guild_id) = message.guild_id {
+                let mut other_roll_bot = None;
+                for id in &self.other_roll_bots {
+                    if let Ok(member) = ctx.http.get_member(guild_id, UserId::new(*id)).await {
+                        other_roll_bot = Some(member);
+                        break;
+                    }
+                }
+
+                if let Some(member) = other_roll_bot {
+                    warn!(
+                        "(message): other roll bot detected, ignored: {} ({})",
+                        &member.user.name, &member.user.id
+                    );
+                    return;
+                }
+            }
+        }
+
         // Send message to the roll parser.
         if let Some(params) = self.context.roll_parser.evaluate(&message.content) {
             match params.roll() {
@@ -354,6 +387,11 @@ async fn main() {
         .map(LavalinkNodeInfo::from)
         .collect();
 
+    let mut other_roll_bots = Vec::from(OTHER_ROLL_BOTS);
+    if !config.public_instance.unwrap_or_default() {
+        other_roll_bots.push(HYDROGEN_PUBLIC_INSTANCE_ID);
+    }
+
     // Initialize HydrogenHandler.
     let app = HydrogenHandler {
         context: HydrogenContext {
@@ -366,6 +404,8 @@ async fn main() {
             roll_parser,
         },
         lavalink_nodes: Arc::new(lavalink_nodes),
+        other_roll_bots,
+        force_roll: config.force_roll.unwrap_or_default(),
     };
 
     let mut client = Client::builder(
