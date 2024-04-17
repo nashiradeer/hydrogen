@@ -49,6 +49,7 @@ When starting, Hydrogen searches for the config file in `$XDG_CONFIG_HOME/hydrog
 - HYDROGEN_LAVALINK: Set the list of Lavalink nodes that can be used, read more below. (required)
 - HYDROGEN_DEFAULT_LANGUAGE: Sets a new default language to Hydrogen. (optional)
 - HYDROGEN_LANGUAGE_PATH: Sets the path where the Hydrogen translation files can be found. (optional)
+- HYDROGEN_FORCE_ROLL: Force enables the auto-roll from messages. (optional)
 
 You can see our example using [Docker Compose](compose.yaml).
 

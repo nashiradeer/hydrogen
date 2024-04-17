@@ -160,6 +160,8 @@ pub struct Config {
     pub discord_token: Option<String>,
     /// If the bot is running in the public instance.
     pub public_instance: Option<bool>,
+    /// If the bot should force enable auto-roll from messages.
+    pub force_roll: Option<bool>,
 }
 
 impl Config {
@@ -200,12 +202,20 @@ impl Config {
                 .map(|s| matches!(s.to_lowercase().as_str(), "true" | "yes" | "1" | "enabled"))
         });
 
+        // Get the force roll from the environment.
+        let force_roll = self.force_roll.or_else(|| {
+            env::var("HYDROGEN_FORCE_ROLL")
+                .ok()
+                .map(|s| matches!(s.to_lowercase().as_str(), "true" | "yes" | "1" | "enabled"))
+        });
+
         Self {
             default_language,
             language_path,
             lavalink,
             discord_token,
             public_instance,
+            force_roll,
         }
     }
 }

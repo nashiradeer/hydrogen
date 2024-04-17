@@ -1,4 +1,5 @@
 discord_token = ""
+force_roll = false
 default_language = "en-US"  # This line isn't required, and it's not recommended to add it unless you know what you're doing.
 language_path = "/app/lang" # This line isn't required, and it's not recommended to add it unless you know what you're doing.
 
