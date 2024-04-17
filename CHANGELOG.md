@@ -11,6 +11,7 @@
 
 ### Fixed
 
+- Avoid accidental rolls inside messages with a prefix. ([#39](https://github.com/nashiradeer/hydrogen/issues/39))
 - Fix the embed footer icon URL.
 - Panic doesn't finalize the program. ([#42](https://github.com/nashiradeer/hydrogen/issues/42))
 

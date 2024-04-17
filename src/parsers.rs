@@ -83,6 +83,8 @@ pub struct RollParser {
 
     /// Regex parser for the modifier syntax.
     modifier_parser: Regex,
+    /// Regex parser for the capture the roll inside a message.
+    inner_message_parser: Regex,
 }
 
 impl RollParser {
@@ -90,10 +92,22 @@ impl RollParser {
     pub fn new() -> Result<Self, regex::Error> {
         Ok(Self {
             roll_parser: Regex::new(
-                r"(?: |^)(?:(10|[1-9])#)?(50|0?[1-9]|[1-4][0-9])?d(100|[fF]|0?[2-9]|[1-9][0-9])((?:[+\-*\/][0-9]{1,3}|){0,3})(?:$| )",
+                r"^(?:(10|[1-9])#)?(50|0?[1-9]|[1-4][0-9])?d(100|[fF]|0?[2-9]|[1-9][0-9])((?:[+\-*\/][0-9]{1,3}|){0,3})$",
             )?,
             modifier_parser: Regex::new(r"([+\-*\/])([0-9]{1,3})")?,
+            inner_message_parser: Regex::new(r"(?: |^)/(.*?)(?: |$)")?,
         })
+    }
+
+    /// Evaluates the roll syntax considering rolls inside a message, returning the parameters.
+    pub fn evaluate(&self, data: &str) -> Option<Params> {
+        match self.evaluate_roll(data) {
+            Some(params) => Some(params),
+            None => {
+                let captures = self.inner_message_parser.captures(data)?;
+                self.evaluate_roll(captures.get(1)?.as_str())
+            }
+        }
     }
 
     /// Parses the modifier syntax, returning the modifier.
@@ -117,7 +131,7 @@ impl RollParser {
     }
 
     /// Evaluates the roll syntax, returning the parameters.
-    pub fn evaluate(&self, data: &str) -> Option<Params> {
+    pub fn evaluate_roll(&self, data: &str) -> Option<Params> {
         // Default roll parameters.
         let mut params = Params::default();
 
