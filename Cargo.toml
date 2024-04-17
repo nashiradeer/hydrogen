@@ -1,6 +1,6 @@
 [package]
 name = "hydrogen"
-version = "0.0.1-alpha.7"
+version = "0.0.1-alpha.8"
 authors = ["Nashira Deer <nashiradeer@gmail.com>"]
 edition = "2021"
 description = "An open-source music bot for Discord, powered by Lavalink."
