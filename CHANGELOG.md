@@ -7,7 +7,7 @@
 - Add an option to force auto-roll from messages.
 - Add a warning about the public instance ending.
 - Add Portuguese Brazil translation to the public instance warning.
-- Disable auto-roll from messages when another roll bot is detected.
+- Disable auto-roll from messages when another roll bot is detected. ([#40](https://github.com/nashiradeer/hydrogen/issues/40))
 
 ### Fixed
 
