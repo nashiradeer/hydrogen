@@ -1,6 +1,6 @@
 # Nashira Deer // Hydrogen
 
-**Warning: Hydrogen is still in the alpha development stage.**
+**Warning: Hydrogen now it's a closed-source project and this repository will no longer be updated.**
 
 Open-source Dungeon Master helper with useful features and a music player for your sessions.
 
